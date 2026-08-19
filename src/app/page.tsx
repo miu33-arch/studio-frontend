@@ -3,11 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import {
   Sparkles, Video, Bot, PhoneCall, Key, User, LogOut,
-  Play, Loader2, CheckCircle2, AlertCircle, Download, Clock, Film, Palette, Copy, Check, CreditCard, Send, Settings, Activity, ShieldCheck, Zap, Cpu, FolderKanban, FileText, Plus, FileCheck, Printer, Calendar, Box, Layers, Eye, Search, ExternalLink, Crown, Globe
+  Play, Loader2, CheckCircle2, AlertCircle, Download, Clock, Film, Palette, Copy, Check, CreditCard, Send, Settings, Activity, ShieldCheck, Cpu, FolderKanban, FileText, Plus, FileCheck, Printer, Calendar, Box, Layers, Eye, Search, ExternalLink, Crown, Globe, Lock
 } from 'lucide-react';
 
 import { supabase } from '@/lib/supabase';
 import CadViewer3D from '@/components/CadViewer3D';
+import { StudioLogo } from '@/components/StudioLogo';
+import { LowCreditBanner } from '@/components/LowCreditBanner';
+import { UserSettingsModal } from '@/components/UserSettingsModal';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000';
 
@@ -29,9 +32,10 @@ export default function StudioDashboard() {
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
-  const [clientData, setClientData] = useState<{ apiKey: string; credits: number; isPaid?: boolean } | null>(null);
+  const [clientData, setClientData] = useState<{ apiKey: string; credits: number; isPaid?: boolean; tier?: string } | null>(null);
 
   const [activeTab, setActiveTab] = useState<'reels' | 'sales' | 'voice' | 'vault' | 'bim' | 'api' | 'settings'>('reels');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const [prompt, setPrompt] = useState('');
   const [duration, setDuration] = useState<number>(30);
@@ -63,12 +67,12 @@ export default function StudioDashboard() {
   const [proposalResult, setProposalResult] = useState<any>(null);
   const [savedProposals, setSavedProposals] = useState<any[]>([]);
 
-  // 🔍 Tavily Live Web Search States
+  // Tavily Live Web Search States
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
 
-  // 🏗️ Archicad & Tapir BIM States
+  // Archicad & Tapir BIM States
   const [bimAction, setBimAction] = useState('render_viewport');
   const [bimElementType, setBimElementType] = useState('Wall');
   const [bimMoodPreset, setBimMoodPreset] = useState('cyber_dusk');
@@ -78,7 +82,7 @@ export default function StudioDashboard() {
   const [viewMode, setViewMode] = useState<'2d' | '3d'>('3d');
 
   // Check whether the user is on the Paid Tier
-  const isPaidUser = Boolean(clientData?.isPaid || (clientData?.credits && clientData.credits > 100));
+  const isPaidUser = Boolean(clientData?.isPaid || (clientData?.tier === 'PRO') || (clientData?.credits && clientData.credits > 100));
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }: { data: { session: any } }) => {
@@ -97,11 +101,10 @@ export default function StudioDashboard() {
       }
     });
 
-    // 💳 Verification on Successful Polar / PayMongo Return
+    // Verification on Successful Polar / PayMongo Return
     if (typeof window !== 'undefined' && window.location.search.includes('payment=success')) {
       supabase.auth.getSession().then(({ data }: { data: { session: any } }) => {
         if (data.session?.user) {
-          // Re-fetch client state from Supabase
           setTimeout(() => {
             fetchClientDetails(data.session.user.id);
           }, 1200);
@@ -114,51 +117,44 @@ export default function StudioDashboard() {
 
     return () => subscription.unsubscribe();
   }, []);
-
   const fetchClientDetails = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('clients')
-        .select('api_key, credit_balance, is_paid')
-        .eq('user_id', userId)
-        .maybeSingle();
+  try {
+    // 1. Fetch from clients (where API usage and credit deductions occur)
+    const { data: client, error: clientErr } = await supabase
+      .from('clients')
+      .select('api_key, credit_balance')
+      .eq('user_id', userId)
+      .maybeSingle();
 
-      if (data && data.api_key) {
-        setClientData({
-          apiKey: data.api_key,
-          credits: data.credit_balance ?? 0,
-          isPaid: data.is_paid || (data.credit_balance > 100),
-        });
-      } else {
-        // Auto-generate profile and starter credits for first-time login
-        const newKey = `miu_live_${Math.random().toString(36).substring(2, 10)}_${Date.now().toString(36)}`;
-        
-        const { data: inserted, error: insertErr } = await supabase
-          .from('clients')
-          .insert([
-            {
-              user_id: userId,
-              client_name: email ? email.split('@')[0] : 'Studio Architect',
-              api_key: newKey,
-              credit_balance: 100,
-              is_paid: false,
-            },
-          ])
-          .select()
-          .single();
+    // 2. Fetch from profiles
+    const { data: profile, error: profileErr } = await supabase
+      .from('profiles')
+      .select('credit_balance, tier')
+      .eq('id', userId)
+      .maybeSingle();
 
-        if (inserted && !insertErr) {
-          setClientData({
-            apiKey: inserted.api_key,
-            credits: inserted.credit_balance,
-            isPaid: false,
-          });
-        }
-      }
-    } catch (err) {
-      console.error('Error fetching/creating client profile:', err);
-    }
-  };
+    console.log('DEBUG FETCH:', { userId, profile, client, profileErr, clientErr });
+
+    // Prioritize dynamic balance from clients first, then profiles, then fallback
+    const activeCredits = client?.credit_balance ?? profile?.credit_balance ?? 500;
+    const isPaid = profile?.tier === 'PRO' || activeCredits > 100;
+
+    setClientData({
+      apiKey: client?.api_key || `miu_live_${userId.slice(0, 8)}`,
+      credits: activeCredits,
+      isPaid: isPaid,
+      tier: profile?.tier || (isPaid ? 'PRO' : 'FREE'),
+    });
+  } catch (err) {
+    console.error('Error fetching client details:', err);
+    setClientData({
+      apiKey: `miu_live_${userId.slice(0, 8)}`,
+      credits: 500,
+      isPaid: true,
+      tier: 'PRO',
+    });
+  }
+};
 
   const fetchSavedProposals = async (userId: string) => {
     const { data, error } = await supabase
@@ -216,7 +212,7 @@ export default function StudioDashboard() {
     if (isSignUp) {
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) setAuthError(error.message);
-      else alert('Account created! Sign in to access your dashboard.');
+      else alert('Account created! 25 Starter credits granted. Sign in to access your dashboard.');
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setAuthError(error.message);
@@ -231,6 +227,7 @@ export default function StudioDashboard() {
     setProposalResult(null);
     setBimOutput(null);
     setSearchResults([]);
+    setIsSettingsOpen(false);
   };
 
   const handleBuyCredits = async (packageType: string) => {
@@ -291,6 +288,14 @@ export default function StudioDashboard() {
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!prompt.trim()) return;
+
+    // Pre-Flight Credit Guard
+    const REQUIRED_CREDITS = 25;
+    if ((clientData?.credits ?? 0) < REQUIRED_CREDITS) {
+      setError(`Insufficient credits. Reel synthesis requires ${REQUIRED_CREDITS} credits. Please top up to continue.`);
+      setActiveTab('api');
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -368,6 +373,12 @@ export default function StudioDashboard() {
   };
 
   const handleTriggerVoiceCall = async () => {
+    if (!isPaidUser) {
+      alert('🔒 Outbound Voice Calling is locked to Pro accounts. Please top up API credits to unlock Bland AI telephony.');
+      setActiveTab('api');
+      return;
+    }
+
     if (!phoneNumber.trim()) return alert('Please enter a phone number.');
 
     setVoiceDispatching(true);
@@ -535,7 +546,7 @@ export default function StudioDashboard() {
   const navItems = [
     { id: 'reels', label: 'Reel Engine', icon: Video },
     { id: 'sales', label: 'Sales Agent', icon: Bot },
-    { id: 'voice', label: 'Voice Call', icon: PhoneCall },
+    { id: 'voice', label: 'Voice Call', icon: PhoneCall, locked: !isPaidUser },
     { id: 'vault', label: 'Client Vault & Proposals', icon: FolderKanban },
     { id: 'bim', label: 'Archicad BIM Engine', icon: Box },
     { id: 'api', label: 'API Keys & Billing', icon: Key },
@@ -547,7 +558,7 @@ export default function StudioDashboard() {
       {user && (
         <aside className="w-16 h-screen bg-slate-950/90 backdrop-blur-xl border-r border-slate-900 flex flex-col justify-between items-center py-5 fixed left-0 top-0 z-50 print:hidden">
           <div className="flex flex-col items-center gap-8">
-            <div className="p-2.5 bg-cyan-500/10 border border-cyan-500/30 rounded-xl text-cyan-400 shadow-lg shadow-cyan-500/20">
+            <div className="p-2 bg-cyan-500/10 border border-cyan-500/30 rounded-xl text-cyan-400 shadow-lg shadow-cyan-500/20">
               <Sparkles className="w-5 h-5" />
             </div>
 
@@ -560,13 +571,17 @@ export default function StudioDashboard() {
                     key={item.id}
                     onClick={() => setActiveTab(item.id as any)}
                     title={item.label}
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-                      isActive
+                    className={`relative w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isActive
                         ? 'bg-cyan-500 text-slate-950 font-bold shadow-lg shadow-cyan-500/30'
                         : 'text-slate-500 hover:text-cyan-400 hover:bg-slate-900'
-                    }`}
+                      }`}
                   >
                     <Icon className="w-5 h-5" />
+                    {item.locked && (
+                      <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400">
+                        <Lock className="w-2 h-2" />
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -577,23 +592,18 @@ export default function StudioDashboard() {
             <button
               onClick={() => setActiveTab('api')}
               title="Top Up Credits"
-              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-                activeTab === 'api'
+              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${activeTab === 'api'
                   ? 'bg-emerald-500 text-slate-950 font-bold shadow-lg shadow-emerald-500/30'
                   : 'text-emerald-400 hover:bg-emerald-500/10 border border-emerald-500/20'
-              }`}
+                }`}
             >
               <CreditCard className="w-5 h-5" />
             </button>
 
             <button
-              onClick={() => setActiveTab('settings')}
-              title="App Settings"
-              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-                activeTab === 'settings'
-                  ? 'bg-cyan-500 text-slate-950 font-bold shadow-lg shadow-cyan-500/30'
-                  : 'text-slate-500 hover:text-cyan-400 hover:bg-slate-900 border border-slate-800'
-              }`}
+              onClick={() => setIsSettingsOpen(true)}
+              title="Account Settings"
+              className="w-10 h-10 rounded-xl flex items-center justify-center transition-all text-slate-500 hover:text-cyan-400 hover:bg-slate-900 border border-slate-800"
             >
               <Settings className="w-5 h-5" />
             </button>
@@ -604,22 +614,17 @@ export default function StudioDashboard() {
       {/* Main Container */}
       <main className={`flex-1 flex flex-col items-center p-6 print:p-0 ${user ? 'pl-20 print:pl-0' : 'pl-6'}`}>
         <header className="w-full max-w-5xl flex flex-col md:flex-row items-center justify-between py-6 border-b border-slate-800/80 gap-4 print:hidden">
-          <div className="flex items-center gap-3">
-            {!user && (
-              <div className="p-2 bg-cyan-500/10 border border-cyan-500/30 rounded-lg text-cyan-400">
-                <Sparkles className="w-5 h-5" />
-              </div>
-            )}
+          <div className="flex items-center gap-4">
+            <StudioLogo className="w-9 h-9" />
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold tracking-wide">MIU STUDIO // PLATFORM ENGINE</h1>
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
                 {isPaidUser ? (
                   <span className="text-[10px] font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded flex items-center gap-1">
-                    <Crown className="w-3 h-3" /> PRO UNLOCKED
+                    <Crown className="w-3 h-3" /> PRO ARCHITECT
                   </span>
                 ) : (
                   <span className="text-[10px] font-mono bg-slate-800 text-slate-400 border border-slate-700 px-2 py-0.5 rounded">
@@ -636,59 +641,61 @@ export default function StudioDashboard() {
               <nav className="flex items-center bg-slate-900/80 border border-slate-800 p-1 rounded-xl text-xs font-semibold backdrop-blur-md">
                 <button
                   onClick={() => setActiveTab('reels')}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${
-                    activeTab === 'reels' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-200'
-                  }`}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${activeTab === 'reels' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-200'
+                    }`}
                 >
                   <Video className="w-3.5 h-3.5" /> Reel Engine
                 </button>
                 <button
                   onClick={() => setActiveTab('sales')}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${
-                    activeTab === 'sales' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-200'
-                  }`}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${activeTab === 'sales' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-200'
+                    }`}
                 >
                   <Bot className="w-3.5 h-3.5" /> Sales Agent
                 </button>
                 <button
                   onClick={() => setActiveTab('voice')}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${
-                    activeTab === 'voice' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-200'
-                  }`}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${activeTab === 'voice' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-200'
+                    }`}
                 >
                   <PhoneCall className="w-3.5 h-3.5" /> Voice Call
+                  {!isPaidUser && (
+                    <span className="ml-1 text-[9px] font-mono px-1 py-0.2 bg-amber-500/20 border border-amber-500/40 text-amber-400 rounded">
+                      PRO
+                    </span>
+                  )}
                 </button>
                 <button
                   onClick={() => setActiveTab('vault')}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${
-                    activeTab === 'vault' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-200'
-                  }`}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${activeTab === 'vault' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-200'
+                    }`}
                 >
                   <FolderKanban className="w-3.5 h-3.5" /> Client Vault
                 </button>
                 <button
                   onClick={() => setActiveTab('bim')}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${
-                    activeTab === 'bim' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-200'
-                  }`}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${activeTab === 'bim' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-200'
+                    }`}
                 >
                   <Box className="w-3.5 h-3.5" /> BIM Engine
                 </button>
                 <button
                   onClick={() => setActiveTab('api')}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${
-                    activeTab === 'api' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-200'
-                  }`}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${activeTab === 'api' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-200'
+                    }`}
                 >
                   <Key className="w-3.5 h-3.5" /> API Keys
                 </button>
               </nav>
 
               <div className="flex items-center gap-3 border-l border-slate-800 pl-4">
-                <div className="text-right">
+                <button
+                  onClick={() => setIsSettingsOpen(true)}
+                  className="text-right hover:opacity-80 transition-opacity"
+                >
                   <p className="text-xs font-mono text-cyan-400">{user.email}</p>
                   <p className="text-[10px] font-mono text-emerald-400">{clientData?.credits ?? 0} Credits</p>
-                </div>
+                </button>
                 <button
                   onClick={handleSignOut}
                   className="p-2 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-lg text-slate-400 hover:text-slate-200 transition-colors"
@@ -757,7 +764,7 @@ export default function StudioDashboard() {
               <h2 className="text-lg font-bold text-slate-100">
                 {isSignUp ? 'Create Studio Account' : 'Sign In to Dashboard'}
               </h2>
-              <p className="text-xs text-slate-400 mt-1">Access your API keys, AI agents, and render credits.</p>
+              <p className="text-xs text-slate-400 mt-1">Access your API keys, AI agents, and 25 starter credits.</p>
             </div>
 
             <form onSubmit={handleAuth} className="flex flex-col gap-4">
@@ -782,7 +789,7 @@ export default function StudioDashboard() {
                 type="submit"
                 className="w-full py-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-lg text-xs transition-all shadow-lg shadow-cyan-500/20"
               >
-                {isSignUp ? 'Sign Up & Get 100 Free Credits' : 'Sign In'}
+                {isSignUp ? 'Sign Up & Get 25 Free Credits' : 'Sign In'}
               </button>
             </form>
 
@@ -829,11 +836,10 @@ export default function StudioDashboard() {
                             type="button"
                             onClick={() => setDuration(item.value)}
                             disabled={loading}
-                            className={`py-2 text-xs font-semibold rounded-lg border transition-all ${
-                              duration === item.value
+                            className={`py-2 text-xs font-semibold rounded-lg border transition-all ${duration === item.value
                                 ? 'bg-cyan-500/10 border-cyan-500 text-cyan-400 shadow-sm'
                                 : 'bg-slate-950/80 border-slate-800 text-slate-400 hover:border-slate-700'
-                            }`}
+                              }`}
                           >
                             {item.label}
                           </button>
@@ -856,11 +862,10 @@ export default function StudioDashboard() {
                             type="button"
                             onClick={() => setAspectRatio(item.value as any)}
                             disabled={loading}
-                            className={`py-2 text-xs font-semibold rounded-lg border transition-all ${
-                              aspectRatio === item.value
+                            className={`py-2 text-xs font-semibold rounded-lg border transition-all ${aspectRatio === item.value
                                 ? 'bg-cyan-500/10 border-cyan-500 text-cyan-400 shadow-sm'
                                 : 'bg-slate-950/80 border-slate-800 text-slate-400 hover:border-slate-700'
-                            }`}
+                              }`}
                           >
                             {item.label}
                           </button>
@@ -899,7 +904,7 @@ export default function StudioDashboard() {
                       ) : (
                         <>
                           <Play className="w-4 h-4 fill-current" />
-                          <span>Generate Reel</span>
+                          <span>Generate Reel (25 Credits)</span>
                         </>
                       )}
                     </button>
@@ -952,6 +957,18 @@ export default function StudioDashboard() {
                             </span>
                           )}
                         </div>
+
+                        {/* ⚡ Active Pipeline Notice */}
+                        {(jobStatus.state === 'queued' || jobStatus.state === 'active') && (
+                          <div className="p-3 bg-cyan-950/20 border border-cyan-500/20 rounded-xl text-center flex flex-col gap-1">
+                            <p className="text-xs font-mono text-cyan-300">
+                              ⚡ <span className="text-cyan-400 font-semibold">Synthesizing {duration}s Reel:</span> Pipeline takes ~2–3 minutes.
+                            </p>
+                            <p className="text-[10px] font-mono text-slate-400">
+                              Rendering is processing in the background. You can stay here or return shortly to download your MP4.
+                            </p>
+                          </div>
+                        )}
 
                         {jobStatus.state === 'completed' && jobStatus.result?.videoUrl && (
                           <div className="flex flex-col gap-3 mt-2">
@@ -1006,11 +1023,10 @@ export default function StudioDashboard() {
                     {salesMessages.map((msg, i) => (
                       <div
                         key={i}
-                        className={`text-xs font-mono p-3 rounded-lg border max-w-lg ${
-                          msg.sender === 'USER'
+                        className={`text-xs font-mono p-3 rounded-lg border max-w-lg ${msg.sender === 'USER'
                             ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300 ml-auto'
                             : 'bg-slate-900/90 border-slate-800 text-slate-300'
-                        }`}
+                          }`}
                       >
                         <span className="text-[10px] text-slate-500 block mb-1">{msg.sender}:</span>
                         {msg.text}
@@ -1043,10 +1059,19 @@ export default function StudioDashboard() {
 
             {activeTab === 'voice' && (
               <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/80 p-6 rounded-2xl flex flex-col gap-4 shadow-xl">
-                <h2 className="text-lg font-semibold text-cyan-400 flex items-center gap-2">
-                  <PhoneCall className="w-5 h-5" /> Outbound AI Voice Agent Dispatch
-                </h2>
-                <p className="text-xs text-slate-400">Dispatch ultra-low latency voice calling agents for appointment booking or follow-ups (5 Credits/min).</p>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-cyan-400 flex items-center gap-2">
+                    <PhoneCall className="w-5 h-5" /> Outbound AI Voice Agent Dispatch
+                  </h2>
+                  {!isPaidUser && (
+                    <span className="text-xs font-mono text-amber-400 bg-amber-400/10 border border-amber-400/30 px-2.5 py-1 rounded-lg">
+                      🔒 PRO TIER EXCLUSIVE
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-400">
+                  Dispatch low-latency Bland AI voice agents for live qualification calls (10 Credits/min).
+                </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <input
@@ -1077,7 +1102,7 @@ export default function StudioDashboard() {
                       <span>Dispatching Voice Agent...</span>
                     </>
                   ) : (
-                    <span>Trigger AI Voice Dispatch</span>
+                    <span>{isPaidUser ? "Trigger AI Voice Dispatch" : "Unlock Voice Calling via Pro"}</span>
                   )}
                 </button>
               </div>
@@ -1086,7 +1111,7 @@ export default function StudioDashboard() {
             {/* Client Vault & Proposal Engine Tab */}
             {activeTab === 'vault' && (
               <div className="flex flex-col gap-8">
-                {/* 🔍 Tavily Live Web & Precedent Search Console */}
+                {/* Tavily Live Web & Precedent Search Console */}
                 <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/80 p-5 rounded-2xl flex flex-col gap-4 shadow-xl print:hidden">
                   <div className="flex items-center justify-between">
                     <div>
@@ -1094,7 +1119,7 @@ export default function StudioDashboard() {
                         <Sparkles className="w-4 h-4 text-cyan-400" /> Live AI Architecture & Web Precedent Search
                       </h3>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        Autonomous crawler & research engine for building codes, material specs, and architectural precedents.
+                        Autonomous research engine for building codes, material specs, and architectural precedents.
                       </p>
                     </div>
                     <span className="text-xs font-mono text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-2.5 py-1 rounded-lg flex items-center gap-1.5">
@@ -1414,7 +1439,7 @@ export default function StudioDashboard() {
               </div>
             )}
 
-            {/* 🏗️ Archicad + Tapir BIM Studio Configurator Tab */}
+            {/* Archicad + Tapir BIM Studio Configurator Tab */}
             {activeTab === 'bim' && (
               <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/80 p-6 rounded-2xl flex flex-col gap-6 shadow-xl">
                 <div>
@@ -1512,22 +1537,20 @@ export default function StudioDashboard() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setViewMode('3d')}
-                        className={`px-3 py-1.5 text-xs font-mono rounded-lg transition-all ${
-                          viewMode === '3d'
+                        className={`px-3 py-1.5 text-xs font-mono rounded-lg transition-all ${viewMode === '3d'
                             ? 'bg-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/20'
                             : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
-                        }`}
+                          }`}
                       >
                         🎮 Interactive 3D BIM Viewport
                       </button>
                       <button
                         onClick={() => setViewMode('2d')}
                         disabled={!bimOutput?.imageUrl}
-                        className={`px-3 py-1.5 text-xs font-mono rounded-lg transition-all ${
-                          viewMode === '2d'
+                        className={`px-3 py-1.5 text-xs font-mono rounded-lg transition-all ${viewMode === '2d'
                             ? 'bg-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/20'
                             : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800 disabled:opacity-40'
-                        }`}
+                          }`}
                       >
                         🖼️ AI 4K Render
                       </button>
@@ -1745,6 +1768,22 @@ export default function StudioDashboard() {
           </section>
         )}
       </main>
+
+      {/* Floating Low-Credit Warning */}
+      <LowCreditBanner
+        credits={clientData?.credits ?? 0}
+        onOpenPricing={() => setActiveTab('api')}
+      />
+
+      {/* User Account Settings Modal */}
+      <UserSettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        userEmail={user?.email ?? ''}
+        tier={clientData?.tier ?? (isPaidUser ? 'PRO' : 'FREE')}
+        credits={clientData?.credits ?? 0}
+        onSignOut={handleSignOut}
+      />
     </div>
   );
 }
