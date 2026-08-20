@@ -26,7 +26,7 @@ export function LowCreditBanner({ credits, onOpenPricing }: LowCreditBannerProps
 
           <button
             onClick={onOpenPricing}
-            className="mt-3 w-full rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-3 py-1.5 font-mono text-xs font-bold text-black transition-all hover:brightness-110 active:scale-95"
+            className="mt-3 w-full rounded-lg bg-linear-to-r from-amber-500 to-amber-600 px-3 py-1.5 font-mono text-xs font-bold text-slate-950 transition-all hover:opacity-90 flex items-center justify-center gap-1.5 shadow-lg shadow-amber-500/20"
           >
             TOP UP CREDITS // RECHARGE
           </button>

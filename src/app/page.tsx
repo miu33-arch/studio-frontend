@@ -12,8 +12,13 @@ import { StudioLogo } from '@/components/StudioLogo';
 import { LowCreditBanner } from '@/components/LowCreditBanner';
 import { UserSettingsModal } from '@/components/UserSettingsModal';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000';
-
+// Uses relative root in production to work seamlessly on mobile
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  (typeof window !== "undefined" && window.location.hostname === "localhost"
+    ? "http://localhost:5000"
+    : "https://api.miu33archstudio.xyz");
+    
 interface JobStatus {
   jobId: string;
   state: 'queued' | 'active' | 'completed' | 'failed';
@@ -30,6 +35,7 @@ export default function StudioDashboard() {
   const [user, setUser] = useState<any>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [clientData, setClientData] = useState<{ apiKey: string; credits: number; isPaid?: boolean; tier?: string } | null>(null);
@@ -49,13 +55,16 @@ export default function StudioDashboard() {
   const [copiedKey, setCopiedKey] = useState(false);
 
   const [salesMessages, setSalesMessages] = useState<ChatMessage[]>([
-    { sender: 'AGENT', text: 'Hello! I am your AI Sales Agent. How can I assist your business today?' }
+    { sender: 'AGENT', text: 'PERSONA:// SYNAPSE_PACT Gateway Active. Transmit deal parameters, specification loads, or architectural scope.' }
   ]);
   const [salesInput, setSalesInput] = useState('');
   const [salesLoading, setSalesLoading] = useState(false);
 
-  const [phoneNumber, setPhoneNumber] = useState('+639994805246');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [campaignType, setCampaignType] = useState('Lead Qualifying & Appointment Booking');
+  const [voicePrompt, setVoicePrompt] = useState(
+    'You are the AI Project Director for MIU Studio. Deliver updates accurately, concisely, and professionally.'
+  );
   const [voiceDispatching, setVoiceDispatching] = useState(false);
 
   // Proposal Engine & Vault States
@@ -81,7 +90,6 @@ export default function StudioDashboard() {
   const [bimOutput, setBimOutput] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'2d' | '3d'>('3d');
 
-  // Check whether the user is on the Paid Tier
   const isPaidUser = Boolean(clientData?.isPaid || (clientData?.tier === 'PRO') || (clientData?.credits && clientData.credits > 100));
 
   useEffect(() => {
@@ -101,7 +109,6 @@ export default function StudioDashboard() {
       }
     });
 
-    // Verification on Successful Polar / PayMongo Return
     if (typeof window !== 'undefined' && window.location.search.includes('payment=success')) {
       supabase.auth.getSession().then(({ data }: { data: { session: any } }) => {
         if (data.session?.user) {
@@ -117,44 +124,40 @@ export default function StudioDashboard() {
 
     return () => subscription.unsubscribe();
   }, []);
+
   const fetchClientDetails = async (userId: string) => {
-  try {
-    // 1. Fetch from clients (where API usage and credit deductions occur)
-    const { data: client, error: clientErr } = await supabase
-      .from('clients')
-      .select('api_key, credit_balance')
-      .eq('user_id', userId)
-      .maybeSingle();
+    try {
+      const { data: client } = await supabase
+        .from('clients')
+        .select('api_key, credit_balance')
+        .eq('user_id', userId)
+        .maybeSingle();
 
-    // 2. Fetch from profiles
-    const { data: profile, error: profileErr } = await supabase
-      .from('profiles')
-      .select('credit_balance, tier')
-      .eq('id', userId)
-      .maybeSingle();
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('credit_balance, tier')
+        .eq('id', userId)
+        .maybeSingle();
 
-    console.log('DEBUG FETCH:', { userId, profile, client, profileErr, clientErr });
+      const activeCredits = client?.credit_balance ?? profile?.credit_balance ?? 500;
+      const isPaid = profile?.tier === 'PRO' || activeCredits > 100;
 
-    // Prioritize dynamic balance from clients first, then profiles, then fallback
-    const activeCredits = client?.credit_balance ?? profile?.credit_balance ?? 500;
-    const isPaid = profile?.tier === 'PRO' || activeCredits > 100;
-
-    setClientData({
-      apiKey: client?.api_key || `miu_live_${userId.slice(0, 8)}`,
-      credits: activeCredits,
-      isPaid: isPaid,
-      tier: profile?.tier || (isPaid ? 'PRO' : 'FREE'),
-    });
-  } catch (err) {
-    console.error('Error fetching client details:', err);
-    setClientData({
-      apiKey: `miu_live_${userId.slice(0, 8)}`,
-      credits: 500,
-      isPaid: true,
-      tier: 'PRO',
-    });
-  }
-};
+      setClientData({
+        apiKey: client?.api_key || `miu_live_${userId.slice(0, 8)}`,
+        credits: activeCredits,
+        isPaid: isPaid,
+        tier: profile?.tier || (isPaid ? 'PRO' : 'FREE'),
+      });
+    } catch (err) {
+      console.error('Error fetching client details:', err);
+      setClientData({
+        apiKey: `miu_live_${userId.slice(0, 8)}`,
+        credits: 500,
+        isPaid: true,
+        tier: 'PRO',
+      });
+    }
+  };
 
   const fetchSavedProposals = async (userId: string) => {
     const { data, error } = await supabase
@@ -289,7 +292,6 @@ export default function StudioDashboard() {
     e.preventDefault();
     if (!prompt.trim()) return;
 
-    // Pre-Flight Credit Guard
     const REQUIRED_CREDITS = 25;
     if ((clientData?.credits ?? 0) < REQUIRED_CREDITS) {
       setError(`Insufficient credits. Reel synthesis requires ${REQUIRED_CREDITS} credits. Please top up to continue.`);
@@ -391,7 +393,7 @@ export default function StudioDashboard() {
           'Content-Type': 'application/json',
           'x-api-key': activeApiKey,
         },
-        body: JSON.stringify({ phoneNumber, campaignType }),
+        body: JSON.stringify({ phoneNumber, campaignType, taskPrompt: voicePrompt }),
       });
 
       const data = await res.json();
@@ -554,9 +556,9 @@ export default function StudioDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex font-sans print:bg-white print:text-black">
-      {/* Left Sidebar */}
+      {/* Left Sidebar (Hidden on mobile viewport) */}
       {user && (
-        <aside className="w-16 h-screen bg-slate-950/90 backdrop-blur-xl border-r border-slate-900 flex flex-col justify-between items-center py-5 fixed left-0 top-0 z-50 print:hidden">
+        <aside className="hidden md:flex w-16 h-screen bg-slate-950/90 backdrop-blur-xl border-r border-slate-900 flex-col justify-between items-center py-5 fixed left-0 top-0 z-50 print:hidden">
           <div className="flex flex-col items-center gap-8">
             <div className="p-2 bg-cyan-500/10 border border-cyan-500/30 rounded-xl text-cyan-400 shadow-lg shadow-cyan-500/20">
               <Sparkles className="w-5 h-5" />
@@ -612,8 +614,8 @@ export default function StudioDashboard() {
       )}
 
       {/* Main Container */}
-      <main className={`flex-1 flex flex-col items-center p-6 print:p-0 ${user ? 'pl-20 print:pl-0' : 'pl-6'}`}>
-        <header className="w-full max-w-5xl flex flex-col md:flex-row items-center justify-between py-6 border-b border-slate-800/80 gap-4 print:hidden">
+      <main className={`flex-1 flex flex-col items-center p-4 md:p-6 print:p-0 ${user ? 'md:pl-20 print:pl-0' : 'p-4'}`}>
+        <header className="w-full max-w-5xl flex flex-col md:flex-row items-center justify-between py-4 md:py-6 border-b border-slate-800/80 gap-4 print:hidden">
           <div className="flex items-center gap-4">
             <StudioLogo className="w-9 h-9" />
             <div>
@@ -637,58 +639,47 @@ export default function StudioDashboard() {
           </div>
 
           {user ? (
-            <div className="flex items-center gap-4">
-              <nav className="flex items-center bg-slate-900/80 border border-slate-800 p-1 rounded-xl text-xs font-semibold backdrop-blur-md">
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <nav className="flex flex-wrap items-center bg-slate-900/80 border border-slate-800 p-1 rounded-xl text-xs font-semibold backdrop-blur-md">
                 <button
                   onClick={() => setActiveTab('reels')}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${activeTab === 'reels' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-200'
-                    }`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${activeTab === 'reels' ? 'bg-cyan-500 text-slate-950 shadow-md font-bold' : 'text-slate-400 hover:text-slate-200'}`}
                 >
                   <Video className="w-3.5 h-3.5" /> Reel Engine
                 </button>
                 <button
                   onClick={() => setActiveTab('sales')}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${activeTab === 'sales' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-200'
-                    }`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${activeTab === 'sales' ? 'bg-cyan-500 text-slate-950 shadow-md font-bold' : 'text-slate-400 hover:text-slate-200'}`}
                 >
                   <Bot className="w-3.5 h-3.5" /> Sales Agent
                 </button>
                 <button
                   onClick={() => setActiveTab('voice')}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${activeTab === 'voice' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-200'
-                    }`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${activeTab === 'voice' ? 'bg-cyan-500 text-slate-950 shadow-md font-bold' : 'text-slate-400 hover:text-slate-200'}`}
                 >
                   <PhoneCall className="w-3.5 h-3.5" /> Voice Call
-                  {!isPaidUser && (
-                    <span className="ml-1 text-[9px] font-mono px-1 py-0.2 bg-amber-500/20 border border-amber-500/40 text-amber-400 rounded">
-                      PRO
-                    </span>
-                  )}
                 </button>
                 <button
                   onClick={() => setActiveTab('vault')}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${activeTab === 'vault' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-200'
-                    }`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${activeTab === 'vault' ? 'bg-cyan-500 text-slate-950 shadow-md font-bold' : 'text-slate-400 hover:text-slate-200'}`}
                 >
                   <FolderKanban className="w-3.5 h-3.5" /> Client Vault
                 </button>
                 <button
                   onClick={() => setActiveTab('bim')}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${activeTab === 'bim' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-200'
-                    }`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${activeTab === 'bim' ? 'bg-cyan-500 text-slate-950 shadow-md font-bold' : 'text-slate-400 hover:text-slate-200'}`}
                 >
                   <Box className="w-3.5 h-3.5" /> BIM Engine
                 </button>
                 <button
                   onClick={() => setActiveTab('api')}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${activeTab === 'api' ? 'bg-cyan-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-slate-200'
-                    }`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${activeTab === 'api' ? 'bg-cyan-500 text-slate-950 shadow-md font-bold' : 'text-slate-400 hover:text-slate-200'}`}
                 >
                   <Key className="w-3.5 h-3.5" /> API Keys
                 </button>
               </nav>
 
-              <div className="flex items-center gap-3 border-l border-slate-800 pl-4">
+              <div className="flex items-center gap-3 border-l border-slate-800 pl-3">
                 <button
                   onClick={() => setIsSettingsOpen(true)}
                   className="text-right hover:opacity-80 transition-opacity"
@@ -735,7 +726,7 @@ export default function StudioDashboard() {
               </div>
             </div>
 
-            <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/80 p-3.5 rounded-xl flex items-center gap-3">
+            <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/80 p-3.5 rounded-lg text-indigo-400">
               <div className="p-2 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-indigo-400">
                 <Box className="w-4 h-4" />
               </div>
@@ -757,7 +748,7 @@ export default function StudioDashboard() {
           </div>
         )}
 
-        {/* Dashboard Panels */}
+        {/* Dynamic Panels */}
         {!user ? (
           <div className="w-full max-w-md mt-16 bg-slate-900/60 backdrop-blur-xl border border-slate-800 p-8 rounded-2xl flex flex-col gap-6 shadow-2xl shadow-cyan-500/5">
             <div className="text-center">
@@ -776,14 +767,24 @@ export default function StudioDashboard() {
                 className="w-full bg-slate-950/80 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 transition-all"
                 required
               />
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-slate-950/80 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 transition-all"
-                required
-              />
+              
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  className="w-full bg-slate-950/80 border border-slate-800 rounded-lg p-3 pr-10 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 transition-all"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-cyan-400 text-sm transition-colors"
+                >
+                  {showPassword ? '🙈' : '👁️'}
+                </button>
+              </div>
 
               <button
                 type="submit"
@@ -958,7 +959,6 @@ export default function StudioDashboard() {
                           )}
                         </div>
 
-                        {/* ⚡ Active Pipeline Notice */}
                         {(jobStatus.state === 'queued' || jobStatus.state === 'active') && (
                           <div className="p-3 bg-cyan-950/20 border border-cyan-500/20 rounded-xl text-center flex flex-col gap-1">
                             <p className="text-xs font-mono text-cyan-300">
@@ -972,7 +972,7 @@ export default function StudioDashboard() {
 
                         {jobStatus.state === 'completed' && jobStatus.result?.videoUrl && (
                           <div className="flex flex-col gap-3 mt-2">
-                            <div className="relative overflow-hidden rounded-xl border border-slate-800 bg-black aspect-[9/16] max-h-80 mx-auto w-full shadow-2xl">
+                            <div className="relative overflow-hidden rounded-xl border border-slate-800 bg-black aspect-9/16 max-h-80 mx-auto w-full shadow-2xl">
                               <video
                                 src={jobStatus.result.videoUrl}
                                 controls
@@ -1014,9 +1014,9 @@ export default function StudioDashboard() {
             {activeTab === 'sales' && (
               <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/80 p-6 rounded-2xl flex flex-col gap-4 shadow-xl">
                 <h2 className="text-lg font-semibold text-cyan-400 flex items-center gap-2">
-                  <Bot className="w-5 h-5" /> AI Sales Lead Qualifier Console
+                  <Bot className="w-5 h-5" /> SYNAPSE_PACT Sales & Negotiation Telemetry
                 </h2>
-                <p className="text-xs text-slate-400">Test inbound lead conversations via your Express API Gateway (1 Credit per interaction).</p>
+                <p className="text-xs text-slate-400">Autonomous deal architect with strict margin defense and reverse verification.</p>
 
                 <div className="bg-slate-950/80 border border-slate-800/80 rounded-xl p-4 h-80 flex flex-col justify-between">
                   <div className="flex flex-col gap-3 overflow-y-auto pr-2">
@@ -1040,14 +1040,14 @@ export default function StudioDashboard() {
                       value={salesInput}
                       onChange={(e) => setSalesInput(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleSendSalesMessage()}
-                      placeholder="Ask about pricing, capabilities, or schedule a call..."
-                      className="flex-1 bg-slate-900/90 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 transition-all"
+                      placeholder="Enter deal terms or test margin defense..."
+                      className="flex-1 bg-slate-900/90 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 transition-all font-mono"
                       disabled={salesLoading}
                     />
                     <button
                       onClick={handleSendSalesMessage}
                       disabled={salesLoading || !salesInput.trim()}
-                      className="bg-cyan-500 hover:bg-cyan-400 disabled:bg-slate-800 text-slate-950 text-xs font-bold px-4 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 shadow-md shadow-cyan-500/20"
+                      className="bg-cyan-500 hover:bg-cyan-400 disabled:bg-slate-800 text-slate-950 text-xs font-bold px-4 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 shadow-md shadow-cyan-500/20 font-mono"
                     >
                       {salesLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                       <span>Send</span>
@@ -1078,8 +1078,8 @@ export default function StudioDashboard() {
                     type="text"
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
-                    placeholder="+639994805246 or +1 (555) 000-1234"
-                    className="bg-slate-950/80 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 transition-all"
+                    placeholder="+63 / +966 / +1..."
+                    className="bg-slate-950/80 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 transition-all font-mono"
                   />
                   <select
                     value={campaignType}
@@ -1089,6 +1089,19 @@ export default function StudioDashboard() {
                     <option value="Lead Qualifying & Appointment Booking">Lead Qualifying & Appointment Booking</option>
                     <option value="Post-Purchase Survey">Post-Purchase Survey</option>
                   </select>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-mono text-slate-400 uppercase">
+                    Custom Voice Directive / Instructions
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={voicePrompt}
+                    onChange={(e) => setVoicePrompt(e.target.value)}
+                    placeholder="Enter voice instructions, persona, and qualification questions..."
+                    className="w-full bg-slate-950/80 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 transition-all resize-none font-mono"
+                  />
                 </div>
 
                 <button
@@ -1111,7 +1124,7 @@ export default function StudioDashboard() {
             {/* Client Vault & Proposal Engine Tab */}
             {activeTab === 'vault' && (
               <div className="flex flex-col gap-8">
-                {/* Tavily Live Web & Precedent Search Console */}
+                {/* Tavily Live Web Search */}
                 <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/80 p-5 rounded-2xl flex flex-col gap-4 shadow-xl print:hidden">
                   <div className="flex items-center justify-between">
                     <div>
@@ -1186,7 +1199,7 @@ export default function StudioDashboard() {
                           <div className="text-[10px] font-mono text-emerald-400 flex items-center justify-between pt-2 border-t border-slate-900 mt-auto">
                             <span>{item.element_type}</span>
                             <span className="text-slate-500 flex items-center gap-1 group-hover:text-cyan-300 transition-colors">
-                              <span className="truncate max-w-[100px]">{item.mood_preset}</span>
+                              <span className="truncate max-w-25">{item.mood_preset}</span>
                               <ExternalLink className="w-2.5 h-2.5" />
                             </span>
                           </div>
@@ -1561,7 +1574,7 @@ export default function StudioDashboard() {
                     </span>
                   </div>
 
-                  <div className="relative w-full aspect-video max-h-[420px] rounded-xl overflow-hidden border border-slate-800 bg-slate-950 shadow-2xl mx-auto flex items-center justify-center">
+                  <div className="relative w-full aspect-video max-h-105 rounded-xl overflow-hidden border border-slate-800 bg-slate-950 shadow-2xl mx-auto flex items-center justify-center">
                     {viewMode === '3d' ? (
                       <div className="relative w-full h-full">
                         <CadViewer3D
@@ -1629,7 +1642,7 @@ export default function StudioDashboard() {
               </div>
             )}
 
-            {/* API Keys & Billing Tab */}
+            {/* API Keys & Billing Tab (3-Tier Implementation) */}
             {activeTab === 'api' && (
               <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/80 p-6 rounded-2xl flex flex-col gap-6 shadow-xl">
                 <div>
@@ -1664,11 +1677,11 @@ export default function StudioDashboard() {
                     <CreditCard className="w-4 h-4 text-cyan-400" /> Top Up API Credits (PayMongo Local & Global Polar.sh)
                   </h3>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Starter Pack */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Tier 1: Starter */}
                     <div className="p-5 bg-slate-950/80 border border-slate-800 rounded-xl flex flex-col justify-between gap-4">
                       <div>
-                        <p className="text-xs font-bold text-cyan-400 uppercase">Starter Pack</p>
+                        <p className="text-xs font-bold text-slate-400 uppercase font-mono">Starter Pack</p>
                         <p className="text-2xl font-bold text-slate-100 mt-1">₱1,000 <span className="text-xs text-slate-500 font-normal">/ $18 USD</span></p>
                         <p className="text-xs text-slate-400 mt-2">+500 API Credits • Removes Watermarks Across All Renders & Proposals.</p>
                       </div>
@@ -1681,7 +1694,7 @@ export default function StudioDashboard() {
                           {buyingCredits === '500_credits' ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
                           ) : (
-                            <span>Pay with PayMongo (GCash / Maya / PH Cards)</span>
+                            <span>PayMongo (GCash / Cards)</span>
                           )}
                         </button>
                         <button
@@ -1690,18 +1703,18 @@ export default function StudioDashboard() {
                           className="w-full py-2 bg-slate-900 border border-slate-700 hover:border-cyan-500/50 text-slate-200 font-bold rounded-lg text-xs transition-colors flex items-center justify-center gap-2"
                         >
                           <Globe className="w-3.5 h-3.5 text-cyan-400" />
-                          <span>Pay Global with Polar ($18 USD)</span>
+                          <span>Global Polar ($18 USD)</span>
                         </button>
                       </div>
                     </div>
 
-                    {/* Pro Scale Pack */}
+                    {/* Tier 2: Pro Scale */}
                     <div className="p-5 bg-slate-950/80 border border-cyan-500/30 rounded-xl flex flex-col justify-between gap-4 relative overflow-hidden shadow-lg shadow-cyan-500/5">
                       <div className="absolute top-0 right-0 bg-cyan-500 text-slate-950 text-[9px] font-bold px-2 py-0.5 rounded-bl">
                         POPULAR
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-cyan-400 uppercase">Pro Scale Pack</p>
+                        <p className="text-xs font-bold text-cyan-400 uppercase font-mono">Pro Scale Pack</p>
                         <p className="text-2xl font-bold text-slate-100 mt-1">₱3,000 <span className="text-xs text-slate-500 font-normal">/ $54 USD</span></p>
                         <p className="text-xs text-slate-400 mt-2">+2,000 API Credits • 100% White-Labeled & Priority GPU Queue.</p>
                       </div>
@@ -1714,7 +1727,7 @@ export default function StudioDashboard() {
                           {buyingCredits === '2000_credits' ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
                           ) : (
-                            <span>Pay with PayMongo (GCash / Maya / PH Cards)</span>
+                            <span>PayMongo (GCash / Cards)</span>
                           )}
                         </button>
                         <button
@@ -1723,7 +1736,40 @@ export default function StudioDashboard() {
                           className="w-full py-2 bg-slate-900 border border-slate-700 hover:border-cyan-500/50 text-slate-200 font-bold rounded-lg text-xs transition-colors flex items-center justify-center gap-2"
                         >
                           <Globe className="w-3.5 h-3.5 text-cyan-400" />
-                          <span>Pay Global with Polar ($54 USD)</span>
+                          <span>Global Polar ($54 USD)</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Tier 3: Studio Fleet */}
+                    <div className="p-5 bg-slate-950/80 border border-amber-500/30 rounded-xl flex flex-col justify-between gap-4 relative overflow-hidden shadow-lg shadow-amber-500/5">
+                      <div className="absolute top-0 right-0 bg-amber-500 text-slate-950 text-[9px] font-bold px-2 py-0.5 rounded-bl">
+                        FLEET
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-amber-400 uppercase font-mono">Studio Fleet Pack</p>
+                        <p className="text-2xl font-bold text-slate-100 mt-1">₱8,500 <span className="text-xs text-slate-500 font-normal">/ $150 USD</span></p>
+                        <p className="text-xs text-slate-400 mt-2">+7,500 API Credits • Dedicated API Webhooks & High-Volume BIM Renders.</p>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <button
+                          onClick={() => handleBuyCredits('7500_credits')}
+                          disabled={buyingCredits === '7500_credits'}
+                          className="w-full py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-xs transition-colors flex items-center justify-center gap-2"
+                        >
+                          {buyingCredits === '7500_credits' ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <span>PayMongo (GCash / Cards)</span>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => handleBuyGlobalCredits('7500_credits')}
+                          disabled={buyingCredits === '7500_credits'}
+                          className="w-full py-2 bg-slate-900 border border-slate-700 hover:border-amber-500/50 text-slate-200 font-bold rounded-lg text-xs transition-colors flex items-center justify-center gap-2"
+                        >
+                          <Globe className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Global Polar ($150 USD)</span>
                         </button>
                       </div>
                     </div>
@@ -1744,7 +1790,7 @@ export default function StudioDashboard() {
                 <div className="flex flex-col gap-4 bg-slate-950/80 border border-slate-800/80 p-5 rounded-xl font-mono text-xs text-slate-300">
                   <div className="flex justify-between border-b border-slate-900 pb-3">
                     <span className="text-slate-500">API Gateway Base URL:</span>
-                    <span className="text-cyan-400">{API_BASE}</span>
+                    <span className="text-cyan-400">{API_BASE || '(Relative Production Host)'}</span>
                   </div>
                   <div className="flex justify-between border-b border-slate-900 pb-3">
                     <span className="text-slate-500">Allowed Production CORS Domain:</span>
