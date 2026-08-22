@@ -2,23 +2,32 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  Sparkles, Video, Bot, PhoneCall, Key, User, LogOut,
-  Play, Loader2, CheckCircle2, AlertCircle, Download, Clock, Film, Palette, Copy, Check, CreditCard, Send, Settings, Activity, ShieldCheck, Cpu, FolderKanban, FileText, Plus, FileCheck, Printer, Calendar, Box, Layers, Eye, Search, ExternalLink, Crown, Globe, Lock
+  ChevronDown, Sparkles, Video, Bot, PhoneCall, Key, User,
+  Play, Loader2, CheckCircle2, AlertCircle, Download, Clock, Film, Palette, 
+  Copy, Check, CreditCard, Send, Settings, Activity, ShieldCheck, Cpu, 
+  FolderKanban, FileText, Plus, FileCheck, Printer, Calendar, Box, Layers, 
+  Eye, Search, ExternalLink, Crown, Globe, Lock, Hand, Radio, 
+  FileSpreadsheet, Scan, Share2
 } from 'lucide-react';
 
 import { supabase } from '@/lib/supabase';
 import CadViewer3D from '@/components/CadViewer3D';
-import { StudioLogo } from '@/components/StudioLogo';
 import { LowCreditBanner } from '@/components/LowCreditBanner';
 import { UserSettingsModal } from '@/components/UserSettingsModal';
+import UserAccountPill from '@/components/UserAccountPill';
 
-// Uses relative root in production to work seamlessly on mobile
+// 4 Modular Cyber-Architectural Suite Components
+import SpatialGestureSandbox from '@/components/sandbox/SpatialGestureSandbox';
+import CyberHudDashboard from '@/components/dashboard/CyberHudDashboard';
+import ProposalInvoiceStudio from '@/components/studio/ProposalInvoiceStudio';
+import LidarMeshInspector from '@/components/lidar/LidarMeshInspector';
+
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   (typeof window !== "undefined" && window.location.hostname === "localhost"
     ? "http://localhost:5000"
     : "https://api.miu33archstudio.xyz");
-    
+
 interface JobStatus {
   jobId: string;
   state: 'queued' | 'active' | 'completed' | 'failed';
@@ -40,7 +49,10 @@ export default function StudioDashboard() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [clientData, setClientData] = useState<{ apiKey: string; credits: number; isPaid?: boolean; tier?: string } | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'reels' | 'sales' | 'voice' | 'vault' | 'bim' | 'api' | 'settings'>('reels');
+  const [activeTab, setActiveTab] = useState<
+    'reels' | 'sales' | 'sandbox' | 'hud' | 'lidar' | 'proposals' | 'voice' | 'vault' | 'bim' | 'api' | 'settings'
+  >('reels');
+  const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const [prompt, setPrompt] = useState('');
@@ -48,6 +60,7 @@ export default function StudioDashboard() {
   const [aspectRatio, setAspectRatio] = useState<'9:16' | '16:9' | '1:1'>('9:16');
   const [stylePreset, setStylePreset] = useState<string>('cyberpunk');
   const [loading, setLoading] = useState(false);
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [buyingCredits, setBuyingCredits] = useState<string | null>(null);
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
@@ -91,6 +104,7 @@ export default function StudioDashboard() {
   const [viewMode, setViewMode] = useState<'2d' | '3d'>('3d');
 
   const isPaidUser = Boolean(clientData?.isPaid || (clientData?.tier === 'PRO') || (clientData?.credits && clientData.credits > 100));
+  const isAdmin = user?.email === 'padillaanamy83@gmail.com';
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }: { data: { session: any } }) => {
@@ -333,6 +347,45 @@ export default function StudioDashboard() {
     }
   };
 
+  const handleBroadcastOnly = async () => {
+    if (!isAdmin) {
+      alert("🔒 Access Restricted: Social broadcasting is strictly reserved for the Studio Administrator.");
+      return;
+    }
+
+    if (!prompt.trim()) {
+      alert("Please enter a story topic or prompt to broadcast.");
+      return;
+    }
+
+    setIsBroadcasting(true);
+    try {
+      const targetVideoUrl = jobStatus?.result?.videoUrl || "https://miu33archstudio.xyz/preview_sample.mp4";
+      
+      const res = await fetch("/api/social/broadcast", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic: prompt,
+          videoUrl: targetVideoUrl,
+          duration: duration || 30,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        alert("⚡ Autonomous Reel Campaign generated and queued across all 6 social channels!");
+      } else {
+        alert(`Broadcast notice: ${data.error || "Queued in local autonomous dispatch buffer."}`);
+      }
+    } catch (err: any) {
+      console.error("Broadcast failed:", err);
+      alert("Failed to reach social broadcast endpoint.");
+    } finally {
+      setIsBroadcasting(false);
+    }
+  };
+
   const handleSendSalesMessage = async () => {
     if (!salesInput.trim() || salesLoading) return;
 
@@ -549,65 +602,137 @@ export default function StudioDashboard() {
     { id: 'reels', label: 'Reel Engine', icon: Video },
     { id: 'sales', label: 'Sales Agent', icon: Bot },
     { id: 'voice', label: 'Voice Call', icon: PhoneCall, locked: !isPaidUser },
-    { id: 'vault', label: 'Client Vault & Proposals', icon: FolderKanban },
-    { id: 'bim', label: 'Archicad BIM Engine', icon: Box },
-    { id: 'api', label: 'API Keys & Billing', icon: Key },
+    { id: 'bim', label: 'BIM Engine', icon: Box },
+    { id: 'sandbox', label: 'Spatial Sandbox', icon: Hand },
+    { id: 'lidar', label: 'LiDAR Inspector', icon: Scan },
+    { id: 'proposals', label: 'Invoice Studio', icon: FileSpreadsheet },
+    { id: 'vault', label: 'Research Vault', icon: FolderKanban },
+    { id: 'hud', label: 'Cyber HUD', icon: Radio },
+    { id: 'api', label: 'Billing & API', icon: Key },
   ];
+
+  const workspaceCategories = [
+    {
+      title: "AI ENGINES",
+      items: [
+        { id: "reels", label: "Reel Engine", desc: "Multi-scene AI video synthesis", icon: Video },
+        { id: "sales", label: "Sales Agent", desc: "SYNAPSE_PACT negotiation", icon: Bot },
+        { id: "voice", label: "Voice Dispatch", desc: "Bland AI telephony calling", icon: PhoneCall, locked: !isPaidUser },
+      ],
+    },
+    {
+      title: "SPATIAL & BIM",
+      items: [
+        { id: "sandbox", label: "3D Sandbox", desc: "Touchless air-gesture control", icon: Hand },
+        { id: "lidar", label: "LiDAR Inspector", desc: "Layer isolation & spatial calipers", icon: Scan },
+        { id: "bim", label: "BIM Engine", desc: "Archicad bridge & 4K synthesis", icon: Box },
+      ],
+    },
+    {
+      title: "BUSINESS & TELEMETRY",
+      items: [
+        { id: "proposals", label: "Invoicing Studio", desc: "Dynamic scope & live A4 print", icon: FileSpreadsheet },
+        { id: "vault", label: "Research Vault", desc: "Tavily precedent search & records", icon: FolderKanban },
+        { id: "hud", label: "Cyber HUD", desc: "Live node health & stream logs", icon: Radio },
+        { id: "api", label: "Billing & API", desc: "Credit balance & Polar checkout", icon: Key },
+      ],
+    },
+  ];
+
+  const currentActiveItem = navItems.find((item) => item.id === activeTab) || navItems[0];
+  const CurrentActiveIcon = currentActiveItem.icon;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex font-sans print:bg-white print:text-black">
-      {/* Left Sidebar (Hidden on mobile viewport) */}
+      {/* Clean Expandable Cyber Dock Sidebar */}
       {user && (
-        <aside className="hidden md:flex w-16 h-screen bg-slate-950/90 backdrop-blur-xl border-r border-slate-900 flex-col justify-between items-center py-5 fixed left-0 top-0 z-50 print:hidden">
-          <div className="flex flex-col items-center gap-8">
-            <div className="p-2 bg-cyan-500/10 border border-cyan-500/30 rounded-xl text-cyan-400 shadow-lg shadow-cyan-500/20">
-              <Sparkles className="w-5 h-5" />
+        <aside className="hidden md:flex flex-col justify-between items-start w-16 hover:w-56 h-screen bg-slate-950/95 backdrop-blur-2xl border-r border-slate-800/80 py-4 pb-12 px-3 fixed left-0 top-0 z-50 transition-all duration-300 ease-in-out group shadow-2xl overflow-hidden print:hidden">
+          <div className="flex flex-col items-start gap-4 w-full">
+            {/* Top Anchor Element */}
+            <div className="flex items-center gap-3 w-full h-10 px-1">
+              <div className="w-8 h-8 rounded-xl bg-slate-900 border border-cyan-500/40 flex items-center justify-center text-cyan-400 font-mono font-black text-sm shrink-0 shadow-lg shadow-cyan-500/20">
+                M
+              </div>
+              <div className="font-mono text-xs hidden group-hover:block transition-all duration-200 whitespace-nowrap overflow-hidden">
+                <p className="font-bold text-white tracking-wider">MIU_33</p>
+                <p className="text-[9px] text-cyan-400">STUDIO COCKPIT</p>
+              </div>
             </div>
 
-            <nav className="flex flex-col gap-3">
-              {navItems.map((item) => {
+            <div className="w-full h-px bg-slate-900" />
+
+            {/* Navigation Tool List */}
+            <nav className="flex flex-col gap-1 w-full">
+              {navItems.map((item, idx) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
+                const isDividerBefore = idx === 3 || idx === 6;
+
                 return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id as any)}
-                    title={item.label}
-                    className={`relative w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isActive
-                        ? 'bg-cyan-500 text-slate-950 font-bold shadow-lg shadow-cyan-500/30'
-                        : 'text-slate-500 hover:text-cyan-400 hover:bg-slate-900'
-                      }`}
-                  >
-                    <Icon className="w-5 h-5" />
-                    {item.locked && (
-                      <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400">
-                        <Lock className="w-2 h-2" />
-                      </span>
+                  <React.Fragment key={item.id}>
+                    {isDividerBefore && (
+                      <div className="w-full h-px bg-slate-900 my-1" />
                     )}
-                  </button>
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveTab(item.id as any)}
+                      className={`relative w-full h-9 px-2 rounded-xl flex items-center gap-3 transition-all ${
+                        isActive
+                          ? 'bg-cyan-500 text-slate-950 font-bold shadow-lg shadow-cyan-500/30'
+                          : 'text-slate-500 hover:text-cyan-400 hover:bg-slate-900'
+                      }`}
+                    >
+                      <div className="relative shrink-0 flex items-center justify-center w-6">
+                        <Icon className="w-4 h-4" />
+                        {item.locked && (
+                          <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 text-[8px]">
+                            <Lock className="w-2 h-2" />
+                          </span>
+                        )}
+                      </div>
+
+                      <span className="font-mono text-xs tracking-wide hidden group-hover:inline-block transition-all duration-200 whitespace-nowrap overflow-hidden">
+                        {item.label}
+                      </span>
+
+                      {isActive && (
+                        <span className="ml-auto w-1.5 h-1.5 rounded-full bg-slate-950 hidden group-hover:block transition-all" />
+                      )}
+                    </button>
+                  </React.Fragment>
                 );
               })}
             </nav>
           </div>
 
-          <div className="flex flex-col items-center gap-3">
+          {/* Bottom Settings & Billing Actions */}
+          <div className="flex flex-col items-start gap-1.5 w-full pt-3 border-t border-slate-900">
             <button
               onClick={() => setActiveTab('api')}
-              title="Top Up Credits"
-              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${activeTab === 'api'
+              className={`w-full h-9 px-2 rounded-xl flex items-center gap-3 transition-all ${
+                activeTab === 'api'
                   ? 'bg-emerald-500 text-slate-950 font-bold shadow-lg shadow-emerald-500/30'
                   : 'text-emerald-400 hover:bg-emerald-500/10 border border-emerald-500/20'
-                }`}
+              }`}
             >
-              <CreditCard className="w-5 h-5" />
+              <div className="shrink-0 flex items-center justify-center w-6">
+                <CreditCard className="w-4 h-4" />
+              </div>
+              <span className="font-mono text-xs font-bold hidden group-hover:inline-block transition-all duration-200 whitespace-nowrap">
+                Top Up Credits
+              </span>
             </button>
 
             <button
               onClick={() => setIsSettingsOpen(true)}
-              title="Account Settings"
-              className="w-10 h-10 rounded-xl flex items-center justify-center transition-all text-slate-500 hover:text-cyan-400 hover:bg-slate-900 border border-slate-800"
+              className="w-full h-9 px-2 rounded-xl flex items-center gap-3 transition-all text-slate-500 hover:text-cyan-400 hover:bg-slate-900 border border-slate-800"
             >
-              <Settings className="w-5 h-5" />
+              <div className="shrink-0 flex items-center justify-center w-6">
+                <Settings className="w-4 h-4" />
+              </div>
+              <span className="font-mono text-xs hidden group-hover:inline-block transition-all duration-200 whitespace-nowrap">
+                Settings
+              </span>
             </button>
           </div>
         </aside>
@@ -615,90 +740,120 @@ export default function StudioDashboard() {
 
       {/* Main Container */}
       <main className={`flex-1 flex flex-col items-center p-4 md:p-6 print:p-0 ${user ? 'md:pl-20 print:pl-0' : 'p-4'}`}>
-        <header className="w-full max-w-5xl flex flex-col md:flex-row items-center justify-between py-4 md:py-6 border-b border-slate-800/80 gap-4 print:hidden">
-          <div className="flex items-center gap-4">
-            <StudioLogo className="w-9 h-9" />
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+        {/* Minimalist Command Breadcrumb Header */}
+        <header className="w-full max-w-6xl flex items-center justify-between py-3 border-b border-slate-800/80 gap-4 print:hidden relative z-40">
+          {/* Left: Studio Identity + Breadcrumb + Active Tool Dropdown */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 font-mono text-xs font-black tracking-wider text-slate-100">
+              <span className="text-cyan-400">MIU_33</span>
+              <span className="text-slate-700 select-none">/</span>
+              {isPaidUser && (
+                <span className="text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded flex items-center gap-1">
+                  <Crown className="w-2.5 h-2.5" /> PRO
                 </span>
-                {isPaidUser ? (
-                  <span className="text-[10px] font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded flex items-center gap-1">
-                    <Crown className="w-3 h-3" /> PRO ARCHITECT
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-mono bg-slate-800 text-slate-400 border border-slate-700 px-2 py-0.5 rounded">
-                    FREE TIER // WATERMARKED
-                  </span>
+              )}
+            </div>
+
+            {user && (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsWorkspaceMenuOpen(!isWorkspaceMenuOpen)}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-cyan-500/40 rounded-xl text-xs font-mono text-slate-200 transition-all shadow-md backdrop-blur-md group"
+                >
+                  <CurrentActiveIcon className="w-3.5 h-3.5 text-cyan-400" />
+                  <span className="font-bold text-white tracking-wide">{currentActiveItem.label}</span>
+                  <ChevronDown
+                    className={`w-3 h-3 text-slate-400 group-hover:text-cyan-400 transition-transform duration-200 ${
+                      isWorkspaceMenuOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                {/* Mega Command Menu Flyout */}
+                {isWorkspaceMenuOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-30"
+                      onClick={() => setIsWorkspaceMenuOpen(false)}
+                    />
+
+                    <div className="absolute left-0 top-11 z-40 w-[90vw] max-w-2xl bg-slate-950/95 border border-cyan-500/30 rounded-2xl p-4 shadow-2xl backdrop-blur-2xl grid grid-cols-1 md:grid-cols-3 gap-4 font-mono animate-in fade-in zoom-in-95 duration-150">
+                      {workspaceCategories.map((cat, catIdx) => (
+                        <div key={catIdx} className="space-y-2">
+                          <p className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider px-2 border-b border-slate-900 pb-1">
+                            {cat.title}
+                          </p>
+                          <div className="space-y-1">
+                            {cat.items.map((item) => {
+                              const ItemIcon = item.icon;
+                              const isActive = activeTab === item.id;
+                              return (
+                                <button
+                                  key={item.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveTab(item.id as any);
+                                    setIsWorkspaceMenuOpen(false);
+                                  }}
+                                  className={`w-full text-left p-2 rounded-lg flex items-start gap-2.5 transition-all group ${
+                                    isActive
+                                      ? "bg-cyan-500 text-slate-950 font-bold"
+                                      : "hover:bg-slate-900/90 text-slate-300 hover:text-white"
+                                  }`}
+                                >
+                                  <ItemIcon
+                                    className={`w-4 h-4 mt-0.5 shrink-0 ${
+                                      isActive ? "text-slate-950" : "text-cyan-400 group-hover:scale-110 transition-transform"
+                                    }`}
+                                  />
+                                  <div>
+                                    <div className="text-[11px] font-bold flex items-center gap-1.5">
+                                      <span>{item.label}</span>
+                                      {item.locked && (
+                                        <Lock className="w-2.5 h-2.5 text-amber-400" />
+                                      )}
+                                    </div>
+                                    <p
+                                      className={`text-[9px] leading-tight line-clamp-1 ${
+                                        isActive ? "text-slate-900/80" : "text-slate-500"
+                                      }`}
+                                    >
+                                      {item.desc}
+                                    </p>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
                 )}
               </div>
-              <p className="text-xs text-slate-400">Multi-Service API Gateway & Digital Architecture</p>
-            </div>
+            )}
           </div>
 
+          {/* Right: Status & User Profile Widget */}
           {user ? (
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              <nav className="flex flex-wrap items-center bg-slate-900/80 border border-slate-800 p-1 rounded-xl text-xs font-semibold backdrop-blur-md">
-                <button
-                  onClick={() => setActiveTab('reels')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${activeTab === 'reels' ? 'bg-cyan-500 text-slate-950 shadow-md font-bold' : 'text-slate-400 hover:text-slate-200'}`}
-                >
-                  <Video className="w-3.5 h-3.5" /> Reel Engine
-                </button>
-                <button
-                  onClick={() => setActiveTab('sales')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${activeTab === 'sales' ? 'bg-cyan-500 text-slate-950 shadow-md font-bold' : 'text-slate-400 hover:text-slate-200'}`}
-                >
-                  <Bot className="w-3.5 h-3.5" /> Sales Agent
-                </button>
-                <button
-                  onClick={() => setActiveTab('voice')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${activeTab === 'voice' ? 'bg-cyan-500 text-slate-950 shadow-md font-bold' : 'text-slate-400 hover:text-slate-200'}`}
-                >
-                  <PhoneCall className="w-3.5 h-3.5" /> Voice Call
-                </button>
-                <button
-                  onClick={() => setActiveTab('vault')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${activeTab === 'vault' ? 'bg-cyan-500 text-slate-950 shadow-md font-bold' : 'text-slate-400 hover:text-slate-200'}`}
-                >
-                  <FolderKanban className="w-3.5 h-3.5" /> Client Vault
-                </button>
-                <button
-                  onClick={() => setActiveTab('bim')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${activeTab === 'bim' ? 'bg-cyan-500 text-slate-950 shadow-md font-bold' : 'text-slate-400 hover:text-slate-200'}`}
-                >
-                  <Box className="w-3.5 h-3.5" /> BIM Engine
-                </button>
-                <button
-                  onClick={() => setActiveTab('api')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${activeTab === 'api' ? 'bg-cyan-500 text-slate-950 shadow-md font-bold' : 'text-slate-400 hover:text-slate-200'}`}
-                >
-                  <Key className="w-3.5 h-3.5" /> API Keys
-                </button>
-              </nav>
-
-              <div className="flex items-center gap-3 border-l border-slate-800 pl-3">
-                <button
-                  onClick={() => setIsSettingsOpen(true)}
-                  className="text-right hover:opacity-80 transition-opacity"
-                >
-                  <p className="text-xs font-mono text-cyan-400">{user.email}</p>
-                  <p className="text-[10px] font-mono text-emerald-400">{clientData?.credits ?? 0} Credits</p>
-                </button>
-                <button
-                  onClick={handleSignOut}
-                  className="p-2 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-lg text-slate-400 hover:text-slate-200 transition-colors"
-                  title="Sign Out"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
+            <div className="flex items-center gap-3 font-mono">
+              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg text-[10px] font-bold">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                <span>ONLINE</span>
               </div>
+
+              <UserAccountPill
+                user={user}
+                clientData={clientData}
+                isPaidUser={isPaidUser}
+                onOpenSettings={() => setIsSettingsOpen(true)}
+                onSignOut={handleSignOut}
+              />
             </div>
           ) : (
-            <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-full">
-              <User className="w-3.5 h-3.5 text-cyan-400" /> Authentication Required
+            <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-full font-mono">
+              <User className="w-3.5 h-3.5 text-cyan-400" /> AUTH REQUIRED
             </div>
           )}
         </header>
@@ -726,7 +881,7 @@ export default function StudioDashboard() {
               </div>
             </div>
 
-            <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/80 p-3.5 rounded-lg text-indigo-400">
+            <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/80 p-3.5 rounded-xl text-indigo-400">
               <div className="p-2 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-indigo-400">
                 <Box className="w-4 h-4" />
               </div>
@@ -767,7 +922,7 @@ export default function StudioDashboard() {
                 className="w-full bg-slate-950/80 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 transition-all"
                 required
               />
-              
+
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -805,10 +960,28 @@ export default function StudioDashboard() {
           </div>
         ) : (
           <section className="w-full max-w-5xl mt-6 print:mt-0 print:max-w-none">
+            {/* 1. Spatial Gesture 3D Sandbox */}
+            {activeTab === 'sandbox' && <SpatialGestureSandbox />}
+
+            {/* 2. Cyber-Brutalist HUD Dashboard */}
+            {activeTab === 'hud' && <CyberHudDashboard />}
+
+            {/* 3. 3D LiDAR & Mesh Inspector */}
+            {activeTab === 'lidar' && <LidarMeshInspector />}
+
+            {/* 4. Instant Proposal & Invoice Studio */}
+            {activeTab === 'proposals' && <ProposalInvoiceStudio />}
+
+            {/* 5. AI Reel Synthesis Engine & Social Flywheel */}
             {activeTab === 'reels' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="flex flex-col gap-5 bg-slate-900/40 backdrop-blur-md border border-slate-800/80 p-6 rounded-2xl shadow-xl shadow-cyan-500/5">
-                  <h2 className="text-lg font-semibold text-slate-200">New Generation Parameters</h2>
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold text-slate-200">New Generation Parameters</h2>
+                    <span className="text-[10px] font-mono font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Radio className="w-2.5 h-2.5 animate-pulse" /> DUAL FLYWHEEL ACTIVE
+                    </span>
+                  </div>
 
                   <form onSubmit={handleGenerate} className="flex flex-col gap-4">
                     <div className="flex flex-col gap-2">
@@ -837,10 +1010,11 @@ export default function StudioDashboard() {
                             type="button"
                             onClick={() => setDuration(item.value)}
                             disabled={loading}
-                            className={`py-2 text-xs font-semibold rounded-lg border transition-all ${duration === item.value
+                            className={`py-2 text-xs font-semibold rounded-lg border transition-all ${
+                              duration === item.value
                                 ? 'bg-cyan-500/10 border-cyan-500 text-cyan-400 shadow-sm'
                                 : 'bg-slate-950/80 border-slate-800 text-slate-400 hover:border-slate-700'
-                              }`}
+                            }`}
                           >
                             {item.label}
                           </button>
@@ -863,10 +1037,11 @@ export default function StudioDashboard() {
                             type="button"
                             onClick={() => setAspectRatio(item.value as any)}
                             disabled={loading}
-                            className={`py-2 text-xs font-semibold rounded-lg border transition-all ${aspectRatio === item.value
+                            className={`py-2 text-xs font-semibold rounded-lg border transition-all ${
+                              aspectRatio === item.value
                                 ? 'bg-cyan-500/10 border-cyan-500 text-cyan-400 shadow-sm'
                                 : 'bg-slate-950/80 border-slate-800 text-slate-400 hover:border-slate-700'
-                              }`}
+                            }`}
                           >
                             {item.label}
                           </button>
@@ -892,24 +1067,64 @@ export default function StudioDashboard() {
                       </select>
                     </div>
 
-                    <button
-                      type="submit"
-                      disabled={loading || !prompt.trim()}
-                      className="w-full py-3 mt-2 bg-cyan-500 hover:bg-cyan-400 disabled:bg-slate-800 disabled:text-slate-600 text-slate-950 font-bold rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20"
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Processing {duration}s Pipeline via fal.ai...</span>
-                        </>
+                    {/* Execution Actions */}
+                    <div className="flex flex-col gap-2.5 mt-2">
+                      <button
+                        type="submit"
+                        disabled={loading || !prompt.trim()}
+                        className="w-full py-3 bg-cyan-500 hover:bg-cyan-400 disabled:bg-slate-800 disabled:text-slate-600 text-slate-950 font-bold rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20"
+                      >
+                        {loading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Processing {duration}s Pipeline via fal.ai...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-4 h-4 fill-current" />
+                            <span>Generate Reel (25 Credits)</span>
+                          </>
+                        )}
+                      </button>
+
+                      {/* Admin-Only Multi-Channel Broadcast Trigger */}
+                      {isAdmin ? (
+                        <button
+                          type="button"
+                          onClick={handleBroadcastOnly}
+                          disabled={loading || isBroadcasting || !prompt.trim()}
+                          className="w-full py-2.5 bg-linear-to-r from-cyan-950/60 to-slate-900 hover:from-cyan-900/40 hover:to-slate-800 border border-cyan-500/40 text-cyan-300 font-mono text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-2"
+                        >
+                          {isBroadcasting ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              <span>Broadcasting Campaign...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Share2 className="w-3.5 h-3.5 text-cyan-400" />
+                              <span>Auto-Generate & Broadcast to Studio Socials (Admin)</span>
+                            </>
+                          )}
+                        </button>
                       ) : (
-                        <>
-                          <Play className="w-4 h-4 fill-current" />
-                          <span>Generate Reel (25 Credits)</span>
-                        </>
+                        <div className="w-full py-2 px-3 bg-slate-950/50 border border-slate-800/80 rounded-lg flex items-center justify-between text-[11px] font-mono text-slate-500">
+                          <span className="flex items-center gap-1.5">
+                            <Lock className="w-3 h-3 text-slate-600" /> Studio Multi-Broadcast
+                          </span>
+                          <span className="text-[10px] text-slate-600">Admin Managed</span>
+                        </div>
                       )}
-                    </button>
+                    </div>
                   </form>
+
+                  {/* Connected Broadcast Targets */}
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-800/60 text-[10px] font-mono text-slate-400">
+                    <span>Active Channels:</span>
+                    <div className="flex items-center gap-1.5 text-cyan-400">
+                      <span>YT Shorts</span> • <span>TikTok</span> • <span>IG</span> • <span>LinkedIn</span> • <span>X</span> • <span>Reddit</span>
+                    </div>
+                  </div>
 
                   {error && (
                     <div className="flex items-center gap-2 p-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-lg text-xs">
@@ -989,28 +1204,43 @@ export default function StudioDashboard() {
                               )}
                             </div>
 
-                            <a
-                              href={jobStatus.result.videoUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 rounded-lg transition-colors flex items-center justify-center gap-2 border border-slate-700"
-                            >
-                              <Download className="w-3.5 h-3.5" />
-                              <span>Download Rendered MP4</span>
-                            </a>
+                            <div className={`grid ${isAdmin ? 'grid-cols-2' : 'grid-cols-1'} gap-2`}>
+                              <a
+                                href={jobStatus.result.videoUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="py-2.5 bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 rounded-lg transition-colors flex items-center justify-center gap-2 border border-slate-700"
+                              >
+                                <Download className="w-3.5 h-3.5" />
+                                <span>Download MP4</span>
+                              </a>
+
+                              {isAdmin && (
+                                <button
+                                  onClick={handleBroadcastOnly}
+                                  disabled={isBroadcasting}
+                                  className="py-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20"
+                                >
+                                  <Share2 className="w-3.5 h-3.5" />
+                                  <span>Broadcast Socials</span>
+                                </button>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
                     )}
                   </div>
 
-                  <div className="text-[11px] font-mono text-slate-500 border-t border-slate-800/80 pt-4">
-                    Engine Stack: Express API ➔ BullMQ ➔ fal.ai ➔ Supabase Storage CDN
+                  <div className="text-[11px] font-mono text-slate-500 border-t border-slate-800/80 pt-4 flex items-center justify-between">
+                    <span>Stack: Express API ➔ BullMQ ➔ fal.ai ➔ Supabase</span>
+                    <span className="text-cyan-400/80 font-bold">Auto-Sales AI: ONLINE</span>
                   </div>
                 </div>
               </div>
             )}
 
+            {/* 6. SYNAPSE_PACT Sales Agent */}
             {activeTab === 'sales' && (
               <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/80 p-6 rounded-2xl flex flex-col gap-4 shadow-xl">
                 <h2 className="text-lg font-semibold text-cyan-400 flex items-center gap-2">
@@ -1024,8 +1254,8 @@ export default function StudioDashboard() {
                       <div
                         key={i}
                         className={`text-xs font-mono p-3 rounded-lg border max-w-lg ${msg.sender === 'USER'
-                            ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300 ml-auto'
-                            : 'bg-slate-900/90 border-slate-800 text-slate-300'
+                          ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300 ml-auto'
+                          : 'bg-slate-900/90 border-slate-800 text-slate-300'
                           }`}
                       >
                         <span className="text-[10px] text-slate-500 block mb-1">{msg.sender}:</span>
@@ -1057,6 +1287,7 @@ export default function StudioDashboard() {
               </div>
             )}
 
+            {/* 7. Bland AI Telephony Voice Tab */}
             {activeTab === 'voice' && (
               <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/80 p-6 rounded-2xl flex flex-col gap-4 shadow-xl">
                 <div className="flex items-center justify-between">
@@ -1121,15 +1352,14 @@ export default function StudioDashboard() {
               </div>
             )}
 
-            {/* Client Vault & Proposal Engine Tab */}
+            {/* 8. Client Vault & Search Tab */}
             {activeTab === 'vault' && (
               <div className="flex flex-col gap-8">
-                {/* Tavily Live Web Search */}
                 <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/80 p-5 rounded-2xl flex flex-col gap-4 shadow-xl print:hidden">
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-cyan-400" /> Live AI Architecture & Web Precedent Search
+                        <Search className="w-4 h-4 text-cyan-400" /> Live AI Architecture & Web Precedent Search
                       </h3>
                       <p className="text-xs text-slate-500 mt-0.5">
                         Autonomous research engine for building codes, material specs, and architectural precedents.
@@ -1452,7 +1682,7 @@ export default function StudioDashboard() {
               </div>
             )}
 
-            {/* Archicad + Tapir BIM Studio Configurator Tab */}
+            {/* 9. Archicad + Tapir BIM Engine Tab */}
             {activeTab === 'bim' && (
               <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/80 p-6 rounded-2xl flex flex-col gap-6 shadow-xl">
                 <div>
@@ -1551,8 +1781,8 @@ export default function StudioDashboard() {
                       <button
                         onClick={() => setViewMode('3d')}
                         className={`px-3 py-1.5 text-xs font-mono rounded-lg transition-all ${viewMode === '3d'
-                            ? 'bg-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/20'
-                            : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                          ? 'bg-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/20'
+                          : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
                           }`}
                       >
                         🎮 Interactive 3D BIM Viewport
@@ -1561,8 +1791,8 @@ export default function StudioDashboard() {
                         onClick={() => setViewMode('2d')}
                         disabled={!bimOutput?.imageUrl}
                         className={`px-3 py-1.5 text-xs font-mono rounded-lg transition-all ${viewMode === '2d'
-                            ? 'bg-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/20'
-                            : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800 disabled:opacity-40'
+                          ? 'bg-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/20'
+                          : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800 disabled:opacity-40'
                           }`}
                       >
                         🖼️ AI 4K Render
@@ -1642,7 +1872,7 @@ export default function StudioDashboard() {
               </div>
             )}
 
-            {/* API Keys & Billing Tab (3-Tier Implementation) */}
+            {/* 10. API Keys & Billing Tab */}
             {activeTab === 'api' && (
               <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/80 p-6 rounded-2xl flex flex-col gap-6 shadow-xl">
                 <div>
@@ -1778,6 +2008,7 @@ export default function StudioDashboard() {
               </div>
             )}
 
+            {/* 11. Environment Settings Tab */}
             {activeTab === 'settings' && (
               <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/80 p-6 rounded-2xl flex flex-col gap-6 shadow-xl">
                 <div>
