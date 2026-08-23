@@ -16,7 +16,7 @@ import { LowCreditBanner } from '@/components/LowCreditBanner';
 import { UserSettingsModal } from '@/components/UserSettingsModal';
 import UserAccountPill from '@/components/UserAccountPill';
 
-// 4 Modular Cyber-Architectural Suite Components
+// Modular Cyber-Architectural Suite Components
 import SpatialGestureSandbox from '@/components/sandbox/SpatialGestureSandbox';
 import CyberHudDashboard from '@/components/dashboard/CyberHudDashboard';
 import ProposalInvoiceStudio from '@/components/studio/ProposalInvoiceStudio';
@@ -106,6 +106,19 @@ export default function StudioDashboard() {
   const isPaidUser = Boolean(clientData?.isPaid || (clientData?.tier === 'PRO') || (clientData?.credits && clientData.credits > 100));
   const isAdmin = user?.email === 'padillaanamy83@gmail.com';
 
+  // Helper function to extract Auth headers (JWT bearer token + API Key)
+  const getAuthHeaders = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    const activeApiKey = clientData?.apiKey || '';
+
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      'x-api-key': activeApiKey,
+    };
+  };
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }: { data: { session: any } }) => {
       setUser(data.session?.user ?? null);
@@ -153,7 +166,7 @@ export default function StudioDashboard() {
         .eq('id', userId)
         .maybeSingle();
 
-      const activeCredits = client?.credit_balance ?? profile?.credit_balance ?? 500;
+      const activeCredits = client?.credit_balance ?? profile?.credit_balance ?? 20;
       const isPaid = profile?.tier === 'PRO' || activeCredits > 100;
 
       setClientData({
@@ -166,9 +179,9 @@ export default function StudioDashboard() {
       console.error('Error fetching client details:', err);
       setClientData({
         apiKey: `miu_live_${userId.slice(0, 8)}`,
-        credits: 500,
-        isPaid: true,
-        tier: 'PRO',
+        credits: 20,
+        isPaid: false,
+        tier: 'FREE',
       });
     }
   };
@@ -229,7 +242,7 @@ export default function StudioDashboard() {
     if (isSignUp) {
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) setAuthError(error.message);
-      else alert('Account created! 25 Starter credits granted. Sign in to access your dashboard.');
+      else alert('Account created! 20 Starter credits granted. Sign in to access your dashboard.');
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setAuthError(error.message);
@@ -252,9 +265,10 @@ export default function StudioDashboard() {
     setBuyingCredits(packageType);
 
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/api/billing/paymongo-checkout`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           userId: user.id,
           creditPackage: packageType,
@@ -279,9 +293,10 @@ export default function StudioDashboard() {
     setBuyingCredits(packageType);
 
     try {
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/api/billing/polar-checkout`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           userId: user.id,
           email: user.email,
@@ -318,15 +333,16 @@ export default function StudioDashboard() {
     setJobStatus(null);
 
     try {
-      const activeApiKey = clientData?.apiKey || '';
-
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/api/generate`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': activeApiKey
-        },
-        body: JSON.stringify({ topic: prompt, duration, aspectRatio, stylePreset }),
+        headers: authHeaders,
+        body: JSON.stringify({ 
+          topic: prompt, 
+          duration, 
+          aspectRatio, 
+          stylePreset 
+        }),
       });
 
       const data = await res.json();
@@ -337,6 +353,8 @@ export default function StudioDashboard() {
         setJobStatus({ jobId: idStr, state: 'queued' });
         if (data.remainingCredits !== undefined && clientData) {
           setClientData({ ...clientData, credits: data.remainingCredits });
+        } else if (user) {
+          fetchClientDetails(user.id);
         }
       } else {
         throw new Error(data?.error || 'Failed to initialize job.');
@@ -361,10 +379,11 @@ export default function StudioDashboard() {
     setIsBroadcasting(true);
     try {
       const targetVideoUrl = jobStatus?.result?.videoUrl || "https://miu33archstudio.xyz/preview_sample.mp4";
+      const authHeaders = await getAuthHeaders();
       
       const res = await fetch("/api/social/broadcast", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders,
         body: JSON.stringify({
           topic: prompt,
           videoUrl: targetVideoUrl,
@@ -396,13 +415,10 @@ export default function StudioDashboard() {
     setSalesLoading(true);
 
     try {
-      const activeApiKey = clientData?.apiKey || '';
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/api/sales-agent/chat`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': activeApiKey,
-        },
+        headers: authHeaders,
         body: JSON.stringify({
           message: userText,
           conversationHistory: updatedMessages.slice(0, -1),
@@ -439,13 +455,10 @@ export default function StudioDashboard() {
     setVoiceDispatching(true);
 
     try {
-      const activeApiKey = clientData?.apiKey || '';
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/api/voice/dispatch`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': activeApiKey,
-        },
+        headers: authHeaders,
         body: JSON.stringify({ phoneNumber, campaignType, taskPrompt: voicePrompt }),
       });
 
@@ -479,13 +492,10 @@ export default function StudioDashboard() {
       .filter((s) => s.length > 0);
 
     try {
-      const activeApiKey = clientData?.apiKey || '';
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/api/proposals/generate`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': activeApiKey,
-        },
+        headers: authHeaders,
         body: JSON.stringify({
           clientName,
           projectTitle,
@@ -521,13 +531,10 @@ export default function StudioDashboard() {
 
     setSearchLoading(true);
     try {
-      const activeApiKey = clientData?.apiKey || '';
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/api/vault/search`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': activeApiKey,
-        },
+        headers: authHeaders,
         body: JSON.stringify({ query: searchQuery }),
       });
       const data = await res.json();
@@ -552,13 +559,10 @@ export default function StudioDashboard() {
     setBimOutput(null);
 
     try {
-      const activeApiKey = clientData?.apiKey || '';
+      const authHeaders = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/api/archicad/execute`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': activeApiKey,
-        },
+        headers: authHeaders,
         body: JSON.stringify({
           action: bimAction,
           parameters: {
@@ -910,7 +914,7 @@ export default function StudioDashboard() {
               <h2 className="text-lg font-bold text-slate-100">
                 {isSignUp ? 'Create Studio Account' : 'Sign In to Dashboard'}
               </h2>
-              <p className="text-xs text-slate-400 mt-1">Access your API keys, AI agents, and 25 starter credits.</p>
+              <p className="text-xs text-slate-400 mt-1">Access your API keys, AI agents, and 20 starter credits.</p>
             </div>
 
             <form onSubmit={handleAuth} className="flex flex-col gap-4">
@@ -945,7 +949,7 @@ export default function StudioDashboard() {
                 type="submit"
                 className="w-full py-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-lg text-xs transition-all shadow-lg shadow-cyan-500/20"
               >
-                {isSignUp ? 'Sign Up & Get 25 Free Credits' : 'Sign In'}
+                {isSignUp ? 'Sign Up & Get 20 Free Credits' : 'Sign In'}
               </button>
             </form>
 
