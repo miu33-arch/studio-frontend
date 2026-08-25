@@ -365,52 +365,65 @@ export default function StudioDashboard() {
   };
 
   const handleBroadcastOnly = async () => {
-    if (!isAdmin) {
-      alert("🔒 Access Restricted: Social broadcasting is strictly reserved for the Studio Administrator.");
-      return;
+  if (!isAdmin) {
+    alert("🔒 Access Restricted: Social broadcasting is strictly reserved for the Studio Administrator.");
+    return;
+  }
+
+  const cleanPrompt = prompt.trim();
+  if (!cleanPrompt) {
+    alert("Please enter a story topic or prompt to broadcast.");
+    return;
+  }
+
+  const targetVideoUrl = jobStatus?.result?.videoUrl || "https://miu33archstudio.xyz/preview_sample.mp4";
+  
+  if (!targetVideoUrl) {
+    alert("No generated reel or preview asset available for dispatch.");
+    return;
+  }
+
+  setIsBroadcasting(true);
+  try {
+    const authHeaders = await getAuthHeaders();
+
+    const res = await fetch(`${API_BASE}/api/social/broadcast`, {
+      method: "POST",
+      headers: {
+        ...authHeaders,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        title: cleanPrompt,
+        videoUrl: targetVideoUrl,
+        platforms: [
+          "youtube",
+          "tiktok",
+          "instagram",
+          "linkedin",
+          "x",
+          "google_business_profile",
+        ],
+      }),
+    });
+
+    const isJson = res.headers.get("content-type")?.includes("application/json");
+    const data = isJson ? await res.json() : null;
+
+    if (res.ok) {
+      alert("⚡ Autonomous Reel Campaign generated and queued across all connected social channels!");
+    } else {
+      const errorMessage = data?.error || `Broadcast dispatch failed (HTTP ${res.status})`;
+      alert(`Broadcast notice: ${errorMessage}`);
     }
-
-    if (!prompt.trim()) {
-      alert("Please enter a story topic or prompt to broadcast.");
-      return;
-    }
-
-    setIsBroadcasting(true);
-    try {
-      const targetVideoUrl = jobStatus?.result?.videoUrl || "https://miu33archstudio.xyz/preview_sample.mp4";
-      const authHeaders = await getAuthHeaders();
-
-      const res = await fetch(`${API_BASE}/api/social/broadcast`, {
-        method: "POST",
-        headers: authHeaders,
-        body: JSON.stringify({
-          title: prompt,
-          videoUrl: targetVideoUrl,
-          platforms: [
-            "youtube",
-            "tiktok",
-            "instagram",
-            "linkedin",
-            "x",
-            "google_business_profile"
-          ],
-        }),
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        alert("⚡ Autonomous Reel Campaign generated and queued across all connected social channels!");
-      } else {
-        alert(`Broadcast notice: ${data.error || "Queued in local autonomous dispatch buffer."}`);
-      }
-    } catch (err: any) {
-      console.error("Broadcast failed:", err);
-      alert("Failed to reach social broadcast endpoint.");
-    } finally {
-      setIsBroadcasting(false);
-    }
-  };
-
+  } catch (err: unknown) {
+    console.error("Broadcast failed:", err);
+    const message = err instanceof Error ? err.message : "Failed to reach social broadcast endpoint.";
+    alert(`Network Error: ${message}`);
+  } finally {
+    setIsBroadcasting(false);
+  }
+};
   const handleSendSalesMessage = async () => {
     if (!salesInput.trim() || salesLoading) return;
 
