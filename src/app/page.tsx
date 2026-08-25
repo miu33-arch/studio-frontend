@@ -365,61 +365,63 @@ export default function StudioDashboard() {
   };
 
 const handleBroadcastOnly = async () => {
-  if (!isAdmin) {
-    alert("🔒 Access Restricted: Social broadcasting is reserved for Studio Admin.");
-    return;
-  }
+    if (!isAdmin) {
+      alert("🔒 Access Restricted: Social broadcasting is strictly reserved for the Studio Administrator.");
+      return;
+    }
 
-  // 1. Enforce that a real generated video exists before broadcasting
-  const targetVideoUrl = jobStatus?.result?.videoUrl;
-  if (!targetVideoUrl) {
-    alert("⚠️ No rendered video found! Please generate and wait for the reel to finish rendering before broadcasting.");
-    return;
-  }
+    // 1. Verify rendered video exists
+    const targetVideoUrl = jobStatus?.result?.videoUrl;
+    if (!targetVideoUrl) {
+      alert("⚠️ No rendered video found! Please generate and wait for the reel to finish rendering before broadcasting.");
+      return;
+    }
 
-  const cleanPrompt = prompt.trim();
-  if (!cleanPrompt) {
-    alert("Please enter a prompt/title.");
-    return;
-  }
+    // 2. Validate and sanitize prompt/title
+    const cleanPrompt = (prompt || "").trim();
+    if (!cleanPrompt) {
+      alert("Please enter a topic or prompt first.");
+      return;
+    }
 
-  const safeTitle = cleanPrompt.length > 95
-    ? `${cleanPrompt.slice(0, 92)}...`
-    : cleanPrompt;
+    // Enforce 100-character ceiling for YouTube
+    const safeTitle = cleanPrompt.length > 95
+      ? `${cleanPrompt.slice(0, 92)}...`
+      : cleanPrompt;
 
-  setIsBroadcasting(true);
-  try {
-    const authHeaders = await getAuthHeaders();
+    setIsBroadcasting(true);
+    try {
+      const authHeaders = await getAuthHeaders();
 
-    const res = await fetch(`${API_BASE}/api/social/broadcast`, {
+      const res = await fetch(`${API_BASE}/api/social/broadcast`, {
       method: "POST",
       headers: authHeaders,
       body: JSON.stringify({
-        title: safeTitle,
-        videoUrl: targetVideoUrl,
-        platforms: [
-          "youtube",
-          "instagram",
-          "linkedin",
-          "x",
-          "google_business_profile",
-        ],
-      }),
-    });
+          title: safeTitle,
+          videoUrl: targetVideoUrl,
+          platforms: [
+            "youtube",
+            "instagram",
+            "linkedin",
+            "x",
+            "google_business",
+          ],
+        }),
+      });
 
-    const data = await res.json();
-    if (res.ok) {
-      alert("⚡ Real AI Reel broadcasted successfully across connected channels!");
-    } else {
-      alert(`Broadcast notice: ${data.error}`);
+      const data = await res.json();
+      if (res.ok) {
+        alert("⚡ Real AI Reel broadcasted successfully across connected channels!");
+      } else {
+        alert(`Broadcast notice: ${data.error || "Failed to broadcast reel."}`);
+      }
+    } catch (err: any) {
+      console.error("Broadcast failed:", err);
+      alert("Failed to reach social broadcast endpoint.");
+    } finally {
+      setIsBroadcasting(false);
     }
-  } catch (err: any) {
-    console.error("Broadcast failed:", err);
-    alert("Failed to dispatch broadcast.");
-  } finally {
-    setIsBroadcasting(false);
-  }
-};
+  };
   const handleSendSalesMessage = async () => {
     if (!salesInput.trim() || salesLoading) return;
 
