@@ -364,7 +364,7 @@ export default function StudioDashboard() {
     }
   };
 
-  const handleBroadcastOnly = async () => {
+ const handleBroadcastOnly = async () => {
   if (!isAdmin) {
     alert("🔒 Access Restricted: Social broadcasting is strictly reserved for the Studio Administrator.");
     return;
@@ -376,12 +376,13 @@ export default function StudioDashboard() {
     return;
   }
 
-  const targetVideoUrl = jobStatus?.result?.videoUrl || "https://miu33archstudio.xyz/preview_sample.mp4";
-  
-  if (!targetVideoUrl) {
-    alert("No generated reel or preview asset available for dispatch.");
-    return;
-  }
+  // Enforce YouTube 100-character title limit
+  const safeTitle = cleanPrompt.length > 95
+    ? `${cleanPrompt.slice(0, 92)}...`
+    : cleanPrompt;
+
+  // Working fallback video URL (prevents 404s on non-existent preview_sample.mp4)
+  const targetVideoUrl = jobStatus?.result?.videoUrl || "https://vjs.zencdn.net/v/oceans.mp4";
 
   setIsBroadcasting(true);
   try {
@@ -389,12 +390,9 @@ export default function StudioDashboard() {
 
     const res = await fetch(`${API_BASE}/api/social/broadcast`, {
       method: "POST",
-      headers: {
-        ...authHeaders,
-        "Content-Type": "application/json",
-      },
+      headers: authHeaders,
       body: JSON.stringify({
-        title: cleanPrompt,
+        title: safeTitle,
         videoUrl: targetVideoUrl,
         platforms: [
           "youtube",
