@@ -364,27 +364,25 @@ export default function StudioDashboard() {
     }
   };
 
-const handleBroadcastOnly = async () => {
+  // Manual broadcast triggered on existing rendered video
+  const handleBroadcastOnly = async () => {
     if (!isAdmin) {
       alert("🔒 Access Restricted: Social broadcasting is strictly reserved for the Studio Administrator.");
       return;
     }
 
-    // 1. Verify rendered video exists
     const targetVideoUrl = jobStatus?.result?.videoUrl;
     if (!targetVideoUrl) {
       alert("⚠️ No rendered video found! Please generate and wait for the reel to finish rendering before broadcasting.");
       return;
     }
 
-    // 2. Validate and sanitize prompt/title
     const cleanPrompt = (prompt || "").trim();
     if (!cleanPrompt) {
       alert("Please enter a topic or prompt first.");
       return;
     }
 
-    // Enforce 100-character ceiling for YouTube
     const safeTitle = cleanPrompt.length > 95
       ? `${cleanPrompt.slice(0, 92)}...`
       : cleanPrompt;
@@ -394,9 +392,9 @@ const handleBroadcastOnly = async () => {
       const authHeaders = await getAuthHeaders();
 
       const res = await fetch(`${API_BASE}/api/social/broadcast`, {
-      method: "POST",
-      headers: authHeaders,
-      body: JSON.stringify({
+        method: "POST",
+        headers: authHeaders,
+        body: JSON.stringify({
           title: safeTitle,
           videoUrl: targetVideoUrl,
           platforms: [
@@ -422,6 +420,128 @@ const handleBroadcastOnly = async () => {
       setIsBroadcasting(false);
     }
   };
+
+  // Sequential pipeline: generate video, poll until complete, then broadcast real MP4
+  const handleAutoGenerateAndBroadcast = async () => {
+    if (!isAdmin) {
+      alert("🔒 Access Restricted: Social broadcasting is strictly reserved for Studio Admin.");
+      return;
+    }
+
+    const cleanPrompt = prompt.trim();
+    if (!cleanPrompt) {
+      alert("Please enter a story topic or prompt first.");
+      return;
+    }
+
+    const REQUIRED_CREDITS = 25;
+    if ((clientData?.credits ?? 0) < REQUIRED_CREDITS) {
+      setError(`Insufficient credits. Reel synthesis requires ${REQUIRED_CREDITS} credits.`);
+      setActiveTab('api');
+      return;
+    }
+
+    setLoading(true);
+    setIsBroadcasting(true);
+    setError(null);
+    setJobStatus(null);
+
+    try {
+      const authHeaders = await getAuthHeaders();
+
+      // 1. Kick off video generation
+      const genRes = await fetch(`${API_BASE}/api/generate`, {
+        method: "POST",
+        headers: authHeaders,
+        body: JSON.stringify({
+          topic: cleanPrompt,
+          duration,
+          aspectRatio,
+          stylePreset,
+        }),
+      });
+
+      const genData = await genRes.json();
+      if (!genRes.ok || !genData.jobId) {
+        throw new Error(genData.error || "Failed to start video rendering job.");
+      }
+
+      const jobId = String(genData.jobId);
+      setCurrentJobId(jobId);
+      setJobStatus({ jobId, state: "queued" });
+
+      if (genData.remainingCredits !== undefined && clientData) {
+        setClientData({ ...clientData, credits: genData.remainingCredits });
+      }
+
+      // 2. Poll job status until video render is complete
+      let renderedVideoUrl: string | null = null;
+      let attempts = 0;
+      const maxAttempts = 60; // 2-3 minutes window (60 * 3s)
+
+      while (attempts < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        attempts++;
+
+        const jobRes = await fetch(`${API_BASE}/api/job/${jobId}`);
+        if (!jobRes.ok) continue;
+
+        const jobData: JobStatus = await jobRes.json();
+        setJobStatus(jobData);
+
+        if (jobData.state === "completed" && jobData.result?.videoUrl) {
+          renderedVideoUrl = jobData.result.videoUrl;
+          break;
+        }
+
+        if (jobData.state === "failed") {
+          throw new Error("AI video generation job failed on server queue.");
+        }
+      }
+
+      if (!renderedVideoUrl) {
+        throw new Error("Render job timed out. Try broadcasting manually once ready.");
+      }
+
+      // 3. Enforce YouTube 100-character title ceiling
+      const safeTitle = cleanPrompt.length > 95
+        ? `${cleanPrompt.slice(0, 92)}...`
+        : cleanPrompt;
+
+      // 4. Dispatch actual rendered video to social channels
+      const broadcastRes = await fetch(`${API_BASE}/api/social/broadcast`, {
+        method: "POST",
+        headers: authHeaders,
+        body: JSON.stringify({
+          title: safeTitle,
+          videoUrl: renderedVideoUrl,
+          platforms: [
+            "youtube",
+            "instagram",
+            "linkedin",
+            "x",
+            "google_business",
+          ],
+        }),
+      });
+
+      const broadcastData = await broadcastRes.json();
+      if (broadcastRes.ok) {
+        alert("⚡ Real AI Reel generated and published across all connected social channels!");
+      } else {
+        alert(`Broadcast failed: ${broadcastData.error}`);
+      }
+    } catch (err: any) {
+      console.error("Auto-broadcast pipeline failed:", err);
+      setError(err.message || "Auto-broadcast failed.");
+      alert(`Auto-Broadcast Error: ${err.message}`);
+    } finally {
+      setLoading(false);
+      setIsBroadcasting(false);
+      if (user) fetchClientDetails(user.id);
+    }
+  };
+
   const handleSendSalesMessage = async () => {
     if (!salesInput.trim() || salesLoading) return;
 
@@ -1103,7 +1223,7 @@ const handleBroadcastOnly = async () => {
                       {isAdmin ? (
                         <button
                           type="button"
-                          onClick={handleBroadcastOnly}
+                          onClick={handleAutoGenerateAndBroadcast}
                           disabled={loading || isBroadcasting || !prompt.trim()}
                           className="w-full py-2.5 bg-linear-to-r from-cyan-950/60 to-slate-900 hover:from-cyan-900/40 hover:to-slate-800 border border-cyan-500/40 text-cyan-300 font-mono text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-2"
                         >
@@ -1229,6 +1349,7 @@ const handleBroadcastOnly = async () => {
 
                               {isAdmin && (
                                 <button
+                                  type="button"
                                   onClick={handleBroadcastOnly}
                                   disabled={isBroadcasting}
                                   className="py-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20"
