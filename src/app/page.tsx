@@ -364,25 +364,28 @@ export default function StudioDashboard() {
     }
   };
 
- const handleBroadcastOnly = async () => {
+const handleBroadcastOnly = async () => {
   if (!isAdmin) {
-    alert("🔒 Access Restricted: Social broadcasting is strictly reserved for the Studio Administrator.");
+    alert("🔒 Access Restricted: Social broadcasting is reserved for Studio Admin.");
+    return;
+  }
+
+  // 1. Enforce that a real generated video exists before broadcasting
+  const targetVideoUrl = jobStatus?.result?.videoUrl;
+  if (!targetVideoUrl) {
+    alert("⚠️ No rendered video found! Please generate and wait for the reel to finish rendering before broadcasting.");
     return;
   }
 
   const cleanPrompt = prompt.trim();
   if (!cleanPrompt) {
-    alert("Please enter a story topic or prompt to broadcast.");
+    alert("Please enter a prompt/title.");
     return;
   }
 
-  // Enforce YouTube 100-character title limit
   const safeTitle = cleanPrompt.length > 95
     ? `${cleanPrompt.slice(0, 92)}...`
     : cleanPrompt;
-
-  // Working fallback video URL (prevents 404s on non-existent preview_sample.mp4)
-  const targetVideoUrl = jobStatus?.result?.videoUrl || "https://vjs.zencdn.net/v/oceans.mp4";
 
   setIsBroadcasting(true);
   try {
@@ -396,7 +399,6 @@ export default function StudioDashboard() {
         videoUrl: targetVideoUrl,
         platforms: [
           "youtube",
-          "tiktok",
           "instagram",
           "linkedin",
           "x",
@@ -405,19 +407,15 @@ export default function StudioDashboard() {
       }),
     });
 
-    const isJson = res.headers.get("content-type")?.includes("application/json");
-    const data = isJson ? await res.json() : null;
-
+    const data = await res.json();
     if (res.ok) {
-      alert("⚡ Autonomous Reel Campaign generated and queued across all connected social channels!");
+      alert("⚡ Real AI Reel broadcasted successfully across connected channels!");
     } else {
-      const errorMessage = data?.error || `Broadcast dispatch failed (HTTP ${res.status})`;
-      alert(`Broadcast notice: ${errorMessage}`);
+      alert(`Broadcast notice: ${data.error}`);
     }
-  } catch (err: unknown) {
+  } catch (err: any) {
     console.error("Broadcast failed:", err);
-    const message = err instanceof Error ? err.message : "Failed to reach social broadcast endpoint.";
-    alert(`Network Error: ${message}`);
+    alert("Failed to dispatch broadcast.");
   } finally {
     setIsBroadcasting(false);
   }
