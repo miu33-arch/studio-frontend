@@ -1,15 +1,13 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Sparkles, Settings, LogOut } from "lucide-react";
+import { ShieldCheck, Settings, LogOut } from "lucide-react";
 
 export interface UserAccountPillProps {
-  // Support direct props or object props
   user?: any;
   email?: string;
-  credits?: number;
   tier?: string;
-  clientData?: { credits: number; tier?: string; apiKey?: string } | null;
+  clientData?: { tier?: string; apiKey?: string; clientName?: string } | null;
   isPaidUser?: boolean;
   compact?: boolean;
   onOpenSettings: () => void;
@@ -19,10 +17,9 @@ export interface UserAccountPillProps {
 export default function UserAccountPill({
   user,
   email,
-  credits,
   tier,
   clientData,
-  isPaidUser,
+  isPaidUser = true,
   compact = false,
   onOpenSettings,
   onSignOut,
@@ -31,10 +28,7 @@ export default function UserAccountPill({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const activeEmail = email || user?.email || "";
-  const activeCredits = credits ?? clientData?.credits ?? 0;
-  const activeTier = tier || clientData?.tier || (isPaidUser ? "PRO" : "FREE");
-  const isPaid = isPaidUser ?? (activeTier === "PRO" || activeCredits > 100);
-
+  const activeTier = tier || clientData?.tier || "SOVEREIGN";
   const userInitial = activeEmail ? activeEmail.charAt(0).toUpperCase() : "M";
   const username = activeEmail ? activeEmail.split("@")[0] : "Architect";
 
@@ -72,30 +66,24 @@ export default function UserAccountPill({
               <span>{userInitial}</span>
             )}
           </div>
-          {isPaid && (
-            <span className="absolute -bottom-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-amber-500 text-slate-950 text-[7px] font-bold ring-1 ring-slate-950">
-              ★
-            </span>
-          )}
+          <span className="absolute -bottom-0.5 -right-0.5 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-emerald-500 ring-2 ring-slate-950">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 animate-pulse" />
+          </span>
         </div>
 
-        {/* User Info */}
+        {/* Enterprise Tenant Info */}
         <div className="text-left font-mono">
-          <div className="flex items-center gap-1">
-            <span className="text-[11px] font-bold text-slate-200 group-hover:text-cyan-300 transition-colors truncate max-w-24">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-bold text-slate-200 group-hover:text-cyan-300 transition-colors truncate max-w-28">
               {username}
             </span>
-            {isPaid ? (
-              <span className="text-[7px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 px-1 py-0.2 rounded">
-                PRO
-              </span>
-            ) : (
-              <span className="text-[7px] text-slate-500">FREE</span>
-            )}
+            <span className="text-[7px] font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 px-1 py-0.2 rounded uppercase">
+              {activeTier}
+            </span>
           </div>
           <div className="flex items-center gap-1 text-[9px] text-emerald-400">
-            <Sparkles className="w-2.5 h-2.5" />
-            <span>{activeCredits} Credits</span>
+            <ShieldCheck className="w-2.5 h-2.5 text-emerald-400" />
+            <span>ZATCA // MOMRAH READY</span>
           </div>
         </div>
 

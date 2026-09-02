@@ -2,7 +2,7 @@
 
 import React, { useState, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Grid, useGLTF, Environment, Center } from '@react-three/drei';
+import { OrbitControls, Grid, Html, useGLTF, Center } from '@react-three/drei';
 import * as THREE from 'three';
 
 interface ModelProps {
@@ -30,7 +30,7 @@ interface RoomMeshProps {
   onLeave: () => void;
 }
 
-function HouseElement({
+function ArchitecturalZone({
   position,
   size,
   name,
@@ -45,32 +45,38 @@ function HouseElement({
   const active = hovered || isTargeted;
 
   return (
-    <mesh
-      position={position}
-      onPointerOver={(e) => {
-        e.stopPropagation();
-        setHovered(true);
-        onHover({ name, category, dimensions, materialName });
-      }}
-      onPointerOut={() => {
-        setHovered(false);
-        onLeave();
-      }}
-    >
-      <boxGeometry args={size} />
-      <meshStandardMaterial
-        color={active ? '#06b6d4' : '#1e293b'}
-        emissive={active ? '#0891b2' : '#000000'}
-        emissiveIntensity={active ? 0.8 : 0}
-        roughness={0.4}
-        metalness={0.6}
-        wireframe={active}
-      />
-    </mesh>
+    <group position={position}>
+      <mesh
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          setHovered(true);
+          onHover({ name, category, dimensions, materialName });
+        }}
+        onPointerOut={() => {
+          setHovered(false);
+          onLeave();
+        }}
+      >
+        <boxGeometry args={size} />
+        <meshStandardMaterial
+          color={active ? '#06b6d4' : '#0f172a'}
+          emissive={active ? '#0891b2' : '#0284c7'}
+          emissiveIntensity={active ? 0.7 : 0.15}
+          roughness={0.2}
+          metalness={0.8}
+          wireframe={false}
+        />
+      </mesh>
+      <Html position={[0, size[1] / 2 + 0.1, 0]} center distanceFactor={12}>
+        <div className="px-2 py-0.5 bg-slate-900/90 border border-cyan-500/60 rounded text-[9px] font-mono text-cyan-400 whitespace-nowrap shadow-lg pointer-events-none">
+          {name}
+        </div>
+      </Html>
+    </group>
   );
 }
 
-function InteractiveWireframeLayout({
+function DimensionedBlueprintLayout({
   selectedElementTarget,
   onHover,
   onLeave,
@@ -81,106 +87,98 @@ function InteractiveWireframeLayout({
 }) {
   return (
     <group position={[0, 0, 0]}>
-      {/* Foundation & Base Concrete Plinth (9.0m x 6.8m) */}
-      <HouseElement
+      <ArchitecturalZone
         position={[0, -0.2, 0]}
-        size={[9.0, 0.4, 6.8]}
-        name="Foundation Concrete Plinth"
-        category="Substructure Slab"
-        dimensions="9.0m x 6.8m x 0.4m (61.2 sqm)"
-        materialName="Reinforced Concrete Grade 30"
+        size={[9.0, 0.3, 6.8]}
+        name="Foundation Slab (9.0m x 6.8m)"
+        category="Substructure"
+        dimensions="9.0m x 6.8m (61.2 sqm)"
+        materialName="Polished Obsidian Concrete"
         isTargeted={selectedElementTarget === 'Slab'}
         onHover={onHover}
         onLeave={onLeave}
       />
 
-      {/* Master Bedroom (B1) */}
-      <HouseElement
-        position={[2.5, 0.75, 1.8]}
-        size={[3.0, 1.5, 2.4]}
-        name="Master Bedroom (B1)"
+      <ArchitecturalZone
+        position={[-3.0, 0.75, -2.15]}
+        size={[3.0, 1.4, 2.5]}
+        name="B2 (Bedroom 2)"
         category="Habitable Room"
-        dimensions="3.0m x 2.4m (7.2 sqm)"
-        materialName="Hardwood Flooring / Plasterboard Walls"
+        dimensions="3.0m x 2.5m (7.5 sqm)"
+        materialName="Obsidian Timber Flooring"
         isTargeted={selectedElementTarget === 'Wall'}
         onHover={onHover}
         onLeave={onLeave}
       />
 
-      {/* Bedroom 2 (B2) */}
-      <HouseElement
-        position={[-2.8, 0.75, -1.8]}
-        size={[2.6, 1.5, 2.4]}
-        name="Bedroom 2 (B2)"
-        category="Habitable Room"
-        dimensions="2.6m x 2.4m (6.2 sqm)"
-        materialName="Engineered Timber Flooring"
-        isTargeted={selectedElementTarget === 'Wall'}
-        onHover={onHover}
-        onLeave={onLeave}
-      />
-
-      {/* Bedroom 3 (B3) */}
-      <HouseElement
-        position={[-2.8, 0.75, 1.8]}
-        size={[2.6, 1.5, 2.4]}
-        name="Bedroom 3 (B3)"
-        category="Habitable Room"
-        dimensions="2.6m x 2.4m (6.2 sqm)"
-        materialName="Engineered Timber Flooring"
-        isTargeted={selectedElementTarget === 'Wall'}
-        onHover={onHover}
-        onLeave={onLeave}
-      />
-
-      {/* Comfort Room / Bath (CR) */}
-      <HouseElement
-        position={[-2.8, 0.75, 0]}
-        size={[2.6, 1.5, 1.0]}
-        name="Comfort Room (CR / Bath)"
+      <ArchitecturalZone
+        position={[-3.0, 0.75, -0.55]}
+        size={[1.8, 1.4, 1.0]}
+        name="CR (Bathroom)"
         category="Sanitary Area"
-        dimensions="2.6m x 1.0m (2.6 sqm)"
+        dimensions="1.8m x 1.0m (1.8 sqm)"
         materialName="Ceramic Tile Finish"
         isTargeted={selectedElementTarget === 'Wall'}
         onHover={onHover}
         onLeave={onLeave}
       />
 
-      {/* Kitchen & Pantry */}
-      <HouseElement
-        position={[0, 0.75, -2.0]}
-        size={[2.6, 1.5, 2.0]}
-        name="Kitchen & Counter Zone"
+      <ArchitecturalZone
+        position={[-3.0, 0.75, 1.95]}
+        size={[3.0, 1.4, 2.5]}
+        name="B3 (Bedroom 3)"
+        category="Habitable Room"
+        dimensions="3.0m x 2.5m (7.5 sqm)"
+        materialName="Obsidian Timber Flooring"
+        isTargeted={selectedElementTarget === 'Wall'}
+        onHover={onHover}
+        onLeave={onLeave}
+      />
+
+      <ArchitecturalZone
+        position={[0, 0.75, -2.15]}
+        size={[3.0, 1.4, 2.5]}
+        name="Kitchen & Utility"
         category="Service Zone"
-        dimensions="2.6m x 2.0m (5.2 sqm)"
-        materialName="Granite Top & Porcelain Tiles"
+        dimensions="3.0m x 2.5m (7.5 sqm)"
+        materialName="Granite Top & Dark Cabinets"
         isTargeted={selectedElementTarget === 'Wall'}
         onHover={onHover}
         onLeave={onLeave}
       />
 
-      {/* Living & Dining Area */}
-      <HouseElement
-        position={[1.5, 0.75, -0.6]}
-        size={[4.2, 1.5, 3.8]}
-        name="Living & Dining Lounge"
+      <ArchitecturalZone
+        position={[0, 0.75, 0.4]}
+        size={[3.0, 1.4, 2.4]}
+        name="Dining Area"
         category="Open Plan Living"
-        dimensions="4.2m x 3.8m (15.9 sqm)"
-        materialName="Polished Concrete & Teak Paneling"
+        dimensions="3.0m x 2.4m (7.2 sqm)"
+        materialName="Polished Stone Floor"
         isTargeted={selectedElementTarget === 'Wall'}
         onHover={onHover}
         onLeave={onLeave}
       />
 
-      {/* Exposed Timber Roof Trusses */}
-      <HouseElement
-        position={[0, 2.3, 0]}
-        size={[8.8, 0.8, 6.4]}
-        name="Exposed Timber Roof Truss Framing"
-        category="Roof Structure"
-        dimensions="8.8m x 6.4m Pitched Truss"
-        materialName="Treated Structural Timber / Slate Tile"
-        isTargeted={selectedElementTarget === 'CurtainWall' || selectedElementTarget === 'Column'}
+      <ArchitecturalZone
+        position={[2.8, 0.75, -1.5]}
+        size={[3.4, 1.4, 3.8]}
+        name="Living Area"
+        category="Open Plan Living"
+        dimensions="3.4m x 3.8m (12.9 sqm)"
+        materialName="Luxury Lounge Setup"
+        isTargeted={selectedElementTarget === 'Wall'}
+        onHover={onHover}
+        onLeave={onLeave}
+      />
+
+      <ArchitecturalZone
+        position={[2.8, 0.75, 1.9]}
+        size={[3.4, 1.4, 3.0]}
+        name="B1 (Master Bedroom + CR)"
+        category="Habitable Room & Suite"
+        dimensions="3.4m x 3.0m (10.2 sqm)"
+        materialName="Dark Teak & Gold Accents"
+        isTargeted={selectedElementTarget === 'Wall'}
         onHover={onHover}
         onLeave={onLeave}
       />
@@ -204,15 +202,14 @@ export default function CadViewer3D({
   const [hoveredData, setHoveredData] = useState<any>(null);
 
   return (
-    <div className="relative w-full h-[420px] bg-slate-950 rounded-xl overflow-hidden border border-slate-800 flex items-center justify-center">
-      {/* 🏷️ Status Badges */}
+    <div className="relative w-full h-105 bg-slate-950 rounded-xl overflow-hidden border border-slate-800 flex items-center justify-center">
       <div className="absolute top-4 left-4 z-10 bg-slate-900/90 backdrop-blur-md border border-cyan-500/50 px-3 py-1.5 rounded-lg text-xs font-mono shadow-xl flex items-center gap-2">
         <span className={`h-2 w-2 rounded-full ${hasExecuted ? 'bg-cyan-400 animate-ping' : 'bg-slate-500'}`} />
         <span className="text-cyan-400 font-bold">
           {modelUrl
             ? 'AI 3D Reconstructed Mesh (.GLB)'
             : hasExecuted
-            ? 'Active Parametric BIM Wireframe'
+            ? 'Active MIU_33 Dimensioned Blueprint Model'
             : 'Standby // Awaiting Synthesize Command'}
         </span>
       </div>
@@ -224,7 +221,6 @@ export default function CadViewer3D({
         </div>
       )}
 
-      {/* 🏷️ Dynamic HUD Tooltip (Only when executed and hovering wireframe elements) */}
       {hoveredData && !modelUrl && hasExecuted && (
         <div className="absolute top-14 left-4 z-10 bg-slate-900/95 backdrop-blur-md border border-cyan-500/50 p-3.5 rounded-lg text-xs font-mono shadow-2xl pointer-events-none">
           <p className="text-cyan-400 font-bold flex items-center gap-2">
@@ -244,7 +240,7 @@ export default function CadViewer3D({
       </div>
 
       <Canvas camera={{ position: [9, 10, 9], fov: 42 }}>
-        <ambientLight intensity={0.7} />
+        <ambientLight intensity={0.8} />
         <directionalLight position={[12, 18, 10]} intensity={1.8} color="#e0f2fe" />
         <pointLight position={[-8, 6, -8]} intensity={0.6} color="#38bdf8" />
 
@@ -253,14 +249,13 @@ export default function CadViewer3D({
             modelUrl ? (
               <DynamicGlbModel url={modelUrl} />
             ) : (
-              <InteractiveWireframeLayout
+              <DimensionedBlueprintLayout
                 selectedElementTarget={selectedElementTarget}
                 onHover={setHoveredData}
                 onLeave={() => setHoveredData(null)}
               />
             )
           )}
-          <Environment preset="city" />
         </Suspense>
 
         <Grid position={[0, -0.41, 0]} args={[18, 18]} cellColor="#1e293b" sectionColor="#06b6d4" />

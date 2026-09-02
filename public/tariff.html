@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deterministic HS & GCC Landed Cost Engine</title>
+<style>
+  :root {
+    --bg-primary: #0a0c10;
+    --bg-surface: #11141a;
+    --border-subtle: #1e2633;
+    --border-active: #00e5ff;
+    --accent-cyan: #00e5ff;
+    --accent-gold: #ffd700;
+    --accent-amber: #ff9100;
+    --accent-crimson: #ff3366;
+    --text-main: #e6edf3;
+    --text-dim: #7d8590;
+    --font-mono: 'Consolas', 'Courier New', Courier, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg-primary);
+    color: var(--text-main);
+    font-family: var(--font-mono);
+    padding: 24px;
+    font-size: 13px;
+  }
+
+  .container { max-width: 1300px; margin: 0 auto; }
+  
+  /* Screen Header */
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: 16px;
+    margin-bottom: 20px;
+  }
+  .badge {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: var(--accent-cyan);
+    margin-bottom: 4px;
+  }
+  .title {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+  .status {
+    color: #3fb950;
+    font-size: 11px;
+    letter-spacing: 1px;
+  }
+
+  /* Navigation */
+  .mode-nav {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .tab-btn {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-dim);
+    padding: 8px 16px;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 1px;
+  }
+  .tab-btn.active {
+    background: #16202c;
+    border-color: var(--accent-cyan);
+    color: var(--accent-cyan);
+  }
+
+  /* View Panels */
+  .view-panel { display: none; }
+  .view-panel.active { display: block; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .panel {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    padding: 20px;
+  }
+  .panel-title {
+    color: var(--accent-gold);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    margin-bottom: 16px;
+    text-transform: uppercase;
+  }
+
+  /* Single Inspector */
+  .search-box {
+    width: 100%;
+    background: #0d1017;
+    border: 1px solid var(--border-subtle);
+    padding: 10px 12px;
+    color: var(--text-main);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    margin-bottom: 12px;
+  }
+  .search-box:focus { border-color: var(--accent-cyan); outline: none; }
+  .card-list { display: flex; flex-direction: column; gap: 8px; max-height: 520px; overflow-y: auto; }
+  .tariff-card {
+    background: #0d1117;
+    border: 1px solid var(--border-subtle);
+    padding: 12px;
+    cursor: pointer;
+  }
+  .tariff-card:hover, .tariff-card.selected {
+    border-color: var(--accent-cyan);
+    background: #141c26;
+  }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .hs-code { color: var(--accent-cyan); font-weight: 700; font-size: 13px; }
+  .duty-tag { color: var(--accent-gold); font-size: 11px; font-weight: 700; }
+  .desc { color: var(--text-dim); font-size: 12px; line-height: 1.4; }
+
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .field label { display: block; color: var(--text-dim); font-size: 10px; margin-bottom: 4px; text-transform: uppercase; }
+  .field input {
+    width: 100%;
+    background: #0d1017;
+    border: 1px solid var(--border-subtle);
+    padding: 8px 10px;
+    color: var(--text-main);
+    font-family: var(--font-mono);
+  }
+  .breakdown-line {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px dashed #1e2633;
+  }
+  .breakdown-line.total {
+    border-top: 1px solid var(--border-subtle);
+    border-bottom: none;
+    margin-top: 12px;
+    padding-top: 12px;
+    font-weight: 700;
+  }
+  .total-val { color: var(--accent-cyan); font-size: 15px; }
+
+  .compliance-box {
+    margin-top: 20px;
+    padding: 12px;
+    background: #0d131a;
+    border-left: 3px solid var(--accent-cyan);
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
+  /* Batch & Table */
+  .dropzone {
+    border: 2px dashed var(--border-subtle);
+    background: #0d1117;
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    margin-bottom: 16px;
+  }
+  .dropzone.dragover { border-color: var(--accent-cyan); background: #141f2d; }
+  .dropzone-title { color: var(--accent-cyan); font-weight: 700; letter-spacing: 1px; margin-bottom: 6px; }
+  .dropzone-hint { color: var(--text-dim); font-size: 11px; }
+
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    gap: 8px;
+  }
+  .btn-group { display: flex; gap: 8px; }
+  .btn {
+    background: #16202c;
+    border: 1px solid var(--border-subtle);
+    color: var(--text-main);
+    padding: 8px 14px;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.5px;
+  }
+  .btn:hover { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+  .btn-accent { border-color: var(--accent-gold); color: var(--accent-gold); }
+  .btn-accent:hover { background: #262014; border-color: var(--accent-gold); color: #fff; }
+
+  .bom-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+  }
+  .bom-table th, .bom-table td {
+    padding: 8px 10px;
+    text-align: left;
+    border: 1px solid var(--border-subtle);
+    font-size: 11px;
+  }
+  .bom-table th {
+    background: #0d1117;
+    color: var(--accent-gold);
+    font-size: 10px;
+    letter-spacing: 0.8px;
+  }
+  .bom-table tr:hover { background: #131a24; }
+
+  /* Interactive Table Inputs */
+  .cell-input {
+    background: #0a0c10;
+    border: 1px solid #1e2633;
+    color: #fff;
+    padding: 4px 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    width: 100%;
+  }
+  .cell-input:focus { border-color: var(--accent-cyan); outline: none; background: #141c26; }
+  .cell-input-num { text-align: right; }
+
+  .tag-flag {
+    padding: 2px 5px;
+    font-size: 9px;
+    font-weight: 700;
+    display: inline-block;
+  }
+  .tag-flag.saber { background: rgba(0, 229, 255, 0.1); color: var(--accent-cyan); border: 1px solid var(--accent-cyan); }
+  .tag-flag.qm { background: rgba(255, 51, 102, 0.15); color: var(--accent-crimson); border: 1px solid var(--accent-crimson); }
+  .tag-flag.standard { background: rgba(255, 215, 0, 0.1); color: var(--accent-gold); border: 1px solid var(--accent-gold); }
+
+  .rollup-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .metric-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    padding: 12px;
+  }
+  .metric-label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 4px; }
+  .metric-val { font-size: 15px; font-weight: 700; color: var(--accent-cyan); }
+
+  /* ================= PRINT DOSSIER STYLES ================= */
+  @media print {
+    body {
+      background: #ffffff !important;
+      color: #000000 !important;
+      padding: 0 !important;
+      font-size: 10pt !important;
+    }
+    .container { max-width: 100% !important; }
+    header, .mode-nav, .toolbar, .dropzone, #view-single, .search-box {
+      display: none !important;
+    }
+    #view-batch { display: block !important; }
+    #batchResults { display: block !important; }
+    .panel {
+      background: transparent !important;
+      border: none !important;
+      padding: 0 !important;
+    }
+    .panel-title { display: none !important; }
+
+    /* Print Audit Header */
+    .print-header {
+      display: block !important;
+      border-bottom: 2pt solid #000;
+      padding-bottom: 8px;
+      margin-bottom: 16px;
+    }
+    .print-header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+    .print-title { font-size: 14pt; font-weight: bold; letter-spacing: 0.5px; }
+    .print-meta { font-size: 8pt; color: #333; text-align: right; }
+
+    .bom-table {
+      border-collapse: collapse !important;
+      width: 100% !important;
+      margin-top: 10px;
+    }
+    .bom-table th, .bom-table td {
+      border: 1pt solid #000 !important;
+      color: #000 !important;
+      padding: 6px 8px !important;
+      font-size: 8.5pt !important;
+    }
+    .bom-table th {
+      background: #f0f0f0 !important;
+      font-weight: bold !important;
+    }
+    .cell-input {
+      background: transparent !important;
+      border: none !important;
+      color: #000 !important;
+      padding: 0 !important;
+      font-size: 8.5pt !important;
+    }
+    .tag-flag {
+      border: 1pt solid #000 !important;
+      color: #000 !important;
+      background: transparent !important;
+    }
+
+    .rollup-grid {
+      display: grid !important;
+      grid-template-columns: repeat(4, 1fr) !important;
+      gap: 10px !important;
+      margin-top: 20px !important;
+      border-top: 1.5pt solid #000;
+      padding-top: 10px;
+    }
+    .metric-card {
+      background: transparent !important;
+      border: 1pt solid #000 !important;
+      padding: 8px !important;
+    }
+    .metric-label { color: #555 !important; font-size: 7.5pt !important; }
+    .metric-val { color: #000 !important; font-size: 11pt !important; }
+
+    /* Customs Audit Sign-off */
+    .print-footer {
+      display: flex !important;
+      justify-content: space-between;
+      margin-top: 40px;
+      padding-top: 20px;
+      page-break-inside: avoid;
+    }
+    .sign-box {
+      width: 45%;
+      border-top: 1pt solid #000;
+      padding-top: 6px;
+      font-size: 8pt;
+    }
+  }
+
+  .print-header, .print-footer { display: none; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- PRINT ONLY AUDIT HEADER -->
+  <div class="print-header">
+    <div class="print-header-top">
+      <div>
+        <div class="print-title">CUSTOMS VALUATION & CONFORMITY CLEARANCE DOSSIER</div>
+        <div style="font-size: 8.5pt; margin-top: 2px;">GCC Common Customs Tariff & ZATCA Statutory Compliance Manifest</div>
+      </div>
+      <div class="print-meta">
+        <div><strong>REGIME:</strong> KSA / GCC PORTS (15% VAT)</div>
+        <div id="printTimestamp">DATE: EVALUATED AIR-GAPPED</div>
+        <div><strong>PORT CONFORMITY:</strong> SABER / PCoC AUDIT READY</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN HEADER -->
+  <header>
+    <div>
+      <div class="badge">AIR-GAPPED COMPLIANCE CORE</div>
+      <div class="title">Deterministic HS & GCC Landed Cost Engine</div>
+    </div>
+    <div class="status">• LOCAL OFFLINE ACTIVE</div>
+  </header>
+
+  <div class="mode-nav">
+    <button class="tab-btn active" onclick="switchTab('single')">SINGLE HS INSPECTOR</button>
+    <button class="tab-btn" onclick="switchTab('batch')">BOM BULK INGESTION (.CSV)</button>
+  </div>
+
+  <!-- SINGLE INSPECTOR VIEW -->
+  <div id="view-single" class="view-panel active">
+    <div class="grid">
+      <div class="panel">
+        <div class="panel-title">Tariff Database (GCC / SASO Integrated)</div>
+        <input type="text" id="searchInput" class="search-box" placeholder="Enter HS code (e.g. 7604) or keyword..." oninput="filterTariffs()">
+        <div class="card-list" id="tariffList"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">CIF Landed Cost & Submittal Breakdown</div>
+        <div class="field" style="margin-bottom: 12px;">
+          <label>Selected HS Code</label>
+          <input type="text" id="displayHS" readonly value="None selected">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>FOB Value (USD)</label>
+            <input type="number" id="fobInput" value="10000" oninput="calculateSingle()">
+          </div>
+          <div class="field">
+            <label>Freight + Insurance (USD)</label>
+            <input type="number" id="freightInput" value="1500" oninput="calculateSingle()">
+          </div>
+        </div>
+
+        <div class="breakdown-line">
+          <span style="color: var(--text-dim);">CIF Customs Value:</span>
+          <span id="cifOut">$11,500.00</span>
+        </div>
+        <div class="breakdown-line">
+          <span style="color: var(--text-dim);">Base Customs Duty:</span>
+          <span id="dutyOut">$0.00 (0%)</span>
+        </div>
+        <div class="breakdown-line">
+          <span style="color: var(--text-dim);">Import VAT (15%):</span>
+          <span id="vatOut">$0.00</span>
+        </div>
+        <div class="breakdown-line total">
+          <span>Total Landed Port Cost:</span>
+          <span class="total-val" id="totalOut">$11,500.00</span>
+        </div>
+
+        <div class="compliance-box" id="complianceFlag">
+          Select an industrial product classification to verify conformity prerequisites (Saber, GCC technical regulations, test certificates).
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BATCH INGESTION VIEW -->
+  <div id="view-batch" class="view-panel">
+    <div class="panel">
+      <div class="panel-title">Client-Side BOM Ingestion & Live Ledger</div>
+      
+      <div class="toolbar">
+        <span style="color: var(--text-dim); font-size: 11px;">Edit any FOB, Freight, or Duty% cell directly in the table to re-run calculations.</span>
+        <div class="btn-group">
+          <button class="btn" onclick="downloadSampleCSV()">⬇ SAMPLE CSV</button>
+          <button class="btn btn-accent" onclick="exportDossier()">⎙ EXPORT CLEARANCE DOSSIER</button>
+        </div>
+      </div>
+
+      <div class="dropzone" id="dropzone" onclick="document.getElementById('csvFileInput').click()">
+        <div class="dropzone-title">DRAG & DROP PROCUREMENT CSV HERE</div>
+        <div class="dropzone-hint">Or click to browse from disk (Columns: CODE, ITEM, HS_CODE, FOB, FREIGHT)</div>
+        <input type="file" id="csvFileInput" accept=".csv,text/csv" style="display: none;" onchange="handleFileSelect(event)">
+      </div>
+
+      <div id="batchResults" style="display: none;">
+        <table class="bom-table">
+          <thead>
+            <tr>
+              <th style="width: 8%;">CODE</th>
+              <th style="width: 22%;">ITEM DESCRIPTION</th>
+              <th style="width: 14%;">HS CODE</th>
+              <th style="width: 8%; text-align: right;">DUTY %</th>
+              <th style="width: 11%; text-align: right;">FOB (USD)</th>
+              <th style="width: 10%; text-align: right;">FREIGHT</th>
+              <th style="width: 10%; text-align: right;">CIF (USD)</th>
+              <th style="width: 9%; text-align: right;">DUTY</th>
+              <th style="width: 8%; text-align: right;">VAT 15%</th>
+              <th style="width: 11%; text-align: right;">LANDED</th>
+              <th style="width: 13%;">DIRECTIVE</th>
+            </tr>
+          </thead>
+          <tbody id="bomTableBody"></tbody>
+        </table>
+
+        <div class="rollup-grid">
+          <div class="metric-card">
+            <div class="metric-label">Total Customs CIF</div>
+            <div class="metric-val" id="rollCif">$0.00</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Total Customs Duty</div>
+            <div class="metric-val" id="rollDuty">$0.00</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Total Import VAT (15%)</div>
+            <div class="metric-val" id="rollVat">$0.00</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Grand Landed Cost</div>
+            <div class="metric-val" id="rollTotal" style="color: #ffd700;">$0.00</div>
+          </div>
+        </div>
+
+        <!-- PRINT ONLY SIGNATURE BLOCK -->
+        <div class="print-footer">
+          <div class="sign-box">
+            <strong>PREPARED BY (PROCUREMENT & LOGISTICS):</strong><br><br>
+            SIGNATURE / DATE: ___________________________
+          </div>
+          <div class="sign-box">
+            <strong>CUSTOMS COMPLIANCE & CLEARANCE BROKER:</strong><br><br>
+            AUDITED & FILED: ____________________________
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const TARIFF_DB = [
+    {
+      code: '7604.21.00.00',
+      desc: 'Aluminum Alloy Hollow Profiles (GB/T 5237, 6063-T5 Architectural Grade)',
+      dutyRate: 0.12,
+      reg: 'SASO Technical Regulation for Building Materials (Part III: Metals & Alloys). Requires Saber PCoC & SCoC.',
+      flag: 'SABER PCoC'
+    },
+    {
+      code: '7214.20.00.00',
+      desc: 'Deformed Concrete Reinforcing Steel Bars (Q235B / ASTM A615 Equivalent)',
+      dutyRate: 0.10,
+      reg: 'SASO Quality Mark (SQM) mandatory prior to port arrival. Requires certified factory inspection dossier.',
+      flag: 'SASO QUALITY MARK'
+    },
+    {
+      code: '7318.15.00.00',
+      desc: 'Threaded Fasteners, High-Tensile Bolts & Screws (Carbon Steel Grade 8.8 / 10.9)',
+      dutyRate: 0.05,
+      reg: 'General GCC Common Customs standard. Batch mill test certificate required for clearance.',
+      flag: 'STANDARD DECLARATION'
+    },
+    {
+      code: '8501.52.00.00',
+      desc: 'Three-Phase AC Electric Motors (Output > 750 W but not exceeding 75 kW)',
+      dutyRate: 0.05,
+      reg: 'SASO IE3 Energy Efficiency Standard registration & Saber Technical Regulation for Electrical.',
+      flag: 'SABER + EE'
+    },
+    {
+      code: '8481.80.10.00',
+      desc: 'Industrial Ball & Butterfly Valves (Ductile Iron / Cast Steel)',
+      dutyRate: 0.05,
+      reg: 'GCC Conformity Assessment. Hydrostatic test certificates attached to shipment manifest.',
+      flag: 'STANDARD DECLARATION'
+    },
+    {
+      code: '8541.43.00.00',
+      desc: 'Photovoltaic Solar Cells Assembled in Modules / Panels',
+      dutyRate: 0.00,
+      reg: 'Statutory 0% Green Energy Incentive. SASO IEC 61215 / 61730 type approval certification required.',
+      flag: '0% INCENTIVE'
+    }
+  ];
+
+  let selectedTariff = null;
+  let activeBOMItems = [];
+
+  function switchTab(mode) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+    if (mode === 'single') {
+      document.querySelectorAll('.tab-btn')[0].classList.add('active');
+      document.getElementById('view-single').classList.add('active');
+    } else {
+      document.querySelectorAll('.tab-btn')[1].classList.add('active');
+      document.getElementById('view-batch').classList.add('active');
+    }
+  }
+
+  function renderList(items) {
+    const list = document.getElementById('tariffList');
+    list.innerHTML = '';
+    items.forEach(t => {
+      const card = document.createElement('div');
+      card.className = `tariff-card ${selectedTariff && selectedTariff.code === t.code ? 'selected' : ''}`;
+      card.onclick = () => selectTariff(t);
+      card.innerHTML = `
+        <div class="card-header">
+          <span class="hs-code">${t.code}</span>
+          <span class="duty-tag">${(t.dutyRate * 100).toFixed(0)}% Duty</span>
+        </div>
+        <div class="desc">${t.desc}</div>
+      `;
+      list.appendChild(card);
+    });
+  }
+
+  function filterTariffs() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    const filtered = TARIFF_DB.filter(t => t.code.toLowerCase().includes(q) || t.desc.toLowerCase().includes(q));
+    renderList(filtered);
+  }
+
+  function selectTariff(t) {
+    selectedTariff = t;
+    document.getElementById('displayHS').value = `${t.code} (${(t.dutyRate * 100).toFixed(0)}% Duty)`;
+    document.getElementById('complianceFlag').innerText = `Clearance Directive: ${t.reg}`;
+    filterTariffs();
+    calculateSingle();
+  }
+
+  function formatUSD(num) {
+    return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function calculateSingle() {
+    const fob = parseFloat(document.getElementById('fobInput').value) || 0;
+    const freight = parseFloat(document.getElementById('freightInput').value) || 0;
+    const rate = selectedTariff ? selectedTariff.dutyRate : 0;
+
+    const cif = fob + freight;
+    const duty = cif * rate;
+    const vat = (cif + duty) * 0.15;
+    const total = cif + duty + vat;
+
+    document.getElementById('cifOut').innerText = formatUSD(cif);
+    document.getElementById('dutyOut').innerText = `${formatUSD(duty)} (${(rate * 100).toFixed(0)}%)`;
+    document.getElementById('vatOut').innerText = formatUSD(vat);
+    document.getElementById('totalOut').innerText = formatUSD(total);
+  }
+
+  // --- CSV FILE INGESTION ---
+
+  const dropzone = document.getElementById('dropzone');
+  dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+  dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) processCSV(e.dataTransfer.files[0]);
+  });
+
+  function handleFileSelect(e) {
+    if (e.target.files.length) processCSV(e.target.files[0]);
+  }
+
+  function processCSV(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target.result;
+      const rows = parseCSVText(text);
+      buildBOMState(rows);
+    };
+    reader.readAsText(file);
+  }
+
+  // --- ROBUST OFFLINE PARSER & LEDGER ENGINE ---
+
+  function cleanNum(val) {
+    if (typeof val === 'number') return val;
+    if (!val) return 0;
+    const cleaned = val.toString().replace(/[^0-9.-]+/g, '');
+    return parseFloat(cleaned) || 0;
+  }
+
+  function detectDelimiter(firstLine) {
+    const delimiters = [',', ';', '\t', '|'];
+    let best = ',';
+    let max = 0;
+    delimiters.forEach(d => {
+      const count = firstLine.split(d).length;
+      if (count > max) { max = count; best = d; }
+    });
+    return best;
+  }
+
+  function parseCSVText(raw) {
+    const cleanRaw = raw.replace(/^\uFEFF/, '').trim();
+    const lines = cleanRaw.split(/\r\n|\n/).filter(l => l.trim().length > 0);
+    if (lines.length < 2) return [];
+
+    const delimiter = detectDelimiter(lines[0]);
+    const splitRow = (str) => {
+      const regex = new RegExp(`(?:^|\\${delimiter})(?:"([^"]*(?:""[^"]*)*)"|([^"\\${delimiter}]*))`, 'g');
+      const matches = [];
+      let match;
+      while ((match = regex.exec(str)) !== null) {
+        let val = match[1] !== undefined ? match[1].replace(/""/g, '"') : match[2];
+        matches.push((val || '').trim());
+      }
+      return matches;
+    };
+
+    const headers = splitRow(lines[0]).map(h => h.toUpperCase().replace(/[\s\-_]+/g, ''));
+
+    return lines.slice(1).map(line => {
+      const values = splitRow(line);
+      const record = {};
+      headers.forEach((h, i) => { record[h] = values[i] !== undefined ? values[i] : ''; });
+      return record;
+    });
+  }
+
+  function findCol(record, aliases) {
+    const keys = Object.keys(record);
+    for (const alias of aliases) {
+      const matchedKey = keys.find(k => k === alias || k.includes(alias));
+      if (matchedKey && record[matchedKey] !== '') return record[matchedKey];
+    }
+    return '';
+  }
+
+  function matchTariff(hsQuery) {
+    const cleaned = (hsQuery || '').replace(/\D/g, '');
+    let matched = TARIFF_DB.find(t => t.code.replace(/\D/g, '') === cleaned);
+    if (!matched) matched = TARIFF_DB.find(t => t.code.replace(/\D/g, '').startsWith(cleaned.substring(0, 4)));
+    return matched || { code: hsQuery || 'GENERIC', desc: 'Standard Industrial Goods', dutyRate: 0.05, reg: 'Standard declaration.', flag: 'STANDARD' };
+  }
+
+  function buildBOMState(rows) {
+    activeBOMItems = rows.map((r, idx) => {
+      const code = findCol(r, ['CODE', 'ITEMNO', 'LINE', 'TAG', 'ID', 'NO']) || `LINE-${idx + 1}`;
+      const itemDesc = findCol(r, ['ITEMNAME', 'ITEM', 'DESCRIPTION', 'MATERIAL', 'SPECIFICATION', 'PRODUCT']) || 'Industrial Component';
+      const hsRaw = findCol(r, ['HSCODE', 'HS', 'TARIFF', 'COMMODITY']) || '7318.15.00.00';
+      const fobRaw = findCol(r, ['FOB', 'PRICE', 'AMOUNT', 'VALUE', 'COST', 'TOTAL']) || 0;
+      const freightRaw = findCol(r, ['FREIGHT', 'SHIPPING', 'INSURANCE', 'LOGISTICS']) || 0;
+
+      const tariff = matchTariff(hsRaw);
+      return {
+        id: idx,
+        code: code,
+        item: itemDesc,
+        hsCode: tariff.code,
+        dutyPercent: tariff.dutyRate * 100,
+        fob: cleanNum(fobRaw),
+        freight: cleanNum(freightRaw),
+        directive: tariff.flag
+      };
+    });
+    renderBOMTable(true);
+  }
+
+  // --- INTERACTIVE ROW EDITING & RECALCULATION ---
+
+  function updateRowVal(idx, key, val) {
+    activeBOMItems[idx][key] = parseFloat(val) || 0;
+    renderBOMTable(false);
+  }
+
+  function renderBOMTable(fullRebuild = true) {
+    const tbody = document.getElementById('bomTableBody');
+    let sumCif = 0, sumDuty = 0, sumVat = 0, sumTotal = 0;
+
+    if (fullRebuild) tbody.innerHTML = '';
+
+    activeBOMItems.forEach((item, idx) => {
+      const cif = item.fob + item.freight;
+      const duty = cif * (item.dutyPercent / 100);
+      const vat = (cif + duty) * 0.15;
+      const landed = cif + duty + vat;
+
+      sumCif += cif;
+      sumDuty += duty;
+      sumVat += vat;
+      sumTotal += landed;
+
+      if (fullRebuild) {
+        const tr = document.createElement('tr');
+        tr.id = `row-${idx}`;
+        tr.innerHTML = `
+          <td style="color: var(--accent-cyan); font-weight: 700;">${item.code}</td>
+          <td>${item.item}</td>
+          <td>${item.hsCode}</td>
+          <td><input type="number" step="0.5" class="cell-input cell-input-num" value="${item.dutyPercent}" onchange="updateRowVal(${idx}, 'dutyPercent', this.value)"></td>
+          <td><input type="number" step="100" class="cell-input cell-input-num" value="${item.fob}" onchange="updateRowVal(${idx}, 'fob', this.value)"></td>
+          <td><input type="number" step="50" class="cell-input cell-input-num" value="${item.freight}" onchange="updateRowVal(${idx}, 'freight', this.value)"></td>
+          <td class="col-cif" style="text-align: right;">${formatUSD(cif)}</td>
+          <td class="col-duty" style="text-align: right;">${formatUSD(duty)}</td>
+          <td class="col-vat" style="text-align: right;">${formatUSD(vat)}</td>
+          <td class="col-landed" style="text-align: right; font-weight: 700; color: var(--accent-cyan);">${formatUSD(landed)}</td>
+          <td><span class="tag-flag ${item.directive.includes('PCoC') ? 'saber' : item.directive.includes('QUALITY') ? 'qm' : 'standard'}">${item.directive}</span></td>
+        `;
+        tbody.appendChild(tr);
+      } else {
+        const row = document.getElementById(`row-${idx}`);
+        if (row) {
+          row.querySelector('.col-cif').innerText = formatUSD(cif);
+          row.querySelector('.col-duty').innerText = formatUSD(duty);
+          row.querySelector('.col-vat').innerText = formatUSD(vat);
+          row.querySelector('.col-landed').innerText = formatUSD(landed);
+        }
+      }
+    });
+
+    document.getElementById('rollCif').innerText = formatUSD(sumCif);
+    document.getElementById('rollDuty').innerText = formatUSD(sumDuty);
+    document.getElementById('rollVat').innerText = formatUSD(sumVat);
+    document.getElementById('rollTotal').innerText = formatUSD(sumTotal);
+    document.getElementById('batchResults').style.display = 'block';
+  }
+  // --- AUDIT DOSSIER PRINT TRIGGER ---
+
+  function exportDossier() {
+    const now = new Date();
+    document.getElementById('printTimestamp').innerText = `EVALUATED: ${now.toISOString().slice(0, 19).replace('T', ' ')} UTC`;
+    window.print();
+  }
+
+  function downloadSampleCSV() {
+    const sample = `CODE,ITEM,HS_CODE,FOB,FREIGHT\n` +
+      `CW-01,"Alloy Curtain Wall Mullion (6063-T5)",7604.21.00.00,45000,3200\n` +
+      `ST-02,"Deformed Rebar 16mm (ASTM A615)",7214.20.00.00,28000,2100\n` +
+      `FN-03,"Structural Hex Bolts Grade 8.8",7318.15.00.00,6400,600\n` +
+      `PV-04,"Monocrystalline Solar PV Modules",8541.43.00.00,82000,4500`;
+    
+    const blob = new Blob([sample], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute('download', 'SAMPLE_FACTORY_BOM.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  // Initialize
+  renderList(TARIFF_DB);
+  selectTariff(TARIFF_DB[0]);
+</script>
+</body>
+</html>
