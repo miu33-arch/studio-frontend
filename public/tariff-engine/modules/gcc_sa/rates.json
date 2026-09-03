@@ -1,0 +1,37 @@
+[
+  {
+    "code": "7604.21.00.00",
+    "desc": "Aluminum Alloy Hollow Profiles (GB/T 5237, 6063-T5)",
+    "dutyRate": 0.12,
+    "directive": "SABER PCoC",
+    "reg": "SASO Technical Regulation for Building Materials"
+  },
+  {
+    "code": "7214.20.00.00",
+    "desc": "Deformed Concrete Reinforcing Steel Bars (ASTM A615)",
+    "dutyRate": 0.10,
+    "directive": "SASO QUALITY MARK",
+    "reg": "SQM Mandatory Factory Inspection"
+  },
+  {
+    "code": "7318.15.00.00",
+    "desc": "Threaded Fasteners, High-Tensile Bolts & Screws (Gr 8.8 / 10.9)",
+    "dutyRate": 0.05,
+    "directive": "STANDARD",
+    "reg": "GCC Common Customs Inspection"
+  },
+  {
+    "code": "8415.81.00.00",
+    "desc": "Industrial Packaged AC Units with Refrigerating Circuit",
+    "dutyRate": 0.05,
+    "directive": "SABER + EE",
+    "reg": "SASO IE3 Energy Efficiency Technical Standard"
+  },
+  {
+    "code": "8541.43.00.00",
+    "desc": "Photovoltaic Solar Cells Assembled in Modules / Panels",
+    "dutyRate": 0.00,
+    "directive": "0% INCENTIVE",
+    "reg": "Statutory Green Energy Framework"
+  }
+]

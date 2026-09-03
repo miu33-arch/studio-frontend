@@ -1,0 +1,26 @@
+[
+  {
+    "code": "7308.90.30.00",
+    "desc": "Prepared Structural Steel Plates & Welded Sections",
+    "dutyRate": 0.00,
+    "penaltyDutyRate": 0.25,
+    "directive": "SEC 232 TARIFF",
+    "reg": "Section 232 Steel 25% Ad Valorem Duty"
+  },
+  {
+    "code": "7604.21.00.10",
+    "desc": "Extruded Aluminum Profiles for Structural Framework",
+    "dutyRate": 0.015,
+    "penaltyDutyRate": 0.10,
+    "directive": "SEC 232 ALUM",
+    "reg": "Section 232 Aluminum 10% Additional Duty"
+  },
+  {
+    "code": "8415.90.80.85",
+    "desc": "Compressor Assemblies & Parts for AC Systems",
+    "dutyRate": 0.014,
+    "penaltyDutyRate": 0.00,
+    "directive": "CBP PGA RELEASE",
+    "reg": "EPA Section 608 Refrigerant Compliance Audit"
+  }
+]
