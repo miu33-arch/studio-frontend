@@ -1,0 +1,42 @@
+﻿[
+  {
+    "code": "7604.21.00.00",
+    "desc": "Aluminium Alloy Profiles & Extrusions (EN 755 / EN 12020 Architectural)",
+    "dutyRate": 0.075,
+    "penaltyDutyRate": 0.15,
+    "directive": "CE + ADD",
+    "reg": "EU Anti-Dumping Regulation 2021/546 & EN 1090-3 CE Declaration"
+  },
+  {
+    "code": "7214.20.00.00",
+    "desc": "Deformed Concrete Reinforcing Bars (B500B / EN 10080)",
+    "dutyRate": 0.00,
+    "penaltyDutyRate": 0.25,
+    "directive": "EU SAFEGUARD",
+    "reg": "EU Steel Safeguard Measure (TRQ Tariff Rate Quota / 25% Out-of-Quota)"
+  },
+  {
+    "code": "7318.15.00.00",
+    "desc": "Threaded Fasteners, Hexagon Bolts & Screws (EN ISO 4014 / 4017)",
+    "dutyRate": 0.037,
+    "penaltyDutyRate": 0.00,
+    "directive": "STANDARD CE",
+    "reg": "Construction Products Regulation (CPR 305/2011/EU)"
+  },
+  {
+    "code": "8415.81.00.00",
+    "desc": "Reversible Commercial Packaged Air Conditioning Units",
+    "dutyRate": 0.026,
+    "penaltyDutyRate": 0.00,
+    "directive": "F-GAS + CE",
+    "reg": "EU F-Gas Regulation (EU) 2024/573 & Ecodesign Directive 2009/125/EC"
+  },
+  {
+    "code": "8541.43.00.00",
+    "desc": "Crystalline Silicon Photovoltaic Modules & Solar Arrays",
+    "dutyRate": 0.00,
+    "penaltyDutyRate": 0.00,
+    "directive": "0% GREEN",
+    "reg": "Net-Zero Industry Act Tariff Exemption & WEEE Directive Compliance"
+  }
+]

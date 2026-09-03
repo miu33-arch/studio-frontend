@@ -1,0 +1,42 @@
+﻿[
+  {
+    "code": "7604.21.00.00",
+    "desc": "Architectural Aluminum Profiles (6063-T5 Series)",
+    "dutyRate": 0.08,
+    "penaltyDutyRate": 0.00,
+    "directive": "ACFTA 0%",
+    "reg": "Form E Certificate of Origin (Concessionary 0% Preferential Duty)"
+  },
+  {
+    "code": "7214.20.00.00",
+    "desc": "High-Strength Deformed Reinforcing Steel (HRB400 / HRB500)",
+    "dutyRate": 0.10,
+    "penaltyDutyRate": 0.00,
+    "directive": "ACFTA 0%",
+    "reg": "Form E Certificate of Origin (ASEAN-China FTA Concession Rate)"
+  },
+  {
+    "code": "7318.15.00.00",
+    "desc": "Industrial Threaded Fasteners, High-Tensile Bolts (Gr 8.8+)",
+    "dutyRate": 0.05,
+    "penaltyDutyRate": 0.00,
+    "directive": "STANDARD MFN",
+    "reg": "Standard MFN Customs Rate (ACFTA Origin Rules Ineligible)"
+  },
+  {
+    "code": "8415.81.00.00",
+    "desc": "Industrial Split & Packaged Commercial Chiller/AC Units",
+    "dutyRate": 0.00,
+    "penaltyDutyRate": 0.00,
+    "directive": "ACFTA 0%",
+    "reg": "China-ASEAN FTA Protocol (Zero-Duty Regional Concession)"
+  },
+  {
+    "code": "8541.43.00.00",
+    "desc": "Tier-1 Photovoltaic Solar Modules & Inverters",
+    "dutyRate": 0.00,
+    "penaltyDutyRate": 0.00,
+    "directive": "0% PREFERENTIAL",
+    "reg": "Renewable Energy Trade Pact (Zero Customs Ad Valorem)"
+  }
+]
