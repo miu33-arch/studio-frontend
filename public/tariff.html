@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -23,11 +23,17 @@
     background: var(--bg-primary);
     color: var(--text-main);
     font-family: var(--font-mono);
-    padding: 24px;
+    padding: 16px 20px;
     font-size: 13px;
+    max-width: 100vw;
+    overflow-x: hidden;
   }
 
-  .container { max-width: 1300px; margin: 0 auto; }
+  .container { 
+    width: 100%; 
+    max-width: 100%; 
+    margin: 0 auto; 
+  }
   
   header {
     display: flex;
@@ -58,6 +64,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
     margin-bottom: 16px;
   }
 
@@ -78,14 +86,21 @@
     color: var(--accent-cyan);
   }
 
-  .corridor-selector {
+  .engine-selectors {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .control-group {
     display: flex;
     align-items: center;
     gap: 8px;
     font-size: 11px;
     color: var(--text-dim);
   }
-  .corridor-selector select {
+  .control-group select {
     background: var(--bg-surface);
     border: 1px solid var(--accent-gold);
     color: var(--accent-gold);
@@ -94,7 +109,7 @@
     font-size: 11px;
     cursor: pointer;
   }
-  .corridor-selector select:focus { outline: none; }
+  .control-group select:focus { outline: none; }
 
   .view-panel { display: none; }
   .view-panel.active { display: block; }
@@ -108,6 +123,8 @@
     background: var(--bg-surface);
     border: 1px solid var(--border-subtle);
     padding: 20px;
+    max-width: 100%;
+    overflow: hidden;
   }
   .panel-title {
     color: var(--accent-gold);
@@ -199,6 +216,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
     margin-bottom: 16px;
     gap: 8px;
   }
@@ -214,17 +232,49 @@
   }
   .btn:hover { border-color: var(--accent-cyan); color: var(--accent-cyan); }
   .btn-accent { border-color: var(--accent-gold); color: var(--accent-gold); }
+  .btn-danger { border-color: var(--accent-crimson); color: var(--accent-crimson); }
+  .btn-danger:hover { background: rgba(255, 51, 102, 0.15); border-color: var(--accent-crimson); color: #fff; }
+
+  .table-wrapper {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    margin-bottom: 16px;
+    border: 1px solid var(--border-subtle);
+    display: block;
+    scrollbar-color: var(--accent-cyan) #0d1117;
+    scrollbar-width: thin;
+  }
+  .table-wrapper::-webkit-scrollbar {
+    height: 8px;
+  }
+  .table-wrapper::-webkit-scrollbar-track {
+    background: #0d1117;
+  }
+  .table-wrapper::-webkit-scrollbar-thumb {
+    background: #1e2633;
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle);
+  }
+  .table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-cyan);
+  }
 
   .bom-table {
     width: 100%;
+    min-width: 1180px;
     border-collapse: collapse;
-    margin-bottom: 16px;
+    table-layout: fixed;
   }
   .bom-table th, .bom-table td {
-    padding: 8px 10px;
+    padding: 6px 8px;
     text-align: left;
     border: 1px solid var(--border-subtle);
     font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .bom-table th {
     background: #0d1117;
@@ -237,7 +287,7 @@
     background: #0a0c10;
     border: 1px solid #1e2633;
     color: #fff;
-    padding: 4px 6px;
+    padding: 3px 5px;
     font-family: var(--font-mono);
     font-size: 11px;
     width: 100%;
@@ -269,41 +319,47 @@
   .metric-label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 4px; }
   .metric-val { font-size: 15px; font-weight: 700; color: var(--accent-cyan); }
 
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+
   @media print {
-    body { background: #fff !important; color: #000 !important; padding: 0 !important; font-size: 10pt !important; }
-    .container { max-width: 100% !important; }
+    body { background: #fff !important; color: #000 !important; padding: 0 !important; font-size: 8pt !important; }
+    .container { max-width: 100% !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
     header, .top-controls, .toolbar, .dropzone, #view-single { display: none !important; }
-    #view-batch, #batchResults { display: block !important; }
+    #view-batch, #batchResults { display: block !important; width: 100% !important; }
     .panel { background: transparent !important; border: none !important; padding: 0 !important; }
     .panel-title { display: none !important; }
 
-    .print-header { display: block !important; border-bottom: 2pt solid #000; padding-bottom: 8px; margin-bottom: 16px; }
-    .print-title { font-size: 13pt; font-weight: bold; }
-    .print-meta { font-size: 8pt; color: #333; }
+    .print-header { display: block !important; border-bottom: 1.5pt solid #000; padding-bottom: 6px; margin-bottom: 12px; }
+    .print-title { font-size: 11pt; font-weight: bold; }
+    .print-meta { font-size: 7.5pt; color: #333; }
 
-    .bom-table { border-collapse: collapse !important; width: 100% !important; }
-    .bom-table th, .bom-table td { border: 1pt solid #000 !important; color: #000 !important; font-size: 8.5pt !important; }
+    .table-wrapper { border: none !important; overflow: visible !important; margin-bottom: 10px !important; }
+    .bom-table { border-collapse: collapse !important; width: 100% !important; min-width: 0 !important; table-layout: fixed !important; }
+    .bom-table th, .bom-table td { border: 0.75pt solid #000 !important; color: #000 !important; font-size: 7.5pt !important; padding: 3px 4px !important; }
     .bom-table th { background: #f0f0f0 !important; }
     .cell-input { 
       background: transparent !important; 
       border: none !important; 
       color: #000 !important; 
       padding: 0 !important; 
-      font-size: 8.5pt !important;
-      width: auto !important;
+      font-size: 7.5pt !important;
+      width: 100% !important;
       text-align: inherit !important;
       appearance: none !important;
       -webkit-appearance: none !important;
     }
-    .tag-flag { border: 1pt solid #000 !important; color: #000 !important; background: transparent !important; }
+    .tag-flag { border: 0.5pt solid #000 !important; color: #000 !important; background: transparent !important; font-size: 6.5pt !important; padding: 1px 3px !important; }
 
-    .rollup-grid { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; margin-top: 16px !important; border-top: 1.5pt solid #000; padding-top: 10px; }
-    .metric-card { background: transparent !important; border: 1pt solid #000 !important; }
-    .metric-label { color: #555 !important; }
-    .metric-val { color: #000 !important; font-size: 11pt !important; }
+    .rollup-grid { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; margin-top: 10px !important; border-top: 1.5pt solid #000; padding-top: 8px; gap: 8px !important; }
+    .metric-card { background: transparent !important; border: 0.75pt solid #000 !important; padding: 6px 8px !important; }
+    .metric-label { color: #555 !important; font-size: 7pt !important; }
+    .metric-val { color: #000 !important; font-size: 9.5pt !important; }
 
-    .print-footer { display: flex !important; justify-content: space-between; margin-top: 30px; page-break-inside: avoid; }
-    .sign-box { width: 45%; border-top: 1pt solid #000; padding-top: 6px; font-size: 8pt; }
+    .print-footer { display: flex !important; justify-content: space-between; margin-top: 20px; page-break-inside: avoid; }
+    .sign-box { width: 45%; border-top: 0.75pt solid #000; padding-top: 4px; font-size: 7.5pt; }
   }
 
   .print-header, .print-footer { display: none; }
@@ -321,7 +377,7 @@
       </div>
       <div class="print-meta" style="text-align: right;">
         <div id="printTimestamp">EVALUATED: OFFLINE</div>
-        <div>PORT CONFORMITY: AUDIT READY</div>
+        <div id="printCurrencyNotice">VALUATION CURRENCY: USD (BASE)</div>
       </div>
     </div>
   </div>
@@ -331,7 +387,7 @@
       <div class="badge">MODULAR AIR-GAPPED CORE</div>
       <div class="title">Deterministic HS & Landed Cost Engine</div>
     </div>
-    <div class="status" id="engineStatus">• RUNNING ENGINE CORE</div>
+    <div class="status" id="engineStatus">• RUNNING ENGINE CORE (PERSISTED)</div>
   </header>
 
   <div class="top-controls">
@@ -340,12 +396,24 @@
       <button class="tab-btn" onclick="switchTab('batch')">BOM BULK INGESTION (.CSV)</button>
     </div>
 
-    <div class="corridor-selector">
-      <label for="corridorSelect">ACTIVE REGIME:</label>
-      <select id="corridorSelect" onchange="changeCorridor(this.value)">
-        <option value="gcc_sa">GCC / KSA (ZATCA 15% VAT + SASO)</option>
-        <option value="us_hts">US / CBP (HTSUS + Sec 232/301)</option>
-      </select>
+    <div class="engine-selectors">
+      <div class="control-group">
+        <label for="currencySelect">LEDGER BASE:</label>
+        <select id="currencySelect" onchange="changeCurrency(this.value)">
+          <option value="USD">USD ($)</option>
+          <option value="SAR">SAR (ر.س - 3.75)</option>
+          <option value="EUR">EUR (€ - 0.92)</option>
+          <option value="CNY">CNY (¥ - 7.22)</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="corridorSelect">ACTIVE REGIME:</label>
+        <select id="corridorSelect" onchange="changeCorridor(this.value)">
+          <option value="gcc_sa">GCC / KSA (ZATCA 15% VAT + SASO)</option>
+          <option value="us_hts">US / CBP (HTSUS + Sec 232/301)</option>
+        </select>
+      </div>
     </div>
   </div>
 
@@ -365,11 +433,11 @@
         </div>
         <div class="field-row">
           <div class="field">
-            <label>FOB Value (USD)</label>
+            <label id="lblFob">FOB Value (USD)</label>
             <input type="number" id="fobInput" value="10000" oninput="calculateSingle()">
           </div>
           <div class="field">
-            <label>Freight + Insurance (USD)</label>
+            <label id="lblFreight">Freight + Insurance (USD)</label>
             <input type="number" id="freightInput" value="1500" oninput="calculateSingle()">
           </div>
         </div>
@@ -409,6 +477,7 @@
       <div class="toolbar">
         <span style="color: var(--text-dim); font-size: 11px;">Edit numbers directly in the table to recalculate under the active corridor regime.</span>
         <div class="btn-group">
+          <button class="btn btn-danger" onclick="clearActiveLedger()">✕ CLEAR LEDGER</button>
           <button class="btn" onclick="downloadSampleCSV()">⬇ SAMPLE CSV</button>
           <button class="btn btn-accent" onclick="exportDossier()">⎙ EXPORT CLEARANCE DOSSIER</button>
         </div>
@@ -421,28 +490,30 @@
       </div>
 
       <div id="batchResults" style="display: none;">
-        <table class="bom-table">
-          <thead>
-            <tr>
-              <th style="width: 8%;">CODE</th>
-              <th style="width: 22%;">ITEM DESCRIPTION</th>
-              <th style="width: 13%;">HS CODE</th>
-              <th style="width: 8%; text-align: right;">DUTY %</th>
-              <th style="width: 10%; text-align: right;">FOB (USD)</th>
-              <th style="width: 9%; text-align: right;">FREIGHT</th>
-              <th style="width: 9%; text-align: right;">CIF (USD)</th>
-              <th style="width: 8%; text-align: right;">DUTY</th>
-              <th style="width: 8%; text-align: right;" id="thVat">TAX/VAT</th>
-              <th style="width: 11%; text-align: right;">LANDED</th>
-              <th style="width: 14%;">DIRECTIVE</th>
-            </tr>
-          </thead>
-          <tbody id="bomTableBody"></tbody>
-        </table>
+        <div class="table-wrapper">
+          <table class="bom-table">
+            <thead>
+              <tr>
+                <th style="width: 7%;">CODE</th>
+                <th style="width: 20%;">ITEM DESCRIPTION</th>
+                <th style="width: 11%;">HS CODE</th>
+                <th style="width: 6%; text-align: right;">DUTY %</th>
+                <th style="width: 12%; text-align: right;" id="thFob">FOB</th>
+                <th style="width: 10%; text-align: right;" id="thFreight">FREIGHT</th>
+                <th style="width: 9%; text-align: right;" id="thCif">CIF</th>
+                <th style="width: 8%; text-align: right;">DUTY</th>
+                <th style="width: 8%; text-align: right;" id="thVat">TAX/VAT</th>
+                <th style="width: 10%; text-align: right;">LANDED</th>
+                <th style="width: 11%;">DIRECTIVE</th>
+              </tr>
+            </thead>
+            <tbody id="bomTableBody"></tbody>
+          </table>
+        </div>
 
         <div class="rollup-grid">
           <div class="metric-card">
-            <div class="metric-label">Total CIF Value</div>
+            <div class="metric-label" id="rollCifLabel">Total CIF Value</div>
             <div class="metric-val" id="rollCif">$0.00</div>
           </div>
           <div class="metric-card">
@@ -476,7 +547,15 @@
 </div>
 
 <script>
-  // Fallback in-memory dataset for air-gapped offline operation
+  const CURRENCY_PEGS = {
+    USD: { symbol: '$', rate: 1.0000, name: 'US Dollar' },
+    SAR: { symbol: 'SAR ', rate: 3.7500, name: 'Saudi Riyal' },
+    EUR: { symbol: '€', rate: 0.9200, name: 'Euro' },
+    CNY: { symbol: '¥', rate: 7.2200, name: 'Chinese Yuan' }
+  };
+
+  let activeCurrency = 'USD';
+
   const CORRIDOR_REGISTRY = {
     gcc_sa: [
       {
@@ -581,10 +660,10 @@
       };
     }
 
-    calculateLine(item, tariff) {
-      const fob = parseFloat(item.fob) || 0;
-      const freight = parseFloat(item.freight) || 0;
-      const cif = fob + freight;
+    calculateLine(item, tariff, conversionMultiplier = 1.0) {
+      const baseFob = (parseFloat(item.fob) || 0) * conversionMultiplier;
+      const baseFreight = (parseFloat(item.freight) || 0) * conversionMultiplier;
+      const cif = baseFob + baseFreight;
       const duty = cif * (tariff.dutyRate || 0);
       let vat = 0;
       let penalties = 0;
@@ -592,7 +671,7 @@
       if (this.activeCorridor === 'gcc_sa') {
         vat = (cif + duty) * 0.15;
       } else if (this.activeCorridor === 'us_hts') {
-        penalties = fob * (tariff.penaltyDutyRate || 0);
+        penalties = baseFob * (tariff.penaltyDutyRate || 0);
       }
 
       const landed = cif + duty + vat + penalties;
@@ -605,6 +684,34 @@
   let selectedTariff = null;
   let activeBOMItems = [];
 
+  const STORAGE_KEYS = {
+    REGIME: 'miu_tariff_active_regime',
+    CURRENCY: 'miu_tariff_active_curr',
+    BOM_ITEMS: 'miu_tariff_bom_items',
+    ACTIVE_TAB: 'miu_tariff_active_tab'
+  };
+
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEYS.REGIME, engine.activeCorridor);
+      localStorage.setItem(STORAGE_KEYS.CURRENCY, activeCurrency);
+      localStorage.setItem(STORAGE_KEYS.BOM_ITEMS, JSON.stringify(activeBOMItems));
+    } catch (e) {}
+  }
+
+  function clearActiveLedger() {
+    if (!activeBOMItems.length) return;
+    if (confirm('Clear active BOM ledger and local storage cache?')) {
+      activeBOMItems = [];
+      try {
+        localStorage.removeItem(STORAGE_KEYS.BOM_ITEMS);
+      } catch (e) {}
+      document.getElementById('batchResults').style.display = 'none';
+      document.getElementById('bomTableBody').innerHTML = '';
+      document.getElementById('csvFileInput').value = '';
+    }
+  }
+
   function switchTab(mode) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
@@ -615,10 +722,27 @@
       document.querySelectorAll('.tab-btn')[1].classList.add('active');
       document.getElementById('view-batch').classList.add('active');
     }
+    try { localStorage.setItem(STORAGE_KEYS.ACTIVE_TAB, mode); } catch (e) {}
   }
 
-  async function changeCorridor(corridorKey) {
+  function changeCurrency(currKey) {
+    activeCurrency = currKey;
+    document.getElementById('currencySelect').value = currKey;
+    document.getElementById('lblFob').innerText = `FOB Value (${currKey})`;
+    document.getElementById('lblFreight').innerText = `Freight + Insurance (${currKey})`;
+    document.getElementById('thFob').innerText = `FOB (${currKey})`;
+    document.getElementById('thFreight').innerText = `FREIGHT (${currKey})`;
+    document.getElementById('thCif').innerText = `CIF (${currKey})`;
+    document.getElementById('printCurrencyNotice').innerText = `VALUATION CURRENCY: ${currKey} (${CURRENCY_PEGS[currKey].rate} PEG/USD)`;
+
+    calculateSingle();
+    if (activeBOMItems.length > 0) renderBOMTable(true);
+    saveState();
+  }
+
+  async function changeCorridor(corridorKey, persist = true) {
     currentRates = await engine.loadCorridor(corridorKey);
+    document.getElementById('corridorSelect').value = corridorKey;
 
     if (corridorKey === 'us_hts') {
       document.getElementById('rowVat').style.display = 'none';
@@ -640,6 +764,7 @@
       reclassifyBOM();
       renderBOMTable(true);
     }
+    if (persist) saveState();
   }
 
   function renderList(items) {
@@ -674,22 +799,23 @@
     calculateSingle();
   }
 
-  function formatUSD(num) {
-    return '$' + (num || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  function formatCurrency(num) {
+    const p = CURRENCY_PEGS[activeCurrency];
+    return p.symbol + (num || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   function calculateSingle() {
     if (!selectedTariff) return;
-    const fob = parseFloat(document.getElementById('fobInput').value) || 0;
-    const freight = parseFloat(document.getElementById('freightInput').value) || 0;
+    const rawFob = parseFloat(document.getElementById('fobInput').value) || 0;
+    const rawFreight = parseFloat(document.getElementById('freightInput').value) || 0;
 
-    const res = engine.calculateLine({ fob, freight }, selectedTariff);
+    const res = engine.calculateLine({ fob: rawFob, freight: rawFreight }, selectedTariff, 1.0);
 
-    document.getElementById('cifOut').innerText = formatUSD(res.cif);
-    document.getElementById('dutyOut').innerText = `${formatUSD(res.duty)} (${(selectedTariff.dutyRate * 100).toFixed(1)}%)`;
-    document.getElementById('vatOut').innerText = formatUSD(res.vat);
-    document.getElementById('penaltyOut').innerText = formatUSD(res.penalties);
-    document.getElementById('totalOut').innerText = formatUSD(res.landed);
+    document.getElementById('cifOut').innerText = formatCurrency(res.cif);
+    document.getElementById('dutyOut').innerText = `${formatCurrency(res.duty)} (${(selectedTariff.dutyRate * 100).toFixed(1)}%)`;
+    document.getElementById('vatOut').innerText = formatCurrency(res.vat);
+    document.getElementById('penaltyOut').innerText = formatCurrency(res.penalties);
+    document.getElementById('totalOut').innerText = formatCurrency(res.landed);
   }
 
   function cleanNum(val) {
@@ -799,29 +925,36 @@
         directive: tariff.directive
       };
     });
+    saveState();
     renderBOMTable(true);
   }
 
   function updateRowVal(idx, key, val) {
-    activeBOMItems[idx][key] = parseFloat(val) || 0;
+    const mult = CURRENCY_PEGS[activeCurrency].rate;
+    activeBOMItems[idx][key] = (parseFloat(val) || 0) / mult;
+    saveState();
     renderBOMTable(false);
   }
 
   function renderBOMTable(fullRebuild = true) {
     const tbody = document.getElementById('bomTableBody');
     let sumCif = 0, sumDuty = 0, sumTax = 0, sumTotal = 0;
+    const mult = CURRENCY_PEGS[activeCurrency].rate;
 
     if (fullRebuild) tbody.innerHTML = '';
 
     activeBOMItems.forEach((item, idx) => {
       const tariffMock = { dutyRate: item.dutyPercent / 100, penaltyDutyRate: item.penaltyRate };
-      const res = engine.calculateLine(item, tariffMock);
+      const res = engine.calculateLine(item, tariffMock, mult);
       const taxLine = engine.activeCorridor === 'us_hts' ? res.penalties : res.vat;
 
       sumCif += res.cif;
       sumDuty += res.duty;
       sumTax += taxLine;
       sumTotal += res.landed;
+
+      const displayFob = (item.fob * mult).toFixed(2);
+      const displayFreight = (item.freight * mult).toFixed(2);
 
       if (fullRebuild) {
         const tr = document.createElement('tr');
@@ -831,31 +964,31 @@
           <td>${item.item}</td>
           <td>${item.hsCode}</td>
           <td><input type="number" step="0.5" class="cell-input cell-input-num" value="${item.dutyPercent}" onchange="updateRowVal(${idx}, 'dutyPercent', this.value)"></td>
-          <td><input type="number" step="100" class="cell-input cell-input-num" value="${item.fob}" onchange="updateRowVal(${idx}, 'fob', this.value)"></td>
-          <td><input type="number" step="50" class="cell-input cell-input-num" value="${item.freight}" onchange="updateRowVal(${idx}, 'freight', this.value)"></td>
-          <td class="col-cif" style="text-align: right;">${formatUSD(res.cif)}</td>
-          <td class="col-duty" style="text-align: right;">${formatUSD(res.duty)}</td>
-          <td class="col-tax" style="text-align: right;">${formatUSD(taxLine)}</td>
-          <td class="col-landed" style="text-align: right; font-weight: 700; color: var(--accent-cyan);">${formatUSD(res.landed)}</td>
+          <td><input type="number" step="100" class="cell-input cell-input-num" value="${displayFob}" onchange="updateRowVal(${idx}, 'fob', this.value)"></td>
+          <td><input type="number" step="50" class="cell-input cell-input-num" value="${displayFreight}" onchange="updateRowVal(${idx}, 'freight', this.value)"></td>
+          <td class="col-cif" style="text-align: right;">${formatCurrency(res.cif)}</td>
+          <td class="col-duty" style="text-align: right;">${formatCurrency(res.duty)}</td>
+          <td class="col-tax" style="text-align: right;">${formatCurrency(taxLine)}</td>
+          <td class="col-landed" style="text-align: right; font-weight: 700; color: var(--accent-cyan);">${formatCurrency(res.landed)}</td>
           <td><span class="tag-flag standard">${item.directive}</span></td>
         </tr>`;
         tbody.appendChild(tr);
       } else {
         const row = document.getElementById(`row-${idx}`);
         if (row) {
-          row.querySelector('.col-cif').innerText = formatUSD(res.cif);
-          row.querySelector('.col-duty').innerText = formatUSD(res.duty);
-          row.querySelector('.col-tax').innerText = formatUSD(taxLine);
-          row.querySelector('.col-landed').innerText = formatUSD(res.landed);
+          row.querySelector('.col-cif').innerText = formatCurrency(res.cif);
+          row.querySelector('.col-duty').innerText = formatCurrency(res.duty);
+          row.querySelector('.col-tax').innerText = formatCurrency(taxLine);
+          row.querySelector('.col-landed').innerText = formatCurrency(res.landed);
         }
       }
     });
 
-    document.getElementById('rollCif').innerText = formatUSD(sumCif);
-    document.getElementById('rollDuty').innerText = formatUSD(sumDuty);
-    document.getElementById('rollVat').innerText = formatUSD(sumTax);
-    document.getElementById('rollTotal').innerText = formatUSD(sumTotal);
-    document.getElementById('batchResults').style.display = 'block';
+    document.getElementById('rollCif').innerText = formatCurrency(sumCif);
+    document.getElementById('rollDuty').innerText = formatCurrency(sumDuty);
+    document.getElementById('rollVat').innerText = formatCurrency(sumTax);
+    document.getElementById('rollTotal').innerText = formatCurrency(sumTotal);
+    document.getElementById('batchResults').style.display = activeBOMItems.length ? 'block' : 'none';
   }
 
   function exportDossier() {
@@ -880,8 +1013,23 @@
     document.body.removeChild(link);
   }
 
-  // Boot directly on load
-  changeCorridor('gcc_sa');
+  (async function boot() {
+    let savedRegime = 'gcc_sa';
+    let savedCurr = 'USD';
+    let savedTab = 'single';
+    try {
+      savedRegime = localStorage.getItem(STORAGE_KEYS.REGIME) || 'gcc_sa';
+      savedCurr = localStorage.getItem(STORAGE_KEYS.CURRENCY) || 'USD';
+      savedTab = localStorage.getItem(STORAGE_KEYS.ACTIVE_TAB) || 'single';
+      const storedBOM = localStorage.getItem(STORAGE_KEYS.BOM_ITEMS);
+      if (storedBOM) activeBOMItems = JSON.parse(storedBOM);
+    } catch (e) {}
+
+    await changeCorridor(savedRegime, false);
+    changeCurrency(savedCurr);
+    if (savedTab !== 'single') switchTab(savedTab);
+    if (activeBOMItems.length) renderBOMTable(true);
+  })();
 </script>
 </body>
 </html>
