@@ -1,0 +1,60 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fff0aa"/>
+      <stop offset="35%" stop-color="#d4af37"/>
+      <stop offset="70%" stop-color="#aa820a"/>
+      <stop offset="100%" stop-color="#644800"/>
+    </linearGradient>
+    <filter id="chassisShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000" flood-opacity="0.8"/>
+    </filter>
+  </defs>
+
+  <rect x="24" y="24" width="464" height="464" rx="72" fill="#14191f" stroke="#0e1317" stroke-width="6" filter="url(#chassisShadow)"/>
+  <rect x="36" y="36" width="440" height="440" rx="60" fill="none" stroke="#00f3ff" stroke-width="7" filter="url(#neonGlow)"/>
+
+  <g stroke="#00f3ff" stroke-opacity="0.22" stroke-width="1.8" fill="none">
+    <rect x="85" y="80" width="342" height="245"/>
+    <line x1="85" y1="80" x2="427" y2="325"/>
+    <line x1="427" y1="80" x2="85" y2="325"/>
+    <line x1="256" y1="80" x2="256" y2="325"/>
+    <line x1="85" y1="202" x2="427" y2="202"/>
+    <circle cx="256" cy="202" r="100"/>
+    <circle cx="256" cy="202" r="60"/>
+  </g>
+
+  <path d="M 100 310 V 95 H 178 L 256 220 L 334 95 H 412 V 310 H 352 V 175 L 278 290 H 234 L 160 175 V 310 Z"
+        fill="#0b0f14" 
+        stroke="#00f3ff" 
+        stroke-width="5" 
+        stroke-linejoin="round"
+        filter="url(#neonGlow)"/>
+
+  <path d="M 125 290 V 125 H 162 L 256 265 L 350 125 H 387 V 290 H 352 V 165 L 270 285 H 242 L 160 165 V 290 Z"
+        fill="none" 
+        stroke="#00f3ff" 
+        stroke-width="4.5" 
+        stroke-linejoin="round"/>
+
+  <circle cx="148" cy="392" r="48" fill="#12161c" stroke="#000" stroke-width="4"/>
+  <circle cx="148" cy="392" r="42" fill="url(#goldGradient)" stroke="#ffe57f" stroke-width="2"/>
+  <circle cx="148" cy="392" r="36" fill="none" stroke="#805d00" stroke-width="1.5" stroke-opacity="0.6"/>
+
+  <text x="325" y="432" 
+        text-anchor="middle"
+        font-family="'Cairo', 'Inter', 'JetBrains Mono', sans-serif" 
+        font-size="124" 
+        font-weight="900" 
+        fill="url(#goldGradient)" 
+        stroke="#ffe680" 
+        stroke-width="2" 
+        letter-spacing="2">33</text>
+</svg>

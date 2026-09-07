@@ -13,45 +13,50 @@ const geistMono = Geist_Mono({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#020617",
+  themeColor: "#050505",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
 };
 
 export const metadata: Metadata = {
-  title: "MIU_33 Studio // Digital Architecture & AI Systems",
+  title: "MIU_33 // Sovereign AEC Core & Municipal Compliance",
   description:
-    "Autonomous BIM visualization, spatial computing pipelines, AI telephony, and high-throughput architectural media engines.",
+    "Enterprise GCC municipal compliance platform: MOMRAH/SASO bilingual submittals, ZATCA Phase-2 billing, 4D BIM sequencing, and site telemetry HUD pipelines.",
   metadataBase: new URL("https://miu33archstudio.xyz"),
-  applicationName: "MIU_33 Studio",
+  applicationName: "MIU Sovereign AEC Core",
   authors: [{ name: "MIU_33 Studio", url: "https://miu33archstudio.xyz" }],
   keywords: [
     "MIU_33 Studio",
-    "SYNAPSE_PACT",
-    "Architectural AI",
-    "BIM Automation",
-    "Archicad Engine",
-    "Spatial Computing",
-    "3D WebGL",
+    "Sovereign AEC Core",
+    "MOMRAH Compliance",
+    "SASO Parity Engine",
+    "ZATCA Phase 2",
+    "BOM Automation",
+    "Industrial Architecture",
+    "4D BIM Sequencing",
+    "Site Progress HUD",
+    "GCC Procurement",
   ],
   openGraph: {
     type: "website",
     locale: "en_US",
     url: "https://miu33archstudio.xyz",
-    siteName: "MIU_33 Studio",
-    title: "MIU_33 Studio // Digital Architecture & AI Systems",
+    siteName: "MIU Sovereign AEC Core",
+    title: "MIU_33 // Sovereign AEC Core & Municipal Compliance",
     description:
-      "Autonomous BIM visualization, spatial computing pipelines, AI telephony, and high-throughput architectural media engines.",
+      "Enterprise platform for MOMRAH/Balady bilingual submittals, SASO material parity, ZATCA Phase-2 billing, and autonomous site telemetry.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "MIU_33 Studio // Digital Architecture & AI Systems",
+    title: "MIU_33 // Sovereign AEC Core",
     description:
-      "Autonomous BIM visualization, spatial computing pipelines, and AI engineering infrastructure.",
+      "Turnkey MOMRAH/SASO submittal compilation, trilingual ZATCA tax invoicing, and autonomous 4D BIM processing.",
   },
-  icons: {
-    icon: "/favicon.ico",
+ icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
   },
   robots: {
     index: true,
@@ -67,10 +72,10 @@ export default function RootLayout({
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: "MIU_33 Studio",
-    alternateName: ["SYNAPSE_PACT", "MIU Arch Engine"],
-    applicationCategory: "DesignApplication",
-    operatingSystem: "Web",
+    name: "MIU Sovereign AEC Core",
+    alternateName: ["MIU_33 Studio", "SYNAPSE_PACT", "AEC Sovereign Core"],
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web, Linux, Docker",
     url: "https://miu33archstudio.xyz",
     author: {
       "@type": "Organization",
@@ -78,13 +83,13 @@ export default function RootLayout({
       url: "https://miu33archstudio.xyz",
     },
     description:
-      "Autonomous BIM visualization, spatial computing pipelines, AI telephony, and high-throughput architectural media engines.",
+      "Autonomous industrial pipeline executing MOMRAH/SASO bilingual technical submittals, ZATCA Phase-2 tax invoicing, and site inspection telemetry.",
   };
 
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased bg-slate-950 text-slate-100`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased bg-black text-slate-100`}
     >
       <head>
         <script
@@ -92,7 +97,9 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col bg-[#050505] text-[#00f3ff] selection:bg-[#00f3ff] selection:text-black font-mono">
+        {children}
+      </body>
     </html>
   );
 }

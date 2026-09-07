@@ -3,7 +3,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import PitchDeck from "@/components/PitchDeck";
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.miu33archstudio.xyz").replace(/\/+$/, "");
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE ||
+  (typeof window !== "undefined" && window.location.hostname !== "localhost"
+    ? "https://api.miu33archstudio.xyz"
+    : "http://localhost:5000");
 
 interface StagedBomItem {
   code: string;
@@ -24,8 +28,72 @@ const SAMPLE_EN: StagedBomItem[] = [
 ];
 
 export default function SovereignCorePage() {
-  const [activeTab, setActiveTab] = useState<"spec" | "invoice" | "site_hud" | "pitch">("spec");
+  const [activeTab, setActiveTab] = useState<"pipeline" | "spec" | "invoice" | "site_hud" | "pitch">("pipeline");
   const [projectCode, setProjectCode] = useState("MOMRAH-RYD-2026-04");
+
+  // Cross-Border Pipeline State
+  const [pipeline, setPipeline] = useState<any>(null);
+  const [pipelineLoading, setPipelineLoading] = useState(false);
+  const manifestFileRef = useRef<HTMLInputElement | null>(null);
+
+  // Fetch Pipeline Status
+  const loadPipeline = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/transport/pipeline-status?projectCode=${projectCode}`);
+      const data = await res.json();
+      if (data.success) {
+        setPipeline(data.pipeline);
+      } else {
+        handleIngestManifest();
+      }
+    } catch (err) {
+      console.error("Pipeline offline:", err);
+    }
+  };
+
+  // Stage 1 Ingestion Handler
+  const handleIngestManifest = async (file?: File) => {
+    setPipelineLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append("projectCode", projectCode);
+      if (file) formData.append("manifestFile", file);
+
+      const res = await fetch(`${API_BASE}/api/transport/ingest`, {
+        method: "POST",
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPipeline(data.pipeline);
+      }
+    } catch (err) {
+      console.error("Ingest failed:", err);
+    } finally {
+      setPipelineLoading(false);
+    }
+  };
+
+  // Telemetry Advance Trigger
+  const handleAdvancePipeline = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/transport/telemetry-advance`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectCode })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPipeline(data.pipeline);
+      }
+    } catch (err) {
+      console.error("Advance failed:", err);
+    }
+  };
+
+  useEffect(() => {
+    loadPipeline();
+  }, [projectCode]);
 
   // Tab 1: BOM & SASO State
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -36,6 +104,7 @@ export default function SovereignCorePage() {
   const [isDragging, setIsDragging] = useState(false);
 
   // Tab 2: Commercial & ZATCA Tax State
+  const [selectedPlan, setSelectedPlan] = useState<"retainer" | "single" | "enterprise">("retainer");
   const [invoiceClient, setInvoiceClient] = useState("AL-RAJHI COMMERCIAL CONTRACTING");
   const [invoiceCurrency, setInvoiceCurrency] = useState("SAR");
   const [freightUSD, setFreightUSD] = useState("2400");
@@ -63,7 +132,7 @@ export default function SovereignCorePage() {
   const [dossierZipUrl, setDossierZipUrl] = useState<string | null>(null);
   const [dossierError, setDossierError] = useState<string | null>(null);
 
-  // Output & Audit History State
+  // Output & History State
   const [output, setOutput] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<any[]>([]);
@@ -71,6 +140,13 @@ export default function SovereignCorePage() {
   // Tenancy Authentication & Session State
   const [activeApiKey] = useState("miu_master_agency_key");
   const [clientBalance, setClientBalance] = useState<any>(null);
+
+  // Settlement & Paywall Gate State
+  const [showSettlementModal, setShowSettlementModal] = useState(false);
+  const [settlementRef, setSettlementRef] = useState("");
+  const [isSettled, setIsSettled] = useState(false);
+  const [clearanceStatus, setClearanceStatus] = useState<"IDLE" | "VERIFIED" | "FAILED">("IDLE");
+  const [pendingAction, setPendingAction] = useState<"spec" | "dossier" | null>(null);
 
   const fetchClientBalance = async () => {
     try {
@@ -104,6 +180,36 @@ export default function SovereignCorePage() {
     fetchHistory();
     fetchClientBalance();
   }, [activeApiKey]);
+
+  // Automated Webhook Listener Polling
+  useEffect(() => {
+    if (!showSettlementModal || isSettled) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/services/verify-settlement`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-api-key": activeApiKey },
+          body: JSON.stringify({ settlementRef: projectCode })
+        });
+        const data = await res.json();
+        if (data.verified) {
+          setIsSettled(true);
+          setClearanceStatus("VERIFIED");
+          setTimeout(() => {
+            setShowSettlementModal(false);
+            if (pendingAction === "spec") handleCompileSubmittal(projectCode);
+            else if (pendingAction === "dossier") handleZipDossier(projectCode);
+            setPendingAction(null);
+            setClearanceStatus("IDLE");
+          }, 1000);
+          clearInterval(interval);
+        }
+      } catch (err) {
+        // Silent poll
+      }
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [showSettlementModal, isSettled, pendingAction, projectCode, activeApiKey]);
 
   const handleModeChange = (mode: "ZH_TO_GCC" | "EN_TO_ZH_AR") => {
     setTranslationMode(mode);
@@ -160,20 +266,81 @@ export default function SovereignCorePage() {
     document.body.removeChild(link);
   };
 
-  const handleZipDossier = async () => {
+  const handleCompileSubmittal = async (overrideRef?: string) => {
+    setSpecLoading(true);
+    setError(null);
+    setOutput(null);
+
+    const refToUse = (overrideRef !== undefined ? overrideRef : settlementRef).trim();
+
+    try {
+      const sourceLang = translationMode === "ZH_TO_GCC" ? "zh" : "en";
+      const targetLangs = translationMode === "ZH_TO_GCC" ? ["en", "ar"] : ["zh", "ar"];
+
+      const res = await fetch(`${API_BASE}/api/services/spec-sheet`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": activeApiKey },
+        body: JSON.stringify({
+          rawData: { documentTitle: stagedDocTitle, items: stagedItems },
+          sourceLang,
+          targetLangs,
+          projectCode,
+          generateDual: true,
+          settlementRef: refToUse || (isSettled ? "SETTLED-AUTH" : undefined)
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Spec compilation failed");
+
+      setOutput(data);
+      if (data.isPaid) setIsSettled(true);
+      fetchHistory();
+      fetchClientBalance();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSpecLoading(false);
+    }
+  };
+
+  const handleZipDossier = async (overrideRef?: string) => {
+    const refToUse = (overrideRef !== undefined ? overrideRef : settlementRef).trim();
+
+    if (!isSettled && !refToUse) {
+      setPendingAction("dossier");
+      setShowSettlementModal(true);
+      return;
+    }
+
     setDossierLoading(true);
     setDossierError(null);
+
     try {
       const res = await fetch(`${API_BASE}/api/services/export-dossier`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-api-key": activeApiKey },
-        body: JSON.stringify({ projectCode }),
+        body: JSON.stringify({
+          projectCode,
+          settlementRef: refToUse || (isSettled ? "SETTLED-AUTH" : undefined)
+        }),
       });
       const data = await res.json();
+
+      if (res.status === 402) {
+        setPendingAction("dossier");
+        setShowSettlementModal(true);
+        return;
+      }
+
       if (!res.ok) throw new Error(data.error || "Dossier packaging failed");
 
+      // Set verified state and close modal
+      setIsSettled(true);
+      setShowSettlementModal(false);
       setDossierZipUrl(data.downloadUrl);
 
+      // Trigger automatic browser download
       const link = document.createElement("a");
       link.href = data.downloadUrl;
       link.setAttribute("download", data.fileName || `${projectCode}_DOSSIER.zip`);
@@ -184,6 +351,48 @@ export default function SovereignCorePage() {
       setDossierError(err.message);
     } finally {
       setDossierLoading(false);
+    }
+  };
+
+  const handleGenerateInvoice = async (plan: "retainer" | "single" | "enterprise") => {
+    setInvoiceLoading(true);
+    setError(null);
+
+    const planPrices = {
+      retainer: { code: "SVC-RET-01", name: "Monthly Municipal Compliance Retainer", priceUSD: 3500 },
+      single: { code: "SVC-SUB-01", name: "Single Project Municipal Compliance Filing", priceUSD: 1850 },
+      enterprise: { code: "SVC-ENT-01", name: "Enterprise Bare-Metal Compliance Core", priceUSD: 8500 },
+    };
+
+    const target = planPrices[plan];
+
+    try {
+      const res = await fetch(`${API_BASE}/api/services/invoice`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": activeApiKey },
+        body: JSON.stringify({
+          clientName: invoiceClient.trim() || "AL-RAJHI COMMERCIAL CONTRACTING",
+          currency: invoiceCurrency,
+          targetLang: "dual",
+          items: [
+            {
+              code: target.code,
+              name: target.name,
+              qty: 1,
+              unitPrice: Number((target.priceUSD * (invoiceCurrency === "SAR" ? 3.75 : 1)).toFixed(2))
+            }
+          ]
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Invoice generation failed");
+      setOutput(data);
+      setShowSettlementModal(true);
+      fetchHistory();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setInvoiceLoading(false);
     }
   };
 
@@ -270,26 +479,41 @@ export default function SovereignCorePage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#050505", color: "#00f3ff", fontFamily: "monospace", padding: "40px" }}>
-      <header style={{ borderBottom: "1px solid #1a1a1a", paddingBottom: "20px", marginBottom: "30px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+    <div style={{ minHeight: "100vh", backgroundColor: "#04070a", color: "#00f3ff", fontFamily: "monospace", padding: "30px 40px" }}>
+      
+      {/* Header Bar */}
+      <header style={{ borderBottom: "1px solid #142838", paddingBottom: "20px", marginBottom: "30px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <h1 style={{ fontSize: "1.2rem", letterSpacing: "2px", margin: 0 }}>MIU_33 // AEC ENTERPRISE SOVEREIGN CORE</h1>
+         <h1 style={{ fontSize: "1.2rem", letterSpacing: "2px", margin: 0, color: "#fff" }}>
+            MIU_33 // AEC ENTERPRISE SOVEREIGN CORE
+          </h1>
+          <div style={{ fontSize: "0.72rem", color: "#888", marginTop: "4px" }}>
+            CROSS-BORDER TRANSPORT &amp; CUSTOMS CLEARANCE // {projectCode}
+          </div>
           <div style={{ display: "flex", gap: "15px", alignItems: "center", marginTop: "5px" }}>
             <span style={{ fontSize: "0.8rem", color: "#00ff66" }}>● MOMRAH / SASO PIPELINE ONLINE</span>
+            <span style={{
+              fontSize: "0.72rem",
+              padding: "2px 8px",
+              borderRadius: "2px",
+              border: isSettled ? "1px solid #00ff66" : "1px solid #ffaa00",
+              color: isSettled ? "#00ff66" : "#ffaa00",
+              backgroundColor: isSettled ? "#041a0d" : "#201400"
+            }}>
+              {isSettled ? "✓ OFFICIAL REGULATORY SEAL LICENSED" : "● TRIAL MODE // WATERMARKED DRAFT"}
+            </span>
             {clientBalance && (
               <span style={{ fontSize: "0.75rem", color: "#888", borderLeft: "1px solid #333", paddingLeft: "15px" }}>
-                CLIENT: <span style={{ color: "#00f3ff" }}>{clientBalance.clientName || "ENTERPRISE"}</span> | LICENSE:{" "}
-                <span style={{ color: "#00ff66", fontWeight: "bold" }}>
-                  {clientBalance.plan === "agency_unlimited" ? "ENTERPRISE SLA // UNLIMITED" : "SOVEREIGN TIER // ACTIVE"}
-                </span>
+                CLIENT: <span style={{ color: "#00f3ff" }}>{clientBalance.clientName || "ENTERPRISE"}</span>
               </span>
             )}
           </div>
         </div>
 
-        {/* 4-Tab Enterprise Workspace */}
+        {/* 5-Tab Enterprise Navigation */}
         <div style={{ display: "flex", gap: "8px" }}>
           {[
+            { id: "pipeline", label: "🚢 LOGISTICS & TARIFF PIPELINE" },
             { id: "spec", label: "📑 BOM & SASO LOCALIZER" },
             { id: "invoice", label: "💳 COMMERCIAL & ZATCA STUDIO" },
             { id: "site_hud", label: "📐 SITE & BIM HUD TELEMETRY" },
@@ -323,7 +547,239 @@ export default function SovereignCorePage() {
         </div>
       )}
 
-      {/* TAB 1: BOM & SASO LOCALIZER */}
+      {/* ========================================================================= */}
+      {/* TAB 0: UNIFIED CROSS-BORDER TRANSPORT & CUSTOMS CLEARANCE PIPELINE        */}
+      {/* ========================================================================= */}
+      {activeTab === "pipeline" && (
+        <main style={{ width: "100%", maxWidth: "1200px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "25px" }}>
+          
+          {/* Manifest Ingestion Action Bar */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "#061017", border: "1px solid #142838", padding: "15px 20px" }}>
+            <div>
+              <span style={{ fontSize: "0.85rem", fontWeight: "bold", color: "#fff" }}>MANIFEST &amp; SHIPPING INGESTION</span>
+              <div style={{ fontSize: "0.7rem", color: "#888", marginTop: "2px" }}>
+                Ingest eBOL, packing lists, or container manifests to map HS Codes and calculate regional tariffs.
+              </div>
+            </div>
+            <div>
+              <button
+                onClick={() => manifestFileRef.current?.click()}
+                disabled={pipelineLoading}
+                style={{ backgroundColor: "#00f3ff", color: "#000", border: "none", padding: "10px 18px", fontWeight: "bold", fontSize: "0.75rem", cursor: "pointer", fontFamily: "monospace" }}
+              >
+                {pipelineLoading ? "PARSING MANIFEST..." : "📥 INGEST eBOL / PACKING LIST"}
+              </button>
+              <input
+                type="file"
+                ref={manifestFileRef}
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) handleIngestManifest(e.target.files[0]);
+                }}
+              />
+            </div>
+          </div>
+
+          {/* STAGE 1 & 2: MANIFEST & HARMONIZED TARIFF TABLE */}
+          <section style={{ border: "1px solid #142838", backgroundColor: "#061017", padding: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+              <div style={{ fontSize: "0.85rem", color: "#fff", fontWeight: "bold" }}>
+                1. HARMONIZED TARIFF &amp; HS CODE CONFORMITY MAPPING
+              </div>
+              <div style={{ fontSize: "0.7rem", color: "#aaa" }}>
+                MANIFEST HASH: <span style={{ color: "#00ff66" }}>{pipeline?.manifestHash?.slice(0, 16) || "AUTHENTICATING..."}...</span>
+              </div>
+            </div>
+
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.72rem" }}>
+                <thead>
+                  <tr style={{ backgroundColor: "#02070a", color: "#666", textAlign: "left", borderBottom: "1px solid #142838" }}>
+                    <th style={{ padding: "10px 8px" }}>ITEM NO</th>
+                    <th style={{ padding: "10px 8px" }}>DESCRIPTION</th>
+                    <th style={{ padding: "10px 8px" }}>MATERIAL SPEC</th>
+                    <th style={{ padding: "10px 8px" }}>HS TARIFF CODE</th>
+                    <th style={{ padding: "10px 8px" }}>SASO CONFORMITY</th>
+                    <th style={{ padding: "10px 8px", textAlign: "right" }}>FOB TOTAL</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(pipeline?.items || []).map((itm: any, idx: number) => (
+                    <tr key={idx} style={{ borderBottom: "1px solid #0d1b26" }}>
+                      <td style={{ padding: "10px 8px", color: "#00f3ff", fontWeight: "bold" }}>{itm.itemNo}</td>
+                      <td style={{ padding: "10px 8px", color: "#fff" }}>{itm.description}</td>
+                      <td style={{ padding: "10px 8px", color: "#aaa" }}>{itm.materialGrade}</td>
+                      <td style={{ padding: "10px 8px", color: "#00ff66" }}>{itm.hsCode}</td>
+                      <td style={{ padding: "10px 8px", color: "#ffaa00" }}>{itm.sasoStandard}</td>
+                      <td style={{ padding: "10px 8px", textAlign: "right", color: "#fff" }}>${itm.totalFobUSD?.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          {/* STAGE 3: REGIONAL COMPLIANCE & FISCAL COMPUTATION */}
+          <section style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+            
+            <div style={{ border: "1px solid #142838", backgroundColor: "#061017", padding: "20px" }}>
+              <div style={{ fontSize: "0.85rem", color: "#fff", fontWeight: "bold", marginBottom: "14px" }}>
+                2. REGIONAL COMPLIANCE &amp; FISCAL COMPUTATION (ZATCA)
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "0.75rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "#888" }}>SUBTOTAL FOB (PORT OF ORIGIN):</span>
+                  <span style={{ color: "#fff" }}>${pipeline?.fiscal?.subtotalFobUSD?.toFixed(2) || "0.00"} USD</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "#888" }}>OCEAN FREIGHT &amp; MARINE INSURANCE:</span>
+                  <span style={{ color: "#fff" }}>${((pipeline?.fiscal?.freightUSD || 0) + (pipeline?.fiscal?.insuranceUSD || 0)).toFixed(2)} USD</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #142838", paddingTop: "8px" }}>
+                  <span style={{ color: "#00f3ff" }}>TOTAL CIF JEDDAH:</span>
+                  <span style={{ color: "#00f3ff", fontWeight: "bold" }}>{pipeline?.fiscal?.totalCifSAR?.toFixed(2) || "0.00"} SAR</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "#ffaa00" }}>5% GCC UNIFIED CUSTOMS DUTY:</span>
+                  <span style={{ color: "#ffaa00" }}>{pipeline?.fiscal?.customsDutySAR?.toFixed(2) || "0.00"} SAR</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "#00ff66" }}>15% ZATCA STANDARD VAT:</span>
+                  <span style={{ color: "#00ff66" }}>{pipeline?.fiscal?.zatcaVatSAR?.toFixed(2) || "0.00"} SAR</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #00f3ff", paddingTop: "10px", marginTop: "4px" }}>
+                  <span style={{ fontWeight: "bold", color: "#fff" }}>ESTIMATED TOTAL LANDED (SAR):</span>
+                  <span style={{ fontWeight: "bold", color: "#00ff66", fontSize: "1rem" }}>
+                    {pipeline?.fiscal?.grandTotalLandedSAR?.toFixed(2) || "0.00"} SAR
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ border: "1px solid #142838", backgroundColor: "#061017", padding: "20px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+              <div>
+                <div style={{ fontSize: "0.85rem", color: "#fff", fontWeight: "bold", marginBottom: "14px" }}>
+                  PORT OF ARRIVAL CONFORMITY AUDIT
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "0.72rem" }}>
+                  <div style={{ padding: "10px 14px", border: "1px solid #00ff66", backgroundColor: "#04150b", display: "flex", justifyContent: "space-between" }}>
+                    <span>SABER MTC CONFORMITY</span>
+                    <strong style={{ color: "#00ff66" }}>APPROVED // SASO 2831 PARITY</strong>
+                  </div>
+                  <div style={{ padding: "10px 14px", border: "1px solid #00f3ff", backgroundColor: "#04141d", display: "flex", justifyContent: "space-between" }}>
+                    <span>FASAH CUSTOMS PRE-DECLARATION</span>
+                    <strong style={{ color: "#00f3ff" }}>SUBMITTED // NO DEMURRAGE HOLD</strong>
+                  </div>
+                  <div style={{ padding: "10px 14px", border: "1px solid #142838", backgroundColor: "#05090e", display: "flex", justifyContent: "space-between" }}>
+                    <span>DUTY DEBIT STATUS</span>
+                    <strong style={{ color: pipeline?.compliance?.dutyDebited ? "#00ff66" : "#aaa" }}>
+                      {pipeline?.compliance?.dutyDebited ? "AUTO-DEBITED AT JEDDAH" : "PENDING VESSEL ARRIVAL"}
+                    </strong>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ fontSize: "0.68rem", color: "#666", marginTop: "10px" }}>
+                CONSIGNMENT: {pipeline?.logistics?.containerNumber || "CSNU-789421-0"} // {pipeline?.logistics?.billOfLading || "BOL-CN-KSA"}
+              </div>
+            </div>
+
+          </section>
+
+          {/* STAGE 4: STAGED TRANSPORT HUD & TELEMETRY TRACKER */}
+          <section style={{ border: "1px solid #00f3ff", backgroundColor: "#061219", padding: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: "0.9rem", color: "#00f3ff", fontWeight: "bold" }}>
+                  3. STAGED TRANSPORT HUD &amp; TELEMETRY TRACKER
+                </div>
+                <div style={{ fontSize: "0.7rem", color: "#888", marginTop: "3px" }}>
+                  VESSEL: {pipeline?.logistics?.vesselName || "COSCO SHIPPING"} // ROUTE: MARITIME RED SEA
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button
+                  type="button"
+                  onClick={handleAdvancePipeline}
+                  style={{ backgroundColor: "#00ff66", border: "none", color: "#000", padding: "8px 16px", fontWeight: "bold", fontSize: "0.75rem", cursor: "pointer", fontFamily: "monospace" }}
+                >
+                  ⚡ ADVANCE TELEMETRY STAGE ➔
+                </button>
+                <button
+                  type="button"
+                  onClick={loadPipeline}
+                  style={{ backgroundColor: "transparent", border: "1px solid #00f3ff", color: "#00f3ff", padding: "8px 12px", fontSize: "0.75rem", cursor: "pointer", fontFamily: "monospace" }}
+                >
+                  ↻ SYNC
+                </button>
+              </div>
+            </div>
+
+            {/* 5-Stage Visual Stepper */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "10px", marginTop: "16px" }}>
+              {(pipeline?.milestones || []).map((m: any, idx: number) => {
+                const isDone = m.status === "COMPLETED" || m.status === "DELIVERED";
+                const isActive = m.status === "ACTIVE" || m.status === "IN_TRANSIT";
+                const color = isDone ? "#00ff66" : isActive ? "#00f3ff" : "#444";
+
+                return (
+                  <div key={idx} style={{ border: `1px solid ${color}`, backgroundColor: "#02070c", padding: "12px", textAlign: "center" }}>
+                    <div style={{ fontSize: "0.65rem", color, fontWeight: "bold" }}>STAGE {m.stage}</div>
+                    <div style={{ fontSize: "0.72rem", color: "#fff", margin: "6px 0", fontWeight: "bold" }}>{m.name}</div>
+                    <div style={{ fontSize: "0.65rem", color: isDone ? "#00ff66" : isActive ? "#00f3ff" : "#666" }}>
+                      ● {m.status}
+                    </div>
+                    <div style={{ fontSize: "0.6rem", color: "#555", marginTop: "4px" }}>{m.node}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* STAGE 5: SECURE CLEARANCE DOSSIER PACKET COMPILATION */}
+          <section style={{ border: isSettled ? "1px solid #00ff66" : "1px solid #00f3ff", backgroundColor: "#031208", padding: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={{ fontSize: "0.95rem", color: isSettled ? "#00ff66" : "#00f3ff", fontWeight: "bold" }}>
+                4. UNIVERSAL CUSTOMS CLEARANCE DOSSIER &amp; MUNICIPAL PACKET
+              </div>
+              <div style={{ fontSize: "0.72rem", color: "#aaa", marginTop: "4px" }}>
+                {isSettled
+                  ? "Dossier unsealed. Trilingual SASO parity sheet, ZATCA tax invoice, and HUD verification archives ready."
+                  : "Trial mode active. Wire or wallet clearance required to package the unwatermarked municipal archive."}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => handleZipDossier()}
+              disabled={dossierLoading}
+              style={{
+                backgroundColor: dossierLoading ? "#222" : isSettled ? "#00ff66" : "#ffd700",
+                color: "#000",
+                border: "none",
+                padding: "14px 24px",
+                fontWeight: "bold",
+                fontSize: "0.8rem",
+                cursor: dossierLoading ? "not-allowed" : "pointer",
+                fontFamily: "monospace",
+                letterSpacing: "1px"
+              }}
+            >
+              {dossierLoading
+                ? "PACKAGING ARCHIVE..."
+                : isSettled
+                  ? "📦 DOWNLOAD AUDIT-READY DOSSIER (.ZIP)"
+                  : "🔒 UNLOCK COMPLETE DOSSIER (.ZIP)"}
+            </button>
+          </section>
+
+        </main>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 1: BOM & SASO LOCALIZER                                               */}
+      {/* ========================================================================= */}
       {activeTab === "spec" && (
         <main style={{ width: "100%", maxWidth: "1200px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "25px", padding: "10px" }}>
           <section style={{ border: "1px solid #222", padding: "20px", backgroundColor: "#0b0b0b", display: "flex", flexDirection: "column", gap: "15px" }}>
@@ -535,66 +991,72 @@ export default function SovereignCorePage() {
               </table>
             </div>
 
-            <button
-              type="button"
-              disabled={specLoading || stagedItems.length === 0}
-              onClick={async () => {
-                setSpecLoading(true);
-                setError(null);
-                setOutput(null);
+            <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+              <button
+                type="button"
+                disabled={specLoading || stagedItems.length === 0}
+                onClick={() => handleCompileSubmittal()}
+                style={{
+                  flex: 1,
+                  backgroundColor: specLoading ? "#222" : isSettled ? "#00ff66" : "#00f3ff",
+                  color: "#000",
+                  border: "none",
+                  padding: "14px",
+                  fontWeight: "bold",
+                  fontSize: "0.85rem",
+                  cursor: specLoading ? "not-allowed" : "pointer",
+                  letterSpacing: "1px"
+                }}
+              >
+                {specLoading
+                  ? "TRANSLATING & COMPILING STAGED SUBMITTALS..."
+                  : isSettled
+                    ? "⚡ COMPILE LICENSED SUBMITTAL DOSSIER (UNWATERMARKED)"
+                    : "⚡ COMPILE PREVIEW SUBMITTAL (WATERMARKED DRAFT)"}
+              </button>
 
-                try {
-                  const sourceLang = translationMode === "ZH_TO_GCC" ? "zh" : "en";
-                  const targetLangs = translationMode === "ZH_TO_GCC" ? ["en", "ar"] : ["zh", "ar"];
-
-                  const res = await fetch(`${API_BASE}/api/services/spec-sheet`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", "x-api-key": activeApiKey },
-                    body: JSON.stringify({
-                      rawData: { documentTitle: stagedDocTitle, items: stagedItems },
-                      sourceLang,
-                      targetLangs,
-                      projectCode,
-                      generateDual: true
-                    }),
-                  });
-
-                  const data = await res.json();
-                  if (!res.ok) throw new Error(data.error || "Spec translation failed");
-
-                  setOutput(data);
-                  fetchHistory();
-                  fetchClientBalance();
-                } catch (err: any) {
-                  setError(err.message);
-                } finally {
-                  setSpecLoading(false);
-                }
-              }}
-              style={{
-                backgroundColor: specLoading ? "#222" : translationMode === "ZH_TO_GCC" ? "#00f3ff" : "#00ff66",
-                color: "#000",
-                border: "none",
-                padding: "14px",
-                fontWeight: "bold",
-                fontSize: "0.85rem",
-                cursor: specLoading ? "not-allowed" : "pointer",
-                letterSpacing: "1px",
-                marginTop: "10px"
-              }}
-            >
-              {specLoading
-                ? "TRANSLATING & COMPILING STAGED SUBMITTALS..."
-                : translationMode === "ZH_TO_GCC"
-                  ? "⚡ COMPILE STAGED BOM ➔ DUAL EN & AR MUNICIPAL SUBMITTALS (PDF)"
-                  : "⚡ COMPILE STAGED BOM ➔ DUAL ZH & AR MUNICIPAL SUBMITTALS (PDF)"}
-            </button>
+              {!isSettled && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPendingAction("spec");
+                    setShowSettlementModal(true);
+                  }}
+                  style={{
+                    backgroundColor: "transparent",
+                    border: "1px solid #ffd700",
+                    color: "#ffd700",
+                    padding: "14px 20px",
+                    fontWeight: "bold",
+                    fontSize: "0.78rem",
+                    cursor: "pointer",
+                    letterSpacing: "0.5px"
+                  }}
+                >
+                  💳 UNLOCK OFFICIAL SEAL
+                </button>
+              )}
+            </div>
           </section>
 
           {output?.downloads && (
-            <section style={{ border: "1px solid #00ff66", padding: "20px", backgroundColor: "#0b0b0b", display: "flex", flexDirection: "column", gap: "15px" }}>
-              <div style={{ fontSize: "0.85rem", color: "#00ff66", fontWeight: "bold" }}>
-                ✓ MOMRA / SASO COMPLIANT SUBMITTALS COMPILED [{output.projectCode || "SPEC-CORE"}]
+            <section style={{ border: output.isPaid ? "1px solid #00ff66" : "1px dashed #ffd700", padding: "20px", backgroundColor: "#0b0b0b", display: "flex", flexDirection: "column", gap: "15px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ fontSize: "0.85rem", color: output.isPaid ? "#00ff66" : "#ffd700", fontWeight: "bold" }}>
+                  {output.isPaid ? "✓ OFFICIAL MUNICIPAL SUBMITTALS RELEASED" : "⚠ PREVIEW DOSSIER COMPILED (WATERMARKED FOR DRAFT REVIEW)"}
+                </div>
+                {!output.isPaid && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPendingAction("spec");
+                      setShowSettlementModal(true);
+                    }}
+                    style={{ backgroundColor: "#ffd700", color: "#000", border: "none", padding: "6px 14px", fontWeight: "bold", fontSize: "0.72rem", cursor: "pointer" }}
+                  >
+                    CLEAR SETTLEMENT TO REMOVE WATERMARK
+                  </button>
+                )}
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
@@ -625,171 +1087,248 @@ export default function SovereignCorePage() {
         </main>
       )}
 
-      {/* TAB 2: COMMERCIAL & ZATCA TAX STUDIO */}
+      {/* ========================================================================= */}
+      {/* TAB 2: COMMERCIAL & ZATCA TAX STUDIO                                      */}
+      {/* ========================================================================= */}
       {activeTab === "invoice" && (
-        <main style={{ width: "100%", maxWidth: "1200px", margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "25px", padding: "10px" }}>
-          <section style={{ border: "1px solid #222", padding: "20px", backgroundColor: "#0b0b0b", display: "flex", flexDirection: "column", gap: "15px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h2 style={{ fontSize: "0.9rem", color: "#00f3ff", margin: 0 }}>
-                ZATCA TRILINGUAL TAX INVOICE ENGINE
+        <main style={{ width: "100%", maxWidth: "1200px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "25px", padding: "10px" }}>
+          <section style={{ border: "1px solid #222", padding: "20px", backgroundColor: "#0b0b0b" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
+              <h2 style={{ fontSize: "0.95rem", color: "#00f3ff", margin: 0, letterSpacing: "1px" }}>
+                COMMERCIAL ENGAGEMENT MODELS // GCC &amp; CHINA CONTRACTORS
               </h2>
-              <span style={{ fontSize: "0.7rem", color: "#00ff66", border: "1px solid #00ff66", padding: "2px 6px" }}>
-                15% VAT AUTO-CALC
+              <span style={{ fontSize: "0.72rem", color: "#888" }}>
+                SELECT MODEL ➔ ISSUE OFFICIAL ZATCA PROFORMA TAX INVOICE (PDF)
               </span>
             </div>
 
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                setInvoiceLoading(true);
-                setError(null);
-                try {
-                  const res = await fetch(`${API_BASE}/api/services/invoice`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", "x-api-key": activeApiKey },
-                    body: JSON.stringify({
-                      clientName: invoiceClient.trim() || "AL-RAJHI COMMERCIAL CONTRACTING",
-                      currency: invoiceCurrency,
-                      targetLang: "dual"
-                    }),
-                  });
-                  const data = await res.json();
-                  if (!res.ok) throw new Error(data.error || "Invoice generation failed");
-                  setOutput(data);
-                  fetchHistory();
-                } catch (err: any) {
-                  setError(err.message);
-                } finally {
-                  setInvoiceLoading(false);
-                }
-              }}
-              style={{ display: "flex", flexDirection: "column", gap: "15px" }}
-            >
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <label style={{ fontSize: "0.75rem", color: "#666" }}>BILLED ENTITY / CLIENT NAME:</label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "15px" }}>
+              <div
+                onClick={() => setSelectedPlan("retainer")}
+                style={{
+                  border: selectedPlan === "retainer" ? "2px solid #00ff66" : "1px solid #222",
+                  backgroundColor: selectedPlan === "retainer" ? "#06150b" : "#050505",
+                  padding: "15px",
+                  cursor: "pointer",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between"
+                }}
+              >
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: "#00ff66" }}>MUNICIPAL COMPLIANCE RETAINER</span>
+                    {selectedPlan === "retainer" && <span style={{ fontSize: "0.65rem", background: "#00ff66", color: "#000", padding: "2px 6px", fontWeight: "bold" }}>ACTIVE</span>}
+                  </div>
+                  <div style={{ fontSize: "1.4rem", fontWeight: "bold", color: "#fff", margin: "10px 0 4px" }}>
+                    $3,500 <span style={{ fontSize: "0.75rem", color: "#888", fontWeight: "normal" }}>/ month</span>
+                  </div>
+                  <p style={{ fontSize: "0.7rem", color: "#aaa", lineHeight: "1.4", margin: 0 }}>
+                    Turnkey procurement &amp; submittal engineering for active GCC projects.
+                  </p>
+                  <ul style={{ fontSize: "0.68rem", color: "#666", marginTop: "10px", paddingLeft: "15px", lineHeight: "1.6" }}>
+                    <li>Unlimited GB/T ⇄ SASO/ASTM BOM staging</li>
+                    <li>Instant MOMRAH dual-language vector PDF</li>
+                    <li>Continuous SABER conformity matrix</li>
+                    <li>Trilingual ZATCA 15% VAT tax invoice</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div
+                onClick={() => setSelectedPlan("single")}
+                style={{
+                  border: selectedPlan === "single" ? "2px solid #00ff66" : "1px solid #222",
+                  backgroundColor: selectedPlan === "single" ? "#06150b" : "#050505",
+                  padding: "15px",
+                  cursor: "pointer",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between"
+                }}
+              >
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: "#00f3ff" }}>PROJECT SUBMITTAL PACKAGE</span>
+                    <span style={{ fontSize: "0.65rem", border: "1px solid #333", color: "#888", padding: "2px 6px" }}>PER SUBMITTAL</span>
+                  </div>
+                  <div style={{ fontSize: "1.4rem", fontWeight: "bold", color: "#fff", margin: "10px 0 4px" }}>
+                    $1,850 <span style={{ fontSize: "0.75rem", color: "#888", fontWeight: "normal" }}>/ package</span>
+                  </div>
+                  <p style={{ fontSize: "0.7rem", color: "#aaa", lineHeight: "1.4", margin: 0 }}>
+                    Complete municipal compliance filing for a single building package.
+                  </p>
+                  <ul style={{ fontSize: "0.68rem", color: "#666", marginTop: "10px", paddingLeft: "15px", lineHeight: "1.6" }}>
+                    <li>Full factory BOM extraction &amp; alloy parity</li>
+                    <li>FOB Guangzhou to CIF Jeddah cost breakdown</li>
+                    <li>Stamped municipal drone inspection video</li>
+                    <li>Complete SASO &amp; ASTM compliance dossier</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div
+                onClick={() => setSelectedPlan("enterprise")}
+                style={{
+                  border: selectedPlan === "enterprise" ? "2px solid #00ff66" : "1px solid #222",
+                  backgroundColor: selectedPlan === "enterprise" ? "#06150b" : "#050505",
+                  padding: "15px",
+                  cursor: "pointer",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between"
+                }}
+              >
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: "#ffd700" }}>ENTERPRISE BARE-METAL CORE</span>
+                    <span style={{ fontSize: "0.65rem", border: "1px solid #333", color: "#ffd700", padding: "2px 6px" }}>AIR-GAPPED</span>
+                  </div>
+                  <div style={{ fontSize: "1.4rem", fontWeight: "bold", color: "#fff", margin: "10px 0 4px" }}>
+                    $8,500 <span style={{ fontSize: "0.75rem", color: "#888", fontWeight: "normal" }}>/ on-premise</span>
+                  </div>
+                  <p style={{ fontSize: "0.7rem", color: "#aaa", lineHeight: "1.4", margin: 0 }}>
+                    Self-hosted sovereign deployment for Tier-1 general contractors.
+                  </p>
+                  <ul style={{ fontSize: "0.68rem", color: "#666", marginTop: "10px", paddingLeft: "15px", lineHeight: "1.6" }}>
+                    <li>100% air-gapped local execution</li>
+                    <li>Direct ERP / Revit / BIM ingestion pipeline</li>
+                    <li>Dedicated multi-tenant contractor licensing</li>
+                    <li>Priority SLA &amp; custom GCC municipal schema</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: "20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #1a1a1a", paddingTop: "15px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <span style={{ fontSize: "0.75rem", color: "#888" }}>BILLED ENTITY:</span>
                 <input
                   type="text"
                   value={invoiceClient}
                   onChange={(e) => setInvoiceClient(e.target.value)}
-                  style={{ backgroundColor: "#050505", border: "1px solid #222", color: "#fff", padding: "10px", fontFamily: "monospace", fontSize: "0.85rem", outline: "none" }}
+                  style={{ backgroundColor: "#000", border: "1px solid #333", color: "#fff", padding: "8px 12px", fontFamily: "monospace", fontSize: "0.8rem", width: "280px", outline: "none" }}
                 />
               </div>
 
-              <div style={{ display: "flex", gap: "10px" }}>
-                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <label style={{ fontSize: "0.75rem", color: "#666" }}>CURRENCY:</label>
-                  <select
-                    value={invoiceCurrency}
-                    onChange={(e) => setInvoiceCurrency(e.target.value)}
-                    style={{ backgroundColor: "#050505", border: "1px solid #222", color: "#00f3ff", padding: "10px", fontFamily: "monospace", fontSize: "0.85rem", outline: "none" }}
-                  >
-                    <option value="SAR">SAR (Saudi Riyal - 15% VAT)</option>
-                    <option value="CNY">CNY (Chinese Yuan)</option>
-                    <option value="USD">USD (US Dollar)</option>
-                  </select>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={invoiceLoading}
-                style={{ backgroundColor: invoiceLoading ? "#222" : "#00f3ff", color: "#000", border: "none", padding: "12px", fontWeight: "bold", cursor: "pointer", letterSpacing: "1px" }}
-              >
-                {invoiceLoading ? "GENERATING..." : "⚡ GENERATE TRILINGUAL TAX INVOICE (PDF)"}
-              </button>
-            </form>
-
-            <hr style={{ borderColor: "#1a1a1a", margin: "10px 0" }} />
-
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h2 style={{ fontSize: "0.9rem", color: "#00ff66", margin: 0 }}>
-                CHINA ➔ GCC LANDED COST ESTIMATOR
-              </h2>
-              <span style={{ fontSize: "0.7rem", color: "#00f3ff", border: "1px solid #00f3ff", padding: "2px 6px" }}>
-                5% TARIFF + 15% VAT
-              </span>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              <div style={{ display: "flex", gap: "10px" }}>
-                <input
-                  type="text"
-                  value={freightUSD}
-                  onChange={(e) => setFreightUSD(e.target.value)}
-                  placeholder="Ocean Freight (USD)..."
-                  style={{ flex: 1, backgroundColor: "#050505", border: "1px solid #222", color: "#fff", padding: "8px", fontFamily: "monospace", fontSize: "0.8rem" }}
-                />
-              </div>
               <button
                 type="button"
-                disabled={customsLoading}
-                onClick={async () => {
-                  setCustomsLoading(true);
-                  setError(null);
-                  try {
-                    const res = await fetch(`${API_BASE}/api/services/landed-cost`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json", "x-api-key": activeApiKey },
-                      body: JSON.stringify({
-                        items: stagedItems.map((itm) => ({ code: itm.code, name: itm.name, unitPriceUSD: 48, qty: 250 })),
-                        freightCostUSD: Number(freightUSD) || 2400
-                      }),
-                    });
-                    const data = await res.json();
-                    if (!res.ok) throw new Error(data.error || "Customs estimation failed");
-                    setOutput(data);
-                    fetchHistory();
-                  } catch (err: any) {
-                    setError(err.message);
-                  } finally {
-                    setCustomsLoading(false);
-                  }
+                disabled={invoiceLoading}
+                onClick={() => {
+                  setShowSettlementModal(true);
+                  handleGenerateInvoice(selectedPlan);
                 }}
-                style={{ backgroundColor: customsLoading ? "#222" : "#00ff66", color: "#000", border: "none", padding: "12px", fontWeight: "bold", cursor: "pointer", letterSpacing: "1px" }}
+                style={{
+                  backgroundColor: invoiceLoading ? "#222" : "#00ff66",
+                  color: "#000",
+                  border: "none",
+                  padding: "12px 24px",
+                  fontWeight: "bold",
+                  cursor: invoiceLoading ? "not-allowed" : "pointer",
+                  fontFamily: "monospace",
+                  fontSize: "0.8rem",
+                  letterSpacing: "1px"
+                }}
               >
-                {customsLoading ? "CALCULATING TARIFFS..." : "📦 ESTIMATE FOB ➔ CIF JEDDAH LANDED COST"}
+                {invoiceLoading ? "GENERATING INVOICE..." : `⚡ GENERATE PROFORMA INVOICE ($${selectedPlan === "retainer" ? "3,500" : selectedPlan === "single" ? "1,850" : "8,500"})`}
               </button>
             </div>
           </section>
 
-          <section style={{ border: "1px solid #222", padding: "20px", backgroundColor: "#0b0b0b", display: "flex", flexDirection: "column", gap: "15px" }}>
-            <h2 style={{ fontSize: "0.9rem", color: "#888", margin: 0 }}>COMMERCIAL ARTIFACT DECK</h2>
-            {output?.downloadUrl ? (
-              <div style={{ border: "1px solid #00ff66", padding: "15px", backgroundColor: "#050505" }}>
-                <div style={{ fontSize: "0.8rem", color: "#00ff66", fontWeight: "bold", marginBottom: "6px" }}>
-                  ✓ TAX INVOICE COMPILED [{output.invoiceNumber}]
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "25px" }}>
+            <section style={{ border: "1px solid #222", padding: "20px", backgroundColor: "#0b0b0b", display: "flex", flexDirection: "column", gap: "15px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h2 style={{ fontSize: "0.9rem", color: "#00ff66", margin: 0 }}>
+                  CHINA ➔ GCC LANDED COST ESTIMATOR
+                </h2>
+                <span style={{ fontSize: "0.7rem", color: "#00f3ff", border: "1px solid #00f3ff", padding: "2px 6px" }}>
+                  5% TARIFF + 15% VAT
+                </span>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <input
+                    type="text"
+                    value={freightUSD}
+                    onChange={(e) => setFreightUSD(e.target.value)}
+                    placeholder="Ocean Freight (USD)..."
+                    style={{ flex: 1, backgroundColor: "#050505", border: "1px solid #222", color: "#fff", padding: "8px", fontFamily: "monospace", fontSize: "0.8rem" }}
+                  />
                 </div>
-                <a
-                  href={output.downloadUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ display: "block", textAlign: "center", backgroundColor: "#111", border: "1px solid #00ff66", color: "#00ff66", padding: "12px", textDecoration: "none", fontWeight: "bold", fontSize: "0.8rem" }}
+                <button
+                  type="button"
+                  disabled={customsLoading}
+                  onClick={async () => {
+                    setCustomsLoading(true);
+                    setError(null);
+                    try {
+                      const res = await fetch(`${API_BASE}/api/services/landed-cost`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "x-api-key": activeApiKey },
+                        body: JSON.stringify({
+                          items: stagedItems.map((itm) => ({ code: itm.code, name: itm.name, unitPriceUSD: 48, qty: 250 })),
+                          freightCostUSD: Number(freightUSD) || 2400
+                        }),
+                      });
+                      const data = await res.json();
+                      if (!res.ok) throw new Error(data.error || "Customs estimation failed");
+                      setOutput(data);
+                      fetchHistory();
+                    } catch (err: any) {
+                      setError(err.message);
+                    } finally {
+                      setCustomsLoading(false);
+                    }
+                  }}
+                  style={{ backgroundColor: customsLoading ? "#222" : "#00ff66", color: "#000", border: "none", padding: "12px", fontWeight: "bold", cursor: "pointer", letterSpacing: "1px" }}
                 >
-                  📑 OPEN TRILINGUAL TAX INVOICE (A4 PDF)
-                </a>
+                  {customsLoading ? "CALCULATING TARIFFS..." : "📦 ESTIMATE FOB ➔ CIF JEDDAH LANDED COST"}
+                </button>
               </div>
-            ) : null}
+            </section>
 
-            {output?.grandTotalLandedSAR ? (
-              <div style={{ border: "1px solid #00f3ff", padding: "15px", backgroundColor: "#050505", display: "flex", flexDirection: "column", gap: "6px", fontSize: "0.75rem" }}>
-                <div style={{ color: "#00f3ff", fontWeight: "bold" }}>✓ CIF JEDDAH LANDED COST ESTIMATE</div>
-                <div>CIF TOTAL: <span style={{ color: "#fff" }}>${output.totalCifUSD?.toFixed(2)} USD</span> ({output.totalCifSAR?.toFixed(2)} SAR)</div>
-                <div>5% CUSTOMS DUTY: <span style={{ color: "#ffcc00" }}>{output.customsDutySAR?.toFixed(2)} SAR</span></div>
-                <div>15% ZATCA VAT: <span style={{ color: "#ffcc00" }}>{output.vatSAR?.toFixed(2)} SAR</span></div>
-                <div style={{ color: "#00ff66", fontWeight: "bold", marginTop: "4px" }}>
-                  TOTAL LANDED: {output.grandTotalLandedSAR?.toFixed(2)} SAR (~¥{output.grandTotalLandedCNY?.toFixed(2)} CNY)
+            <section style={{ border: "1px solid #222", padding: "20px", backgroundColor: "#0b0b0b", display: "flex", flexDirection: "column", gap: "15px" }}>
+              <h2 style={{ fontSize: "0.9rem", color: "#888", margin: 0 }}>COMMERCIAL ARTIFACT DECK</h2>
+              {output?.downloadUrl ? (
+                <div style={{ border: "1px solid #00ff66", padding: "15px", backgroundColor: "#050505" }}>
+                  <div style={{ fontSize: "0.8rem", color: "#00ff66", fontWeight: "bold", marginBottom: "6px" }}>
+                    ✓ TAX INVOICE COMPILED [{output.invoiceNumber || "INV-LATEST"}]
+                  </div>
+                  <a
+                    href={output.downloadUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ display: "block", textAlign: "center", backgroundColor: "#111", border: "1px solid #00ff66", color: "#00ff66", padding: "12px", textDecoration: "none", fontWeight: "bold", fontSize: "0.8rem" }}
+                  >
+                    📑 OPEN TRILINGUAL TAX INVOICE (A4 PDF)
+                  </a>
                 </div>
-              </div>
-            ) : null}
+              ) : null}
 
-            <pre style={{ color: "#00ff66", margin: 0, whiteSpace: "pre-wrap", fontSize: "0.8rem", maxHeight: "350px", overflowY: "auto", border: "1px solid #222", padding: "10px", backgroundColor: "#050505" }}>
-              {output ? JSON.stringify(output, null, 2) : "// Awaiting commercial calculation..."}
-            </pre>
-          </section>
+              {output?.grandTotalLandedSAR ? (
+                <div style={{ border: "1px solid #00f3ff", padding: "15px", backgroundColor: "#050505", display: "flex", flexDirection: "column", gap: "6px", fontSize: "0.75rem" }}>
+                  <div style={{ color: "#00f3ff", fontWeight: "bold" }}>✓ CIF JEDDAH LANDED COST ESTIMATE</div>
+                  <div>CIF TOTAL: <span style={{ color: "#fff" }}>${output.totalCifUSD?.toFixed(2)} USD</span> ({output.totalCifSAR?.toFixed(2)} SAR)</div>
+                  <div>5% CUSTOMS DUTY: <span style={{ color: "#ffcc00" }}>{output.customsDutySAR?.toFixed(2)} SAR</span></div>
+                  <div>15% ZATCA VAT: <span style={{ color: "#ffcc00" }}>{output.vatSAR?.toFixed(2)} SAR</span></div>
+                  <div style={{ color: "#00ff66", fontWeight: "bold", marginTop: "4px" }}>
+                    TOTAL LANDED: {output.grandTotalLandedSAR?.toFixed(2)} SAR (~¥{output.grandTotalLandedCNY?.toFixed(2)} CNY)
+                  </div>
+                </div>
+              ) : null}
+
+              <pre style={{ color: "#00ff66", margin: 0, whiteSpace: "pre-wrap", fontSize: "0.8rem", maxHeight: "250px", overflowY: "auto", border: "1px solid #222", padding: "10px", backgroundColor: "#050505" }}>
+                {output ? JSON.stringify(output, null, 2) : "// Awaiting commercial calculation..."}
+              </pre>
+            </section>
+          </div>
         </main>
       )}
 
-      {/* TAB 3: SITE & BIM HUD TELEMETRY */}
+      {/* ========================================================================= */}
+      {/* TAB 3: SITE & BIM HUD TELEMETRY                                           */}
+      {/* ========================================================================= */}
       {activeTab === "site_hud" && (
         <main style={{ width: "100%", maxWidth: "1200px", margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "25px", padding: "10px" }}>
           <section style={{ border: "1px solid #222", padding: "20px", backgroundColor: "#0b0b0b", display: "flex", flexDirection: "column", gap: "15px" }}>
@@ -801,17 +1340,15 @@ export default function SovereignCorePage() {
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
-                if (!droneFile) {
-                  setError("Please select a valid .mp4 video file first before stamping.");
-                  return;
-                }
                 setSiteHudLoading(true);
                 setError(null);
                 setOutput(null);
 
                 try {
                   const formData = new FormData();
-                  formData.append("videoFile", droneFile);
+                  if (droneFile) {
+                    formData.append("videoFile", droneFile);
+                  }
                   formData.append("projectTitle", projectTitle);
                   formData.append("datumElevation", datumElevation);
                   formData.append("gpsCoordinates", gpsCoords);
@@ -837,7 +1374,7 @@ export default function SovereignCorePage() {
               style={{ display: "flex", flexDirection: "column", gap: "12px" }}
             >
               <label style={{ fontSize: "0.75rem", color: "#00ff66", fontWeight: "bold" }}>
-                1. SELECT RAW DRONE / SITE WALKTHROUGH FOOTAGE (.MP4)
+                1. SELECT RAW DRONE FOOTAGE (.MP4) OR RUN SYNTHETIC COLOR
               </label>
               <input
                 type="file"
@@ -859,7 +1396,7 @@ export default function SovereignCorePage() {
                 style={{ backgroundColor: "#050505", border: "1px solid #222", color: "#fff", padding: "8px", fontSize: "0.8rem" }}
               />
 
-              <div style={{ display: "flex", gap: "10px" }}>
+              <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
                 <input
                   type="text"
                   value={datumElevation}
@@ -937,7 +1474,7 @@ export default function SovereignCorePage() {
               <label style={{ fontSize: "0.72rem", color: "#888" }}>
                 SELECT OR DROP DRONE / PROGRESS CLIPS (.MP4):
               </label>
-              
+
               <input
                 type="file"
                 multiple
@@ -1147,55 +1684,10 @@ export default function SovereignCorePage() {
         </main>
       )}
 
-      {/* TAB 4: EXECUTIVE PROPOSAL DECK */}
+      {/* ========================================================================= */}
+      {/* TAB 4: EXECUTIVE PROPOSAL DECK                                            */}
+      {/* ========================================================================= */}
       {activeTab === "pitch" && <PitchDeck />}
-
-      {/* UNIVERSAL DOSSIER VAULT & 1-CLICK ZIP EXPORTER */}
-      <section style={{ maxWidth: "1200px", margin: "30px auto 0", border: "1px solid #00f3ff", backgroundColor: "#060f14", padding: "20px", display: "flex", flexDirection: "column", gap: "10px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <div style={{ fontSize: "0.85rem", color: "#00f3ff", fontWeight: "bold", letterSpacing: "1px" }}>
-              📦 UNIVERSAL PROJECT DOSSIER VAULT // [{projectCode}]
-            </div>
-            <div style={{ fontSize: "0.72rem", color: "#888", marginTop: "4px" }}>
-              Bundles all compiled submittal PDFs, SASO matrices, ZATCA tax invoices, and stamped MP4 passes into a single archive.
-            </div>
-          </div>
-
-          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-            <button
-              type="button"
-              disabled={dossierLoading}
-              onClick={handleZipDossier}
-              style={{
-                backgroundColor: dossierLoading ? "#222" : "#00ff66",
-                color: "#000",
-                border: "none",
-                padding: "12px 20px",
-                fontWeight: "bold",
-                fontSize: "0.75rem",
-                cursor: dossierLoading ? "not-allowed" : "pointer",
-                fontFamily: "monospace",
-                letterSpacing: "1px"
-              }}
-            >
-              {dossierLoading ? "PACKAGING ARTIFACTS..." : "📦 1-CLICK BUNDLE COMPLETE DOSSIER (.ZIP)"}
-            </button>
-          </div>
-        </div>
-
-        {dossierError && (
-          <div style={{ color: "#ff3366", fontSize: "0.75rem", border: "1px solid #ff3366", padding: "8px", backgroundColor: "#1a0505" }}>
-            ERROR: {dossierError}
-          </div>
-        )}
-
-        {dossierZipUrl && (
-          <div style={{ fontSize: "0.72rem", color: "#00ff66" }}>
-            ✓ ARCHIVE READY: <a href={dossierZipUrl} target="_blank" rel="noreferrer" style={{ color: "#00f3ff", textDecoration: "underline" }}>Click here if download did not start automatically</a>
-          </div>
-        )}
-      </section>
 
       {/* Sovereign Enterprise Compliance Footer */}
       <footer style={{ marginTop: "40px", borderTop: "1px solid #1a1a1a", paddingTop: "20px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.7rem", color: "#555" }}>
@@ -1205,9 +1697,191 @@ export default function SovereignCorePage() {
         </div>
         <div style={{ textAlign: "right", fontFamily: "monospace", color: "#444" }}>
           <div>SOVEREIGN AIR-GAPPED CORE // 2026</div>
-          <div style={{ color: "#00ff66" }}>● LOCAL EXECUTION ACTIVE</div>
+          <div style={{ color: isSettled ? "#00ff66" : "#00f3ff" }}>
+            ● {isSettled ? "LICENSED FOR OFFICIAL FILING" : "TRIAL PREVIEW MODE"}
+          </div>
         </div>
       </footer>
+
+      {/* DUAL PAYMENT & CLEARANCE MODAL (SARIE WIRE & AUTO-POLL LISTENER) */}
+      {showSettlementModal && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100vw",
+          height: "100vh",
+          backgroundColor: "rgba(0, 0, 0, 0.92)",
+          backdropFilter: "blur(6px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+          padding: "20px"
+        }}>
+          <div style={{
+            backgroundColor: "#0a0e17",
+            border: "1px solid #00f3ff",
+            padding: "25px",
+            width: "680px",
+            maxWidth: "95%",
+            display: "flex",
+            flexDirection: "column",
+            gap: "16px",
+            boxShadow: "0 0 35px rgba(0, 243, 255, 0.25)"
+          }}>
+
+            {/* Modal Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1px solid #1a2936", paddingBottom: "12px" }}>
+              <div>
+                <div style={{ fontSize: "0.95rem", color: "#00f3ff", fontWeight: "bold", letterSpacing: "1px" }}>
+                  SETTLEMENT GATEWAY // SARIE WIRE &amp; DIGITAL WALLET
+                </div>
+                <div style={{ fontSize: "0.72rem", color: "#aaa", marginTop: "3px" }}>
+                  BENEFICIARY: <span style={{ color: "#fff", fontWeight: "bold" }}>ANAMY DE LA CRUZ PADILLA</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSettlementModal(false);
+                  setPendingAction(null);
+                }}
+                style={{ backgroundColor: "transparent", border: "1px solid #444", color: "#888", padding: "4px 8px", cursor: "pointer", fontFamily: "monospace", fontSize: "0.75rem" }}
+              >
+                [CLOSE ✕]
+              </button>
+            </div>
+
+            {/* Generated Invoice Alert */}
+            {output?.downloadUrl && (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "#061824", border: "1px solid #0088cc", padding: "10px 14px" }}>
+                <div>
+                  <div style={{ fontSize: "0.75rem", color: "#00ff66", fontWeight: "bold" }}>✓ ZATCA PROFORMA INVOICE ISSUED</div>
+                  <div style={{ fontSize: "0.68rem", color: "#888" }}>Ref: {output.invoiceNumber || projectCode} (15% VAT &amp; Base64 QR Encoded)</div>
+                </div>
+                <a
+                  href={output.downloadUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ backgroundColor: "#00f3ff", color: "#000", padding: "6px 12px", textDecoration: "none", fontWeight: "bold", fontSize: "0.7rem", fontFamily: "monospace" }}
+                >
+                  VIEW PDF
+                </a>
+              </div>
+            )}
+
+            {/* Dual Payment Methods Grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
+
+              {/* Box 1: urpay / Al Rajhi */}
+              <div style={{ border: "1px solid #1a2936", backgroundColor: "#04070d", padding: "12px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #1a2230", paddingBottom: "6px", marginBottom: "8px" }}>
+                    <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: "#00f3ff" }}>URPAY // AL RAJHI</span>
+                    <span style={{ fontSize: "0.62rem", color: "#00ff66", backgroundColor: "#022010", padding: "2px 5px", border: "1px solid #006633" }}>SARIE</span>
+                  </div>
+                  <div style={{ fontSize: "0.68rem", color: "#888", marginBottom: "4px" }}>IBAN (Instant Local Transfer):</div>
+                  <div style={{ fontSize: "0.7rem", color: "#00ff66", fontWeight: "bold", backgroundColor: "#000", padding: "6px", border: "1px solid #1a2230", wordBreak: "break-all", userSelect: "all" }}>
+                    SA4880207781501222121011
+                  </div>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "10px" }}>
+                  <img
+                    src="/urpay-qr.png"
+                    alt="urpay QR"
+                    style={{ width: "130px", height: "130px", backgroundColor: "#fff", padding: "4px", borderRadius: "3px", objectFit: "contain", border: "1px solid #00f3ff" }}
+                  />
+                  <span style={{ fontSize: "0.65rem", color: "#666", marginTop: "6px" }}>Scan with urpay app</span>
+                </div>
+              </div>
+
+              {/* Box 2: STC Bank */}
+              <div style={{ border: "1px solid #1a2936", backgroundColor: "#04070d", padding: "12px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #1a2230", paddingBottom: "6px", marginBottom: "8px" }}>
+                    <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: "#b366ff" }}>STC BANK</span>
+                    <span style={{ fontSize: "0.62rem", color: "#00ff66", backgroundColor: "#022010", padding: "2px 5px", border: "1px solid #006633" }}>SARIE</span>
+                  </div>
+                  <div style={{ fontSize: "0.68rem", color: "#888", marginBottom: "4px" }}>IBAN (Instant Local Transfer):</div>
+                  <div style={{ fontSize: "0.7rem", color: "#00ff66", fontWeight: "bold", backgroundColor: "#000", padding: "6px", border: "1px solid #1a2230", wordBreak: "break-all", userSelect: "all" }}>
+                    SA277800000001261965468
+                  </div>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "10px" }}>
+                  <img
+                    src="/stc-qr.png"
+                    alt="STC Bank QR"
+                    style={{ width: "130px", height: "130px", backgroundColor: "#fff", padding: "4px", borderRadius: "3px", objectFit: "contain", border: "1px solid #b366ff" }}
+                  />
+                  <span style={{ fontSize: "0.65rem", color: "#666", marginTop: "6px" }}>Scan with STC Pay / Bank</span>
+                </div>
+              </div>
+
+            </div>
+
+           {/* Automated Webhook Listener Status Block */}
+            <div style={{ borderTop: "1px solid #1a2936", paddingTop: "14px", textAlign: "center" }}>
+              <div style={{ backgroundColor: "#061824", border: "1px solid #0088cc", padding: "12px", display: "flex", flexDirection: "column", gap: "6px" }}>
+                <div style={{ fontSize: "0.78rem", color: "#00ff66", fontWeight: "bold" }}>
+                  ⏳ WAITING FOR SARIE SETTLEMENT CLEARANCE...
+                </div>
+                <div style={{ fontSize: "0.68rem", color: "#aaa", lineHeight: "1.4" }}>
+                  Scan either QR code above and complete your transfer with your banking app. Once confirmed on the network, this terminal detects clearance and unlocks the dossier archive automatically in this window.
+                </div>
+
+                <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
+                  <input
+                    type="text"
+                    placeholder="Or enter SARIE / Bank Transaction Ref..."
+                    value={settlementRef}
+                    onChange={(e) => setSettlementRef(e.target.value)}
+                    style={{
+                      flex: 1,
+                      backgroundColor: "#000",
+                      border: "1px solid #142838",
+                      color: "#00f3ff",
+                      padding: "8px 12px",
+                      fontSize: "0.72rem",
+                      fontFamily: "monospace",
+                      outline: "none"
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (settlementRef.trim()) {
+                        handleZipDossier(settlementRef);
+                      }
+                    }}
+                    style={{
+                      backgroundColor: "#00f3ff",
+                      color: "#000",
+                      border: "none",
+                      padding: "8px 14px",
+                      fontWeight: "bold",
+                      fontSize: "0.72rem",
+                      cursor: "pointer",
+                      fontFamily: "monospace"
+                    }}
+                  >
+                    VERIFY REF
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Status Feedbacks */}
+            {clearanceStatus === "VERIFIED" && (
+              <div style={{ backgroundColor: "#022010", border: "1px solid #00ff66", padding: "8px", textAlign: "center", fontSize: "0.72rem", color: "#00ff66", fontWeight: "bold" }}>
+                ✓ SETTLEMENT CONFIRMED — UNLOCKING MUNICIPAL COMPLIANCE DOSSIER...
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
