@@ -20,40 +20,40 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "MIU_33 // Sovereign AEC Core & Municipal Compliance",
+  title: "MIU_33 // Sovereign China-GCC Trade & Compliance Core",
   description:
-    "Enterprise GCC municipal compliance platform: MOMRAH/SASO bilingual submittals, ZATCA Phase-2 billing, 4D BIM sequencing, and site telemetry HUD pipelines.",
+    "Cross-border China-Saudi sovereign compliance engine: GB/T to SASO/ASTM BOM parity, SFDA food cold-chain thermal telemetry, SABER MTC verification, and trilingual ZATCA 15% VAT settlement.",
   metadataBase: new URL("https://miu33archstudio.xyz"),
-  applicationName: "MIU Sovereign AEC Core",
+  applicationName: "MIU Sovereign Trade Core",
   authors: [{ name: "MIU_33 Studio", url: "https://miu33archstudio.xyz" }],
   keywords: [
     "MIU_33 Studio",
-    "Sovereign AEC Core",
-    "MOMRAH Compliance",
-    "SASO Parity Engine",
-    "ZATCA Phase 2",
-    "BOM Automation",
-    "Industrial Architecture",
-    "4D BIM Sequencing",
-    "Site Progress HUD",
-    "GCC Procurement",
+    "China Saudi Arabia Trade",
+    "SFDA Cold Chain",
+    "SASO 2831 Parity",
+    "SABER MTC",
+    "ZATCA 15% VAT",
+    "MOMRAH Balady",
+    "Dual Track Ingestion",
+    "BOM Localization",
+    "GCC Customs Clearance",
   ],
   openGraph: {
     type: "website",
     locale: "en_US",
     url: "https://miu33archstudio.xyz",
-    siteName: "MIU Sovereign AEC Core",
-    title: "MIU_33 // Sovereign AEC Core & Municipal Compliance",
+    siteName: "MIU_33 Sovereign Core",
+    title: "MIU_33 // China-GCC Sovereign Trade & Compliance Engine",
     description:
-      "Enterprise platform for MOMRAH/Balady bilingual submittals, SASO material parity, ZATCA Phase-2 billing, and autonomous site telemetry.",
+      "Automated cross-border trade execution: Trilingual SASO/SFDA submittals, cold-chain thermal monitoring, and ZATCA Phase-2 fiscal settlement.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "MIU_33 // Sovereign AEC Core",
+    title: "MIU_33 // Sovereign China-GCC Compliance Core",
     description:
-      "Turnkey MOMRAH/SASO submittal compilation, trilingual ZATCA tax invoicing, and autonomous 4D BIM processing.",
+      "Automated SFDA cold-chain audit, SASO/ASTM alloy parity, and trilingual ZATCA tax invoice dossiers.",
   },
- icons: {
+  icons: {
     icon: "/icon.svg",
     shortcut: "/icon.svg",
     apple: "/icon.svg",
@@ -72,8 +72,8 @@ export default function RootLayout({
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: "MIU Sovereign AEC Core",
-    alternateName: ["MIU_33 Studio", "SYNAPSE_PACT", "AEC Sovereign Core"],
+    name: "MIU Sovereign Trade Core",
+    alternateName: ["MIU_33 Studio", "Sovereign AEC & Trade Core"],
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web, Linux, Docker",
     url: "https://miu33archstudio.xyz",
@@ -83,7 +83,7 @@ export default function RootLayout({
       url: "https://miu33archstudio.xyz",
     },
     description:
-      "Autonomous industrial pipeline executing MOMRAH/SASO bilingual technical submittals, ZATCA Phase-2 tax invoicing, and site inspection telemetry.",
+      "Autonomous cross-border execution pipeline for China-Saudi trade: SFDA cold-chain telemetry audits, SASO 2831 material parity, and ZATCA Phase-2 tax invoicing.",
   };
 
   return (

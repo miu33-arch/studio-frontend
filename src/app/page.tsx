@@ -4,10 +4,10 @@ import React, { useState, useEffect, useRef } from "react";
 import PitchDeck from "@/components/PitchDeck";
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE ||
-  (typeof window !== "undefined" && window.location.hostname !== "localhost"
-    ? "https://api.miu33archstudio.xyz"
-    : "http://localhost:5000");
+  typeof window !== "undefined" &&
+  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+    ? "http://localhost:5000"
+    : (process.env.NEXT_PUBLIC_API_BASE || "https://api.miu33archstudio.xyz");
 
 interface StagedBomItem {
   code: string;
@@ -28,13 +28,70 @@ const SAMPLE_EN: StagedBomItem[] = [
 ];
 
 export default function SovereignCorePage() {
-  const [activeTab, setActiveTab] = useState<"pipeline" | "spec" | "invoice" | "site_hud" | "pitch">("pipeline");
+  const [activeTab, setActiveTab] = useState<"pipeline" | "multi_vertical" | "spec" | "invoice" | "site_hud" | "pitch">("pipeline");
   const [projectCode, setProjectCode] = useState("MOMRAH-RYD-2026-04");
+
+  // Multi-Vertical Ingest State (AEC + FMCG)
+  const [mvTrack, setMvTrack] = useState<"fmcg" | "aec">("fmcg");
+  const [mvCifValueSAR, setMvCifValueSAR] = useState("45000");
+  const [mvSfdaRegId, setMvSfdaRegId] = useState("SFDA-FOOD-2026-991");
+  const [mvHalalCert, setMvHalalCert] = useState(true);
+  const [mvTempC, setMvTempC] = useState("3.1");
+  const [mvShelfLifePct, setMvShelfLifePct] = useState("88");
+  const [mvIotStream, setMvIotStream] = useState(true);
+  
+  // AEC Track States
+  const [mvSaberCertId, setMvSaberCertId] = useState("SABER-KSA-AEC-2026-004");
+  const [mvSasoCompliant, setMvSasoCompliant] = useState(true);
+  const [mvMaterialGrade, setMvMaterialGrade] = useState("Structural Steel ASTM A36");
+  const [mvWeightTons, setMvWeightTons] = useState("42");
+
+  const [mvLoading, setMvLoading] = useState(false);
+  const [mvResult, setMvResult] = useState<any>(null);
 
   // Cross-Border Pipeline State
   const [pipeline, setPipeline] = useState<any>(null);
   const [pipelineLoading, setPipelineLoading] = useState(false);
   const manifestFileRef = useRef<HTMLInputElement | null>(null);
+
+  // Multi-Vertical Execution Handler
+  const handleRunMultiVerticalIngest = async () => {
+    setMvLoading(true);
+    setError(null);
+    try {
+      const payload: any = {
+        track: mvTrack,
+        metadata: mvTrack === "fmcg"
+          ? { sfdaRegistrationId: mvSfdaRegId, halalCertified: mvHalalCert }
+          : { saberCertificateId: mvSaberCertId, sasoCompliant: mvSasoCompliant },
+        shipment: mvTrack === "fmcg"
+          ? {
+              cifValueSAR: Number(mvCifValueSAR) || 0,
+              shelfLifeRemainingPct: Number(mvShelfLifePct) || 0,
+              iotTelemetryStream: mvIotStream,
+              currentTempC: Number(mvTempC) || 0
+            }
+          : {
+              cifValueSAR: Number(mvCifValueSAR) || 0,
+              materialGrade: mvMaterialGrade,
+              weightTons: Number(mvWeightTons) || 0
+            }
+      };
+
+      const res = await fetch(`${API_BASE}/api/transport/multi-vertical-ingest`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || "Multi-vertical evaluation failed.");
+      setMvResult(data);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setMvLoading(false);
+    }
+  };
 
   // Fetch Pipeline Status
   const loadPipeline = async () => {
@@ -169,7 +226,7 @@ export default function SovereignCorePage() {
       const contentType = res.headers.get("content-type");
       if (res.ok && contentType && contentType.includes("application/json")) {
         const data = await res.json();
-        if (data.success) setHistory(data.logs);
+        if (data.logs) setHistory(data.logs);
       }
     } catch (err) {
       console.error("Backend history offline:", err);
@@ -335,12 +392,10 @@ export default function SovereignCorePage() {
 
       if (!res.ok) throw new Error(data.error || "Dossier packaging failed");
 
-      // Set verified state and close modal
       setIsSettled(true);
       setShowSettlementModal(false);
       setDossierZipUrl(data.downloadUrl);
 
-      // Trigger automatic browser download
       const link = document.createElement("a");
       link.href = data.downloadUrl;
       link.setAttribute("download", data.fileName || `${projectCode}_DOSSIER.zip`);
@@ -481,14 +536,14 @@ export default function SovereignCorePage() {
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#04070a", color: "#00f3ff", fontFamily: "monospace", padding: "30px 40px" }}>
       
-      {/* Header Bar */}
+     {/* Header Bar */}
       <header style={{ borderBottom: "1px solid #142838", paddingBottom: "20px", marginBottom: "30px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-         <h1 style={{ fontSize: "1.2rem", letterSpacing: "2px", margin: 0, color: "#fff" }}>
-            MIU_33 // AEC ENTERPRISE SOVEREIGN CORE
+          <h1 style={{ fontSize: "1.2rem", letterSpacing: "2px", margin: 0, color: "#fff", display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ color: "#00f3ff" }}>MIU_33</span> // SOVEREIGN TRADE &amp; COMPLIANCE CORE
           </h1>
-          <div style={{ fontSize: "0.72rem", color: "#888", marginTop: "4px" }}>
-            CROSS-BORDER TRANSPORT &amp; CUSTOMS CLEARANCE // {projectCode}
+          <div style={{ fontSize: "0.72rem", color: "#888", marginTop: "4px", letterSpacing: "1px" }}>
+            CROSS-BORDER CHINA-SAUDI CLEARANCE // SFDA COLD-CHAIN &bull; SASO AEC &bull; {projectCode}
           </div>
           <div style={{ display: "flex", gap: "15px", alignItems: "center", marginTop: "5px" }}>
             <span style={{ fontSize: "0.8rem", color: "#00ff66" }}>● MOMRAH / SASO PIPELINE ONLINE</span>
@@ -510,14 +565,15 @@ export default function SovereignCorePage() {
           </div>
         </div>
 
-        {/* 5-Tab Enterprise Navigation */}
+        {/* 6-Tab Enterprise Navigation */}
         <div style={{ display: "flex", gap: "8px" }}>
           {[
-            { id: "pipeline", label: "🚢 LOGISTICS & TARIFF PIPELINE" },
+            { id: "pipeline", label: "🚢 LOGISTICS & TARIFF" },
+            { id: "multi_vertical", label: "❄️ DUAL-TRACK INGEST" },
             { id: "spec", label: "📑 BOM & SASO LOCALIZER" },
-            { id: "invoice", label: "💳 COMMERCIAL & ZATCA STUDIO" },
-            { id: "site_hud", label: "📐 SITE & BIM HUD TELEMETRY" },
-            { id: "pitch", label: "📊 EXECUTIVE PROPOSAL DECK" },
+            { id: "invoice", label: "💳 COMMERCIAL & ZATCA" },
+            { id: "site_hud", label: "📐 SITE & BIM HUD" },
+            { id: "pitch", label: "📊 PROPOSAL DECK" },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -553,7 +609,6 @@ export default function SovereignCorePage() {
       {activeTab === "pipeline" && (
         <main style={{ width: "100%", maxWidth: "1200px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "25px" }}>
           
-          {/* Manifest Ingestion Action Bar */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "#061017", border: "1px solid #142838", padding: "15px 20px" }}>
             <div>
               <span style={{ fontSize: "0.85rem", fontWeight: "bold", color: "#fff" }}>MANIFEST &amp; SHIPPING INGESTION</span>
@@ -580,7 +635,6 @@ export default function SovereignCorePage() {
             </div>
           </div>
 
-          {/* STAGE 1 & 2: MANIFEST & HARMONIZED TARIFF TABLE */}
           <section style={{ border: "1px solid #142838", backgroundColor: "#061017", padding: "20px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
               <div style={{ fontSize: "0.85rem", color: "#fff", fontWeight: "bold" }}>
@@ -619,9 +673,7 @@ export default function SovereignCorePage() {
             </div>
           </section>
 
-          {/* STAGE 3: REGIONAL COMPLIANCE & FISCAL COMPUTATION */}
           <section style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
-            
             <div style={{ border: "1px solid #142838", backgroundColor: "#061017", padding: "20px" }}>
               <div style={{ fontSize: "0.85rem", color: "#fff", fontWeight: "bold", marginBottom: "14px" }}>
                 2. REGIONAL COMPLIANCE &amp; FISCAL COMPUTATION (ZATCA)
@@ -683,10 +735,8 @@ export default function SovereignCorePage() {
                 CONSIGNMENT: {pipeline?.logistics?.containerNumber || "CSNU-789421-0"} // {pipeline?.logistics?.billOfLading || "BOL-CN-KSA"}
               </div>
             </div>
-
           </section>
 
-          {/* STAGE 4: STAGED TRANSPORT HUD & TELEMETRY TRACKER */}
           <section style={{ border: "1px solid #00f3ff", backgroundColor: "#061219", padding: "20px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
@@ -716,7 +766,6 @@ export default function SovereignCorePage() {
               </div>
             </div>
 
-            {/* 5-Stage Visual Stepper */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "10px", marginTop: "16px" }}>
               {(pipeline?.milestones || []).map((m: any, idx: number) => {
                 const isDone = m.status === "COMPLETED" || m.status === "DELIVERED";
@@ -737,7 +786,6 @@ export default function SovereignCorePage() {
             </div>
           </section>
 
-          {/* STAGE 5: SECURE CLEARANCE DOSSIER PACKET COMPILATION */}
           <section style={{ border: isSettled ? "1px solid #00ff66" : "1px solid #00f3ff", backgroundColor: "#031208", padding: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <div style={{ fontSize: "0.95rem", color: isSettled ? "#00ff66" : "#00f3ff", fontWeight: "bold" }}>
@@ -778,7 +826,310 @@ export default function SovereignCorePage() {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 1: BOM & SASO LOCALIZER                                               */}
+      {/* TAB 1: DUAL-TRACK MULTI-VERTICAL INGESTION CONSOLE (AEC + FMCG)          */}
+      {/* ========================================================================= */}
+      {activeTab === "multi_vertical" && (
+        <main style={{ width: "100%", maxWidth: "1200px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "25px" }}>
+          
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "#061017", border: "1px solid #142838", padding: "15px 20px" }}>
+            <div>
+              <div style={{ fontSize: "0.95rem", fontWeight: "bold", color: "#00f3ff" }}>
+                DUAL-TRACK COMPLIANCE ROUTER (SFDA FOOD / FMCG ⇄ AEC HEAVY ENGINEERING)
+              </div>
+              <div style={{ fontSize: "0.72rem", color: "#888", marginTop: "4px" }}>
+                Target: <code>/api/transport/multi-vertical-ingest</code> // Validated cold-chain sensor streaming &amp; SABER parity.
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                type="button"
+                onClick={() => { setMvTrack("fmcg"); setMvCifValueSAR("45000"); }}
+                style={{
+                  backgroundColor: mvTrack === "fmcg" ? "#00f3ff" : "transparent",
+                  color: mvTrack === "fmcg" ? "#000" : "#00f3ff",
+                  border: "1px solid #00f3ff",
+                  padding: "8px 14px",
+                  fontWeight: "bold",
+                  fontSize: "0.75rem",
+                  cursor: "pointer",
+                  fontFamily: "monospace"
+                }}
+              >
+                ❄️ FMCG / COLD CHAIN
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMvTrack("aec"); setMvCifValueSAR("120000"); }}
+                style={{
+                  backgroundColor: mvTrack === "aec" ? "#00ff66" : "transparent",
+                  color: mvTrack === "aec" ? "#000" : "#00ff66",
+                  border: "1px solid #00ff66",
+                  padding: "8px 14px",
+                  fontWeight: "bold",
+                  fontSize: "0.75rem",
+                  cursor: "pointer",
+                  fontFamily: "monospace"
+                }}
+              >
+                🏗️ AEC STRUCTURAL STEEL
+              </button>
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "25px" }}>
+            
+            {/* Input Config Section */}
+            <section style={{ border: "1px solid #142838", backgroundColor: "#061017", padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ fontSize: "0.85rem", color: "#fff", fontWeight: "bold", borderBottom: "1px solid #142838", paddingBottom: "8px" }}>
+                CARGO &amp; REGULATORY PARAMETERS [{mvTrack.toUpperCase()}]
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "0.72rem", color: "#888" }}>CIF VALUE (SAR):</label>
+                <input
+                  type="number"
+                  value={mvCifValueSAR}
+                  onChange={(e) => setMvCifValueSAR(e.target.value)}
+                  style={{ backgroundColor: "#000", border: "1px solid #333", color: "#00ff66", padding: "8px 12px", fontFamily: "monospace", fontSize: "0.8rem", outline: "none" }}
+                />
+              </div>
+
+              {mvTrack === "fmcg" ? (
+                <>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <label style={{ fontSize: "0.72rem", color: "#888" }}>SFDA REGISTRATION ID:</label>
+                    <input
+                      type="text"
+                      value={mvSfdaRegId}
+                      onChange={(e) => setMvSfdaRegId(e.target.value)}
+                      style={{ backgroundColor: "#000", border: "1px solid #333", color: "#fff", padding: "8px 12px", fontFamily: "monospace", fontSize: "0.8rem", outline: "none" }}
+                    />
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <label style={{ fontSize: "0.72rem", color: "#888" }}>CURRENT TEMP (°C):</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={mvTempC}
+                        onChange={(e) => setMvTempC(e.target.value)}
+                        style={{
+                          backgroundColor: "#000",
+                          border: Number(mvTempC) > 4.0 ? "1px solid #ff3366" : "1px solid #333",
+                          color: Number(mvTempC) > 4.0 ? "#ff3366" : "#00f3ff",
+                          padding: "8px 12px",
+                          fontFamily: "monospace",
+                          fontSize: "0.8rem",
+                          outline: "none"
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <label style={{ fontSize: "0.72rem", color: "#888" }}>REMAINING SHELF LIFE (%):</label>
+                      <input
+                        type="number"
+                        value={mvShelfLifePct}
+                        onChange={(e) => setMvShelfLifePct(e.target.value)}
+                        style={{
+                          backgroundColor: "#000",
+                          border: Number(mvShelfLifePct) < 70 ? "1px solid #ff3366" : "1px solid #333",
+                          color: Number(mvShelfLifePct) < 70 ? "#ff3366" : "#00ff66",
+                          padding: "8px 12px",
+                          fontFamily: "monospace",
+                          fontSize: "0.8rem",
+                          outline: "none"
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", gap: "20px", marginTop: "6px" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.75rem", color: "#fff", cursor: "pointer" }}>
+                      <input
+                        type="checkbox"
+                        checked={mvHalalCert}
+                        onChange={(e) => setMvHalalCert(e.target.checked)}
+                        style={{ accentColor: "#00ff66" }}
+                      />
+                      GSO HALAL CERTIFIED
+                    </label>
+
+                    <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.75rem", color: "#fff", cursor: "pointer" }}>
+                      <input
+                        type="checkbox"
+                        checked={mvIotStream}
+                        onChange={(e) => setMvIotStream(e.target.checked)}
+                        style={{ accentColor: "#00f3ff" }}
+                      />
+                      ACTIVE IOT TELEMETRY
+                    </label>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <label style={{ fontSize: "0.72rem", color: "#888" }}>SABER CERTIFICATE ID:</label>
+                    <input
+                      type="text"
+                      value={mvSaberCertId}
+                      onChange={(e) => setMvSaberCertId(e.target.value)}
+                      style={{ backgroundColor: "#000", border: "1px solid #333", color: "#fff", padding: "8px 12px", fontFamily: "monospace", fontSize: "0.8rem", outline: "none" }}
+                    />
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <label style={{ fontSize: "0.72rem", color: "#888" }}>MATERIAL SPEC / GRADE:</label>
+                    <input
+                      type="text"
+                      value={mvMaterialGrade}
+                      onChange={(e) => setMvMaterialGrade(e.target.value)}
+                      style={{ backgroundColor: "#000", border: "1px solid #333", color: "#00f3ff", padding: "8px 12px", fontFamily: "monospace", fontSize: "0.8rem", outline: "none" }}
+                    />
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <label style={{ fontSize: "0.72rem", color: "#888" }}>WEIGHT (METRIC TONS):</label>
+                    <input
+                      type="number"
+                      value={mvWeightTons}
+                      onChange={(e) => setMvWeightTons(e.target.value)}
+                      style={{ backgroundColor: "#000", border: "1px solid #333", color: "#fff", padding: "8px 12px", fontFamily: "monospace", fontSize: "0.8rem", outline: "none" }}
+                    />
+                  </div>
+
+                  <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.75rem", color: "#fff", cursor: "pointer", marginTop: "6px" }}>
+                    <input
+                      type="checkbox"
+                      checked={mvSasoCompliant}
+                      onChange={(e) => setMvSasoCompliant(e.target.checked)}
+                      style={{ accentColor: "#00ff66" }}
+                    />
+                    SASO / ASTM STANDARDS COMPLIANT
+                  </label>
+                </>
+              )}
+
+              <button
+                type="button"
+                disabled={mvLoading}
+                onClick={handleRunMultiVerticalIngest}
+                style={{
+                  backgroundColor: mvLoading ? "#222" : "#00f3ff",
+                  color: "#000",
+                  border: "none",
+                  padding: "14px",
+                  fontWeight: "bold",
+                  fontSize: "0.8rem",
+                  cursor: mvLoading ? "not-allowed" : "pointer",
+                  fontFamily: "monospace",
+                  marginTop: "10px",
+                  letterSpacing: "1px"
+                }}
+              >
+                {mvLoading ? "EVALUATING PIPELINE..." : `⚡ TRANSMIT ${mvTrack.toUpperCase()} TELEMETRY & AUDIT TARIFFS`}
+              </button>
+            </section>
+
+            {/* Ingestion Evaluation Display */}
+            <section style={{ border: "1px solid #142838", backgroundColor: "#061017", padding: "20px", display: "flex", flexDirection: "column", gap: "15px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ fontSize: "0.85rem", color: "#fff", fontWeight: "bold" }}>
+                  GATE EVALUATION // REGULATORY CLEARANCE
+                </div>
+                {mvResult?.validation?.status && (
+                  <span style={{
+                    fontSize: "0.72rem",
+                    padding: "3px 8px",
+                    fontWeight: "bold",
+                    borderRadius: "2px",
+                    border: mvResult.validation.status.includes("CLEAR") ? "1px solid #00ff66" : "1px solid #ff3366",
+                    color: mvResult.validation.status.includes("CLEAR") ? "#00ff66" : "#ff3366",
+                    backgroundColor: mvResult.validation.status.includes("CLEAR") ? "#041a0d" : "#1a0408"
+                  }}>
+                    ● {mvResult.validation.status}
+                  </span>
+                )}
+              </div>
+
+              {mvResult ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "0.75rem" }}>
+                  
+                  {/* Status Badges */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                    <div style={{ padding: "10px", border: "1px solid #142838", backgroundColor: "#02070c" }}>
+                      <div style={{ fontSize: "0.65rem", color: "#888" }}>REGULATORY APPROVAL:</div>
+                      <div style={{ color: "#00ff66", fontWeight: "bold", marginTop: "2px" }}>
+                        {mvResult.validation?.sfdaPreApproval || (mvResult.validation?.sasoCompliance ? "SASO Verified" : "Active")}
+                      </div>
+                    </div>
+                    <div style={{ padding: "10px", border: "1px solid #142838", backgroundColor: "#02070c" }}>
+                      <div style={{ fontSize: "0.65rem", color: "#888" }}>STANDARD PARITY:</div>
+                      <div style={{ color: "#00f3ff", fontWeight: "bold", marginTop: "2px" }}>
+                        {mvResult.validation?.halalStandard || (mvResult.validation?.zatcaValidated ? "ZATCA e-Tax Ready" : "GCC Compliant")}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* FMCG Cold Chain Metrics Box */}
+                  {mvResult.validation?.coldChainTelemetry && (
+                    <div style={{ border: "1px solid #142838", backgroundColor: "#02070c", padding: "12px" }}>
+                      <div style={{ fontSize: "0.7rem", color: "#00f3ff", fontWeight: "bold", marginBottom: "8px" }}>
+                        COLD-CHAIN SENSOR TELEMETRY STREAM
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", fontSize: "0.7rem" }}>
+                        <div>CURRENT TEMP: <strong style={{ color: mvResult.validation.coldChainTelemetry.tempStatus === "BREACH_CRITICAL_SFDA" ? "#ff3366" : "#00ff66" }}>{mvResult.validation.coldChainTelemetry.currentTempC}°C</strong></div>
+                        <div>MAX THRESHOLD: <span style={{ color: "#aaa" }}>{mvResult.validation.coldChainTelemetry.maxTempThresholdC}°C</span></div>
+                        <div>SHELF-LIFE REMAINING: <strong style={{ color: mvResult.validation.coldChainTelemetry.shelfLifeStatus === "REJECT_EXPIRED_THRESHOLD" ? "#ff3366" : "#00ff66" }}>{mvResult.validation.coldChainTelemetry.minRemainingShelfLifePct}%</strong></div>
+                        <div>TELEMETRY LINK: <span style={{ color: "#00f3ff" }}>{mvResult.validation.coldChainTelemetry.sensorStreamActive ? "ENCRYPTED STREAM" : "OFFLINE"}</span></div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Financial Settlement Ledger */}
+                  <div style={{ border: "1px solid #142838", backgroundColor: "#02070c", padding: "12px", display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <div style={{ fontSize: "0.7rem", color: "#ffaa00", fontWeight: "bold", marginBottom: "4px" }}>
+                      ZATCA / PORT CLEARANCE FISCAL ASSESSMENT
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "#888" }}>CIF VALUE:</span>
+                      <span>{mvResult.financials?.cifValueSAR?.toLocaleString()} SAR</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "#888" }}>5% CUSTOMS DUTY:</span>
+                      <span style={{ color: "#ffaa00" }}>{mvResult.financials?.customsDutySAR?.toLocaleString()} SAR</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "#888" }}>PORT INSPECTION &amp; TERMINAL FEE:</span>
+                      <span>{(mvResult.financials?.sfdaHandlingFee || mvResult.financials?.municipalHandlingFee)?.toLocaleString()} SAR</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "#888" }}>15% ZATCA VAT:</span>
+                      <span style={{ color: "#00ff66" }}>{mvResult.financials?.zatcaVatSAR?.toLocaleString()} SAR</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #142838", paddingTop: "8px", marginTop: "4px" }}>
+                      <strong style={{ color: "#fff" }}>TOTAL LANDED COST:</strong>
+                      <strong style={{ color: "#00ff66", fontSize: "0.95rem" }}>
+                        {mvResult.financials?.totalLandedCostSAR?.toLocaleString()} SAR
+                      </strong>
+                    </div>
+                  </div>
+
+                </div>
+              ) : (
+                <div style={{ padding: "40px 20px", border: "1px dashed #222", textAlign: "center", color: "#666", fontSize: "0.75rem" }}>
+                  Adjust parameters on the left and dispatch audit telemetry to calculate landed duties and verify compliance.
+                </div>
+              )}
+            </section>
+          </div>
+
+        </main>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 2: BOM & SASO LOCALIZER                                               */}
       {/* ========================================================================= */}
       {activeTab === "spec" && (
         <main style={{ width: "100%", maxWidth: "1200px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "25px", padding: "10px" }}>
@@ -1088,7 +1439,7 @@ export default function SovereignCorePage() {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 2: COMMERCIAL & ZATCA TAX STUDIO                                      */}
+      {/* TAB 3: COMMERCIAL & ZATCA TAX STUDIO                                      */}
       {/* ========================================================================= */}
       {activeTab === "invoice" && (
         <main style={{ width: "100%", maxWidth: "1200px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "25px", padding: "10px" }}>
@@ -1327,7 +1678,7 @@ export default function SovereignCorePage() {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 3: SITE & BIM HUD TELEMETRY                                           */}
+      {/* TAB 4: SITE & BIM HUD TELEMETRY                                           */}
       {/* ========================================================================= */}
       {activeTab === "site_hud" && (
         <main style={{ width: "100%", maxWidth: "1200px", margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "25px", padding: "10px" }}>
@@ -1685,15 +2036,15 @@ export default function SovereignCorePage() {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 4: EXECUTIVE PROPOSAL DECK                                            */}
+      {/* TAB 5: EXECUTIVE PROPOSAL DECK                                            */}
       {/* ========================================================================= */}
       {activeTab === "pitch" && <PitchDeck />}
 
-      {/* Sovereign Enterprise Compliance Footer */}
+    {/* Sovereign Enterprise Compliance Footer */}
       <footer style={{ marginTop: "40px", borderTop: "1px solid #1a1a1a", paddingTop: "20px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.7rem", color: "#555" }}>
         <div style={{ maxWidth: "800px", lineHeight: "1.4" }}>
           <span style={{ color: "#888", fontWeight: "bold" }}>LEGAL &amp; REGULATORY NOTICE:</span>{" "}
-          MIU Sovereign AEC Core is a technical staging and document compilation engine. Outputs are prepared for engineering coordination. Final submittals to MOMRAH, Balady, SABER, or ZATCA require review and endorsement by the licensed Engineer of Record.
+          MIU Sovereign AEC &amp; Trade Core is a technical staging and document compilation engine. Outputs are prepared for engineering coordination and customs clearance. Final submittals to MOMRAH, Balady, SFDA, SABER, or ZATCA require review and endorsement by the licensed Engineer of Record or clearing agent.
         </div>
         <div style={{ textAlign: "right", fontFamily: "monospace", color: "#444" }}>
           <div>SOVEREIGN AIR-GAPPED CORE // 2026</div>
@@ -1702,7 +2053,7 @@ export default function SovereignCorePage() {
           </div>
         </div>
       </footer>
-
+      
       {/* DUAL PAYMENT & CLEARANCE MODAL (SARIE WIRE & AUTO-POLL LISTENER) */}
       {showSettlementModal && (
         <div style={{
@@ -1735,10 +2086,10 @@ export default function SovereignCorePage() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1px solid #1a2936", paddingBottom: "12px" }}>
               <div>
                 <div style={{ fontSize: "0.95rem", color: "#00f3ff", fontWeight: "bold", letterSpacing: "1px" }}>
-                  SETTLEMENT GATEWAY // SARIE WIRE &amp; DIGITAL WALLET
+                  SETTLEMENT GATEWAY // SARIE WIRE &amp; DIGITAL WALLET [source: 1]
                 </div>
                 <div style={{ fontSize: "0.72rem", color: "#aaa", marginTop: "3px" }}>
-                  BENEFICIARY: <span style={{ color: "#fff", fontWeight: "bold" }}>ANAMY DE LA CRUZ PADILLA</span>
+                  BENEFICIARY: <span style={{ color: "#fff", fontWeight: "bold" }}>ANAMY DE LA CRUZ PADILLA</span> [source: 1]
                 </div>
               </div>
               <button
@@ -1749,7 +2100,7 @@ export default function SovereignCorePage() {
                 }}
                 style={{ backgroundColor: "transparent", border: "1px solid #444", color: "#888", padding: "4px 8px", cursor: "pointer", fontFamily: "monospace", fontSize: "0.75rem" }}
               >
-                [CLOSE ✕]
+                [CLOSE ✕] [source: 1]
               </button>
             </div>
 
@@ -1757,8 +2108,8 @@ export default function SovereignCorePage() {
             {output?.downloadUrl && (
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "#061824", border: "1px solid #0088cc", padding: "10px 14px" }}>
                 <div>
-                  <div style={{ fontSize: "0.75rem", color: "#00ff66", fontWeight: "bold" }}>✓ ZATCA PROFORMA INVOICE ISSUED</div>
-                  <div style={{ fontSize: "0.68rem", color: "#888" }}>Ref: {output.invoiceNumber || projectCode} (15% VAT &amp; Base64 QR Encoded)</div>
+                  <div style={{ fontSize: "0.75rem", color: "#00ff66", fontWeight: "bold" }}>✓ ZATCA PROFORMA INVOICE ISSUED [source: 1]</div>
+                  <div style={{ fontSize: "0.68rem", color: "#888" }}>Ref: {output.invoiceNumber || projectCode} (15% VAT &amp; Base64 QR Encoded) [source: 1]</div>
                 </div>
                 <a
                   href={output.downloadUrl}
@@ -1766,7 +2117,7 @@ export default function SovereignCorePage() {
                   rel="noreferrer"
                   style={{ backgroundColor: "#00f3ff", color: "#000", padding: "6px 12px", textDecoration: "none", fontWeight: "bold", fontSize: "0.7rem", fontFamily: "monospace" }}
                 >
-                  VIEW PDF
+                  VIEW PDF [source: 1]
                 </a>
               </div>
             )}
@@ -1778,12 +2129,12 @@ export default function SovereignCorePage() {
               <div style={{ border: "1px solid #1a2936", backgroundColor: "#04070d", padding: "12px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                 <div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #1a2230", paddingBottom: "6px", marginBottom: "8px" }}>
-                    <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: "#00f3ff" }}>URPAY // AL RAJHI</span>
-                    <span style={{ fontSize: "0.62rem", color: "#00ff66", backgroundColor: "#022010", padding: "2px 5px", border: "1px solid #006633" }}>SARIE</span>
+                    <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: "#00f3ff" }}>URPAY // AL RAJHI [source: 1]</span>
+                    <span style={{ fontSize: "0.62rem", color: "#00ff66", backgroundColor: "#022010", padding: "2px 5px", border: "1px solid #006633" }}>SARIE [source: 1]</span>
                   </div>
-                  <div style={{ fontSize: "0.68rem", color: "#888", marginBottom: "4px" }}>IBAN (Instant Local Transfer):</div>
+                  <div style={{ fontSize: "0.68rem", color: "#888", marginBottom: "4px" }}>IBAN (Instant Local Transfer): [source: 1]</div>
                   <div style={{ fontSize: "0.7rem", color: "#00ff66", fontWeight: "bold", backgroundColor: "#000", padding: "6px", border: "1px solid #1a2230", wordBreak: "break-all", userSelect: "all" }}>
-                    SA4880207781501222121011
+                    SA4880207781501222121011 [source: 1]
                   </div>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "10px" }}>
@@ -1792,7 +2143,7 @@ export default function SovereignCorePage() {
                     alt="urpay QR"
                     style={{ width: "130px", height: "130px", backgroundColor: "#fff", padding: "4px", borderRadius: "3px", objectFit: "contain", border: "1px solid #00f3ff" }}
                   />
-                  <span style={{ fontSize: "0.65rem", color: "#666", marginTop: "6px" }}>Scan with urpay app</span>
+                  <span style={{ fontSize: "0.65rem", color: "#666", marginTop: "6px" }}>Scan with urpay app [source: 1]</span>
                 </div>
               </div>
 
@@ -1800,12 +2151,12 @@ export default function SovereignCorePage() {
               <div style={{ border: "1px solid #1a2936", backgroundColor: "#04070d", padding: "12px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                 <div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #1a2230", paddingBottom: "6px", marginBottom: "8px" }}>
-                    <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: "#b366ff" }}>STC BANK</span>
-                    <span style={{ fontSize: "0.62rem", color: "#00ff66", backgroundColor: "#022010", padding: "2px 5px", border: "1px solid #006633" }}>SARIE</span>
+                    <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: "#b366ff" }}>STC BANK [source: 1]</span>
+                    <span style={{ fontSize: "0.62rem", color: "#00ff66", backgroundColor: "#022010", padding: "2px 5px", border: "1px solid #006633" }}>SARIE [source: 1]</span>
                   </div>
-                  <div style={{ fontSize: "0.68rem", color: "#888", marginBottom: "4px" }}>IBAN (Instant Local Transfer):</div>
+                  <div style={{ fontSize: "0.68rem", color: "#888", marginBottom: "4px" }}>IBAN (Instant Local Transfer): [source: 1]</div>
                   <div style={{ fontSize: "0.7rem", color: "#00ff66", fontWeight: "bold", backgroundColor: "#000", padding: "6px", border: "1px solid #1a2230", wordBreak: "break-all", userSelect: "all" }}>
-                    SA277800000001261965468
+                    SA277800000001261965468 [source: 1]
                   </div>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "10px" }}>
@@ -1814,20 +2165,20 @@ export default function SovereignCorePage() {
                     alt="STC Bank QR"
                     style={{ width: "130px", height: "130px", backgroundColor: "#fff", padding: "4px", borderRadius: "3px", objectFit: "contain", border: "1px solid #b366ff" }}
                   />
-                  <span style={{ fontSize: "0.65rem", color: "#666", marginTop: "6px" }}>Scan with STC Pay / Bank</span>
+                  <span style={{ fontSize: "0.65rem", color: "#666", marginTop: "6px" }}>Scan with STC Pay / Bank [source: 1]</span>
                 </div>
               </div>
 
             </div>
 
-           {/* Automated Webhook Listener Status Block */}
+            {/* Automated Webhook Listener Status Block */}
             <div style={{ borderTop: "1px solid #1a2936", paddingTop: "14px", textAlign: "center" }}>
               <div style={{ backgroundColor: "#061824", border: "1px solid #0088cc", padding: "12px", display: "flex", flexDirection: "column", gap: "6px" }}>
                 <div style={{ fontSize: "0.78rem", color: "#00ff66", fontWeight: "bold" }}>
-                  ⏳ WAITING FOR SARIE SETTLEMENT CLEARANCE...
+                  ⏳ WAITING FOR SARIE SETTLEMENT CLEARANCE... [source: 1]
                 </div>
                 <div style={{ fontSize: "0.68rem", color: "#aaa", lineHeight: "1.4" }}>
-                  Scan either QR code above and complete your transfer with your banking app. Once confirmed on the network, this terminal detects clearance and unlocks the dossier archive automatically in this window.
+                  Scan either QR code above and complete your transfer with your banking app [source: 1]. Once confirmed on the network, this terminal detects clearance and unlocks the dossier archive automatically in this window [source: 1].
                 </div>
 
                 <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
@@ -1865,7 +2216,7 @@ export default function SovereignCorePage() {
                       fontFamily: "monospace"
                     }}
                   >
-                    VERIFY REF
+                    VERIFY REF [source: 1]
                   </button>
                 </div>
               </div>
@@ -1874,7 +2225,7 @@ export default function SovereignCorePage() {
             {/* Status Feedbacks */}
             {clearanceStatus === "VERIFIED" && (
               <div style={{ backgroundColor: "#022010", border: "1px solid #00ff66", padding: "8px", textAlign: "center", fontSize: "0.72rem", color: "#00ff66", fontWeight: "bold" }}>
-                ✓ SETTLEMENT CONFIRMED — UNLOCKING MUNICIPAL COMPLIANCE DOSSIER...
+                ✓ SETTLEMENT CONFIRMED — UNLOCKING MUNICIPAL COMPLIANCE DOSSIER... [source: 1]
               </div>
             )}
 
