@@ -167,6 +167,27 @@ export default function SovereignCorePage() {
   const [freightUSD, setFreightUSD] = useState("2400");
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [customsLoading, setCustomsLoading] = useState(false);
+  const [ledgerInvoices, setLedgerInvoices] = useState<any[]>([]);
+  const [ledgerLoading, setLedgerLoading] = useState<boolean>(false);
+
+  const fetchLedger = async () => {
+    setLedgerLoading(true);
+    try {
+      const res = await fetch("https://api.miu33archstudio.xyz/api/services/invoices?limit=10");
+      const data = await res.json();
+      if (data.success && data.invoices) {
+        setLedgerInvoices(data.invoices);
+      }
+    } catch (err) {
+      console.error("Failed to sync ledger:", err);
+    } finally {
+      setLedgerLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLedger();
+  }, []);
 
   // Tab 3: Site & BIM Telemetry State
   const [droneFile, setDroneFile] = useState<File | null>(null);
@@ -442,6 +463,7 @@ export default function SovereignCorePage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Invoice generation failed");
       setOutput(data);
+      fetchLedger();
       setShowSettlementModal(true);
       fetchHistory();
     } catch (err: any) {
@@ -1586,6 +1608,77 @@ export default function SovereignCorePage() {
             </div>
           </section>
 
+          {/* SOVEREIGN TRANSACTION AUDIT LEDGER */}
+          <section style={{ border: "1px solid #1a2e26", padding: "16px 20px", backgroundColor: "#050807", fontFamily: "monospace" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #162620", paddingBottom: "10px", marginBottom: "12px" }}>
+              <span style={{ fontSize: "0.8rem", color: "#00ff66", fontWeight: "bold", letterSpacing: "1px" }}>
+                ⚡ SOVEREIGN_LEDGER // ZATCA TRANSACTION AUDIT
+              </span>
+              <button
+                type="button"
+                onClick={fetchLedger}
+                style={{
+                  background: "transparent",
+                  border: "1px solid #00ff66",
+                  color: "#00ff66",
+                  fontSize: "0.7rem",
+                  padding: "3px 10px",
+                  cursor: "pointer",
+                  fontFamily: "monospace"
+                }}
+              >
+                {ledgerLoading ? "SYNCING..." : "SYNC LEDGER"}
+              </button>
+            </div>
+
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem", textAlign: "left" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid #222", color: "#666" }}>
+                    <th style={{ padding: "6px 8px" }}>REF NO.</th>
+                    <th style={{ padding: "6px 8px" }}>CLIENT ENTITY</th>
+                    <th style={{ padding: "6px 8px" }}>TAX ID</th>
+                    <th style={{ padding: "6px 8px" }}>NET (SAR)</th>
+                    <th style={{ padding: "6px 8px" }}>VAT (15%)</th>
+                    <th style={{ padding: "6px 8px" }}>TOTAL</th>
+                    <th style={{ padding: "6px 8px" }}>COMMITTED AT</th>
+                    <th style={{ padding: "6px 8px" }}>STATE</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ledgerInvoices && ledgerInvoices.length > 0 ? (
+                    ledgerInvoices.map((inv: any) => (
+                      <tr key={inv.id || inv.invoiceNumber} style={{ borderBottom: "1px solid #111", color: "#ccc" }}>
+                        <td style={{ padding: "8px", color: "#00f3ff", fontWeight: "bold" }}>{inv.invoiceNumber}</td>
+                        <td style={{ padding: "8px" }}>{inv.clientName}</td>
+                        <td style={{ padding: "8px", color: "#777" }}>{inv.clientTaxId}</td>
+                        <td style={{ padding: "8px" }}>{Number(inv.subtotal).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: "8px", color: "#ffb703" }}>{Number(inv.vatAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: "8px", color: "#00ff66", fontWeight: "bold" }}>
+                          {Number(inv.grandTotal).toLocaleString(undefined, { minimumFractionDigits: 2 })} {inv.currency}
+                        </td>
+                        <td style={{ padding: "8px", color: "#555", fontSize: "0.7rem" }}>
+                          {new Date(inv.createdAt).toLocaleDateString()} {new Date(inv.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </td>
+                        <td style={{ padding: "8px" }}>
+                          <span style={{ border: "1px solid #00ff66", color: "#00ff66", padding: "1px 6px", fontSize: "0.65rem", background: "#003311" }}>
+                            VERIFIED
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={8} style={{ padding: "16px 8px", textAlign: "center", color: "#555" }}>
+                        {ledgerLoading ? "Retrieving ledger transactions..." : "No recorded audit records found."}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "25px" }}>
             <section style={{ border: "1px solid #222", padding: "20px", backgroundColor: "#0b0b0b", display: "flex", flexDirection: "column", gap: "15px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -2053,7 +2146,7 @@ export default function SovereignCorePage() {
           </div>
         </div>
       </footer>
-      
+
       {/* DUAL PAYMENT & CLEARANCE MODAL (SARIE WIRE & AUTO-POLL LISTENER) */}
       {showSettlementModal && (
         <div style={{
