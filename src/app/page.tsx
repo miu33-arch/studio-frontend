@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import PitchDeck from "@/components/PitchDeck";
 import { TerminalIngestModal } from "@/components/TerminalIngestModal";
+import { getClientGeoContext, GeoAuditData } from "@/lib/geo";
 
 const API_BASE =
   typeof window !== "undefined" &&
@@ -31,6 +32,16 @@ export default function SovereignCorePage() {
   const [activeTab, setActiveTab] = useState<"pipeline" | "multi_vertical" | "spec" | "invoice" | "site_hud" | "pitch">("pipeline");
   const [projectCode, setProjectCode] = useState("MOMRAH-RYD-2026-04");
   const [isIngestModalOpen, setIsIngestModalOpen] = useState(false);
+
+  // Edge Telemetry State
+  const [geo, setGeo] = useState<GeoAuditData | null>(null);
+
+  useEffect(() => {
+    getClientGeoContext().then((data) => {
+      setGeo(data);
+      if (data.currency) setInvoiceCurrency(data.currency);
+    });
+  }, []);
 
   // Multi-Vertical Ingest State (AEC + FMCG)
   const [mvTrack, setMvTrack] = useState<"fmcg" | "aec">("fmcg");
@@ -574,7 +585,7 @@ export default function SovereignCorePage() {
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#04070a", color: "#00f3ff", fontFamily: "monospace", padding: "30px 40px" }}>
 
-      {/* Header Bar */}
+     {/* Header Bar */}
       <header style={{ borderBottom: "1px solid #142838", paddingBottom: "20px", marginBottom: "30px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <h1 style={{ fontSize: "1.2rem", letterSpacing: "2px", margin: 0, color: "#fff", display: "flex", alignItems: "center", gap: "8px" }}>
@@ -583,8 +594,37 @@ export default function SovereignCorePage() {
           <div style={{ fontSize: "0.72rem", color: "#888", marginTop: "4px", letterSpacing: "1px" }}>
             CROSS-BORDER CHINA-SAUDI CLEARANCE // SFDA COLD-CHAIN &bull; SASO AEC &bull; {projectCode}
           </div>
-          <div style={{ display: "flex", gap: "15px", alignItems: "center", marginTop: "5px" }}>
+          <div style={{ display: "flex", gap: "15px", alignItems: "center", marginTop: "5px", flexWrap: "wrap" }}>
             <span style={{ fontSize: "0.8rem", color: "#00ff66" }}>● MOMRAH / SASO PIPELINE ONLINE</span>
+
+            {/* Edge Geo Telemetry Status Pill */}
+            <span style={{
+              fontSize: "0.72rem",
+              padding: "2px 8px",
+              borderRadius: "2px",
+              border: "1px solid #00f3ff",
+              color: "#00f3ff",
+              backgroundColor: "#04141d",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px"
+            }}>
+              <span style={{
+                display: "inline-block",
+                width: "6px",
+                height: "6px",
+                borderRadius: "50%",
+                backgroundColor: "#00f3ff"
+              }} />
+              <span>
+                EDGE: {geo ? `${geo.city.toUpperCase()}, ${geo.country} [${geo.currency}]` : "AUDITING EDGE..."}
+              </span>
+              <span style={{ color: "#335566" }}>|</span>
+              <span style={{ color: geo?.isKsa ? "#00ff66" : "#ffaa00" }}>
+                {geo?.isKsa ? "ZATCA 15% ACTIVE" : "0% STANDARD"}
+              </span>
+            </span>
+
             <span style={{
               fontSize: "0.72rem",
               padding: "2px 8px",
@@ -595,6 +635,7 @@ export default function SovereignCorePage() {
             }}>
               {isSettled ? "✓ OFFICIAL REGULATORY SEAL LICENSED" : "● TRIAL MODE // WATERMARKED DRAFT"}
             </span>
+
             {clientBalance && (
               <span style={{ fontSize: "0.75rem", color: "#888", borderLeft: "1px solid #333", paddingLeft: "15px" }}>
                 CLIENT: <span style={{ color: "#00f3ff" }}>{clientBalance.clientName || "ENTERPRISE"}</span>
