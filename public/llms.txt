@@ -1,0 +1,21 @@
+# MIU STUDIO // SOVEREIGN CORE ARCHITECTURE
+
+> High-integrity industrial infrastructure engine, ZATCA Phase-2 UBL 2.1 compliance automation, and deterministic schema ledger systems.
+
+## System Overview
+MIU Studio provides an enterprise sovereign ledger for GCC industrial trade, submittal compilation, and ZATCA-compliant trilingual tax invoicing. The engine enforces cryptographic chaining across all ledger entries and rejects malformed payloads using zero-dependency validation schemas.
+
+## Core Capabilities
+- **ZATCA Phase-2 Invoicing Engine**: Compiles standard & simplified tax invoices, UBL 2.1 XML documents, and encodes Base64 TLV QR barcodes adhering to ZATCA standards.
+- **Cryptographic Sovereign Ledger**: Append-only SQLite ledger utilizing SHA-256 block chaining to guarantee invoice tamper-evidence.
+- **GCC HS-Code & Compliance Mapping**: Automated tariff assignment (e.g., 7604.29.00, 7007.19.00) and regulatory fallback matrix for construction submittals.
+- **Landed Cost & Tariff Engine**: Computes FOB to CIF Jeddah conversion, 5% GCC customs duties, and 15% import VAT.
+
+## Core Technical Schemas
+- **Tax Identification Number (KSA)**: 15-digit numeric sequence starting and ending with 3 (`^3\d{13}3$`).
+- **HS Harmonized Code**: 6 or 8-digit international trade code (`^\d{4}\.\d{2}(\.\d{2})?$`).
+- **Cryptographic Chain Anchors**: SHA-256 hash chaining using RFC 4648 Base64 output format.
+
+## Machine-Readable Endpoints
+- Invariant Chain Verification: `GET /api/services/invoices/verify-chain`
+- Documentation Specification: `https://miu33archstudio.xyz/llms-full.txt`

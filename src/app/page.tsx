@@ -2,13 +2,13 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import PitchDeck from "@/components/PitchDeck";
+import { TerminalIngestModal } from "@/components/TerminalIngestModal";
 
 const API_BASE =
   typeof window !== "undefined" &&
-  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
-    ? "http://localhost:5000"
+    (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+    ? (window.location.port === "3000" || window.location.port === "3001" ? "http://127.0.0.1:5000" : "")
     : (process.env.NEXT_PUBLIC_API_BASE || "https://api.miu33archstudio.xyz");
-
 interface StagedBomItem {
   code: string;
   name: string;
@@ -30,6 +30,7 @@ const SAMPLE_EN: StagedBomItem[] = [
 export default function SovereignCorePage() {
   const [activeTab, setActiveTab] = useState<"pipeline" | "multi_vertical" | "spec" | "invoice" | "site_hud" | "pitch">("pipeline");
   const [projectCode, setProjectCode] = useState("MOMRAH-RYD-2026-04");
+  const [isIngestModalOpen, setIsIngestModalOpen] = useState(false);
 
   // Multi-Vertical Ingest State (AEC + FMCG)
   const [mvTrack, setMvTrack] = useState<"fmcg" | "aec">("fmcg");
@@ -39,7 +40,7 @@ export default function SovereignCorePage() {
   const [mvTempC, setMvTempC] = useState("3.1");
   const [mvShelfLifePct, setMvShelfLifePct] = useState("88");
   const [mvIotStream, setMvIotStream] = useState(true);
-  
+
   // AEC Track States
   const [mvSaberCertId, setMvSaberCertId] = useState("SABER-KSA-AEC-2026-004");
   const [mvSasoCompliant, setMvSasoCompliant] = useState(true);
@@ -66,16 +67,16 @@ export default function SovereignCorePage() {
           : { saberCertificateId: mvSaberCertId, sasoCompliant: mvSasoCompliant },
         shipment: mvTrack === "fmcg"
           ? {
-              cifValueSAR: Number(mvCifValueSAR) || 0,
-              shelfLifeRemainingPct: Number(mvShelfLifePct) || 0,
-              iotTelemetryStream: mvIotStream,
-              currentTempC: Number(mvTempC) || 0
-            }
+            cifValueSAR: Number(mvCifValueSAR) || 0,
+            shelfLifeRemainingPct: Number(mvShelfLifePct) || 0,
+            iotTelemetryStream: mvIotStream,
+            currentTempC: Number(mvTempC) || 0
+          }
           : {
-              cifValueSAR: Number(mvCifValueSAR) || 0,
-              materialGrade: mvMaterialGrade,
-              weightTons: Number(mvWeightTons) || 0
-            }
+            cifValueSAR: Number(mvCifValueSAR) || 0,
+            materialGrade: mvMaterialGrade,
+            weightTons: Number(mvWeightTons) || 0
+          }
       };
 
       const res = await fetch(`${API_BASE}/api/transport/multi-vertical-ingest`, {
@@ -173,21 +174,27 @@ export default function SovereignCorePage() {
   const fetchLedger = async () => {
     setLedgerLoading(true);
     try {
-      const res = await fetch("https://api.miu33archstudio.xyz/api/services/invoices?limit=10");
+      const apiUrl = API_BASE;
+      const res = await fetch(`${apiUrl}/api/services/invoices?limit=10`, {
+        headers: {
+          "x-api-key": "miu_master_agency_key",
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
       const data = await res.json();
-      if (data.success && data.invoices) {
+      if (data.invoices) {
         setLedgerInvoices(data.invoices);
       }
     } catch (err) {
-      console.error("Failed to sync ledger:", err);
+      console.warn("Failed to sync ledger:", err);
     } finally {
       setLedgerLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchLedger();
-  }, []);
 
   // Tab 3: Site & BIM Telemetry State
   const [droneFile, setDroneFile] = useState<File | null>(null);
@@ -430,17 +437,32 @@ export default function SovereignCorePage() {
     }
   };
 
-  const handleGenerateInvoice = async (plan: "retainer" | "single" | "enterprise") => {
+  const handleGenerateInvoice = async (planOrItems?: "retainer" | "single" | "enterprise" | any[]) => {
     setInvoiceLoading(true);
     setError(null);
 
-    const planPrices = {
-      retainer: { code: "SVC-RET-01", name: "Monthly Municipal Compliance Retainer", priceUSD: 3500 },
-      single: { code: "SVC-SUB-01", name: "Single Project Municipal Compliance Filing", priceUSD: 1850 },
-      enterprise: { code: "SVC-ENT-01", name: "Enterprise Bare-Metal Compliance Core", priceUSD: 8500 },
-    };
+    let itemsPayload: any[] = [];
 
-    const target = planPrices[plan];
+    if (Array.isArray(planOrItems)) {
+      itemsPayload = planOrItems;
+    } else {
+      const plan = (planOrItems as "retainer" | "single" | "enterprise") || selectedPlan;
+      const planPrices = {
+        retainer: { code: "SVC-RET-01", name: "Monthly Municipal Compliance Retainer", priceUSD: 3500 },
+        single: { code: "SVC-SUB-01", name: "Single Project Municipal Compliance Filing", priceUSD: 1850 },
+        enterprise: { code: "SVC-ENT-01", name: "Enterprise Bare-Metal Compliance Core", priceUSD: 8500 },
+      };
+
+      const target = planPrices[plan];
+      itemsPayload = [
+        {
+          code: target.code,
+          name: target.name,
+          qty: 1,
+          unitPrice: Number((target.priceUSD * (invoiceCurrency === "SAR" ? 3.75 : 1)).toFixed(2))
+        }
+      ];
+    }
 
     try {
       const res = await fetch(`${API_BASE}/api/services/invoice`, {
@@ -448,20 +470,14 @@ export default function SovereignCorePage() {
         headers: { "Content-Type": "application/json", "x-api-key": activeApiKey },
         body: JSON.stringify({
           clientName: invoiceClient.trim() || "AL-RAJHI COMMERCIAL CONTRACTING",
+          clientTaxId: "300000000000003",
           currency: invoiceCurrency,
           targetLang: "dual",
-          items: [
-            {
-              code: target.code,
-              name: target.name,
-              qty: 1,
-              unitPrice: Number((target.priceUSD * (invoiceCurrency === "SAR" ? 3.75 : 1)).toFixed(2))
-            }
-          ]
+          items: itemsPayload
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Invoice generation failed");
+      if (!res.ok) throw new Error(data.details?.join(" | ") || data.error || "Invoice generation failed");
       setOutput(data);
       fetchLedger();
       setShowSettlementModal(true);
@@ -557,8 +573,8 @@ export default function SovereignCorePage() {
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#04070a", color: "#00f3ff", fontFamily: "monospace", padding: "30px 40px" }}>
-      
-     {/* Header Bar */}
+
+      {/* Header Bar */}
       <header style={{ borderBottom: "1px solid #142838", paddingBottom: "20px", marginBottom: "30px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <h1 style={{ fontSize: "1.2rem", letterSpacing: "2px", margin: 0, color: "#fff", display: "flex", alignItems: "center", gap: "8px" }}>
@@ -630,7 +646,7 @@ export default function SovereignCorePage() {
       {/* ========================================================================= */}
       {activeTab === "pipeline" && (
         <main style={{ width: "100%", maxWidth: "1200px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "25px" }}>
-          
+
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "#061017", border: "1px solid #142838", padding: "15px 20px" }}>
             <div>
               <span style={{ fontSize: "0.85rem", fontWeight: "bold", color: "#fff" }}>MANIFEST &amp; SHIPPING INGESTION</span>
@@ -852,7 +868,7 @@ export default function SovereignCorePage() {
       {/* ========================================================================= */}
       {activeTab === "multi_vertical" && (
         <main style={{ width: "100%", maxWidth: "1200px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "25px" }}>
-          
+
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "#061017", border: "1px solid #142838", padding: "15px 20px" }}>
             <div>
               <div style={{ fontSize: "0.95rem", fontWeight: "bold", color: "#00f3ff" }}>
@@ -900,7 +916,7 @@ export default function SovereignCorePage() {
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "25px" }}>
-            
+
             {/* Input Config Section */}
             <section style={{ border: "1px solid #142838", backgroundColor: "#061017", padding: "20px", display: "flex", flexDirection: "column", gap: "14px" }}>
               <div style={{ fontSize: "0.85rem", color: "#fff", fontWeight: "bold", borderBottom: "1px solid #142838", paddingBottom: "8px" }}>
@@ -1077,7 +1093,7 @@ export default function SovereignCorePage() {
 
               {mvResult ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "0.75rem" }}>
-                  
+
                   {/* Status Badges */}
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                     <div style={{ padding: "10px", border: "1px solid #142838", backgroundColor: "#02070c" }}>
@@ -1584,27 +1600,47 @@ export default function SovereignCorePage() {
                 />
               </div>
 
-              <button
-                type="button"
-                disabled={invoiceLoading}
-                onClick={() => {
-                  setShowSettlementModal(true);
-                  handleGenerateInvoice(selectedPlan);
-                }}
-                style={{
-                  backgroundColor: invoiceLoading ? "#222" : "#00ff66",
-                  color: "#000",
-                  border: "none",
-                  padding: "12px 24px",
-                  fontWeight: "bold",
-                  cursor: invoiceLoading ? "not-allowed" : "pointer",
-                  fontFamily: "monospace",
-                  fontSize: "0.8rem",
-                  letterSpacing: "1px"
-                }}
-              >
-                {invoiceLoading ? "GENERATING INVOICE..." : `⚡ GENERATE PROFORMA INVOICE ($${selectedPlan === "retainer" ? "3,500" : selectedPlan === "single" ? "1,850" : "8,500"})`}
-              </button>
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button
+                  type="button"
+                  onClick={() => setIsIngestModalOpen(true)}
+                  style={{
+                    backgroundColor: "transparent",
+                    color: "#00f3ff",
+                    border: "1px solid #00f3ff",
+                    padding: "12px 18px",
+                    fontWeight: "bold",
+                    cursor: "pointer",
+                    fontFamily: "monospace",
+                    fontSize: "0.8rem",
+                    letterSpacing: "1px",
+                  }}
+                >
+                  📥 RAW TERMINAL INGEST (CSV / TSV)
+                </button>
+
+                <button
+                  type="button"
+                  disabled={invoiceLoading}
+                  onClick={() => {
+                    setShowSettlementModal(true);
+                    handleGenerateInvoice(selectedPlan);
+                  }}
+                  style={{
+                    backgroundColor: invoiceLoading ? "#222" : "#00ff66",
+                    color: "#000",
+                    border: "none",
+                    padding: "12px 24px",
+                    fontWeight: "bold",
+                    cursor: invoiceLoading ? "not-allowed" : "pointer",
+                    fontFamily: "monospace",
+                    fontSize: "0.8rem",
+                    letterSpacing: "1px",
+                  }}
+                >
+                  {invoiceLoading ? "GENERATING INVOICE..." : `⚡ GENERATE PROFORMA INVOICE ($${selectedPlan === "retainer" ? "3,500" : selectedPlan === "single" ? "1,850" : "8,500"})`}
+                </button>
+              </div>
             </div>
           </section>
 
@@ -1617,14 +1653,16 @@ export default function SovereignCorePage() {
               <button
                 type="button"
                 onClick={fetchLedger}
+                disabled={ledgerLoading}
                 style={{
                   background: "transparent",
                   border: "1px solid #00ff66",
                   color: "#00ff66",
                   fontSize: "0.7rem",
                   padding: "3px 10px",
-                  cursor: "pointer",
-                  fontFamily: "monospace"
+                  cursor: ledgerLoading ? "not-allowed" : "pointer",
+                  fontFamily: "monospace",
+                  opacity: ledgerLoading ? 0.6 : 1
                 }}
               >
                 {ledgerLoading ? "SYNCING..." : "SYNC LEDGER"}
@@ -1642,35 +1680,90 @@ export default function SovereignCorePage() {
                     <th style={{ padding: "6px 8px" }}>VAT (15%)</th>
                     <th style={{ padding: "6px 8px" }}>TOTAL</th>
                     <th style={{ padding: "6px 8px" }}>COMMITTED AT</th>
-                    <th style={{ padding: "6px 8px" }}>STATE</th>
+                    <th style={{ padding: "6px 8px" }}>ARTIFACTS</th>
+                    <th style={{ padding: "6px 8px", textAlign: "right" }}>STATE</th>
                   </tr>
                 </thead>
                 <tbody>
                   {ledgerInvoices && ledgerInvoices.length > 0 ? (
-                    ledgerInvoices.map((inv: any) => (
-                      <tr key={inv.id || inv.invoiceNumber} style={{ borderBottom: "1px solid #111", color: "#ccc" }}>
-                        <td style={{ padding: "8px", color: "#00f3ff", fontWeight: "bold" }}>{inv.invoiceNumber}</td>
-                        <td style={{ padding: "8px" }}>{inv.clientName}</td>
-                        <td style={{ padding: "8px", color: "#777" }}>{inv.clientTaxId}</td>
-                        <td style={{ padding: "8px" }}>{Number(inv.subtotal).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                        <td style={{ padding: "8px", color: "#ffb703" }}>{Number(inv.vatAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                        <td style={{ padding: "8px", color: "#00ff66", fontWeight: "bold" }}>
-                          {Number(inv.grandTotal).toLocaleString(undefined, { minimumFractionDigits: 2 })} {inv.currency}
-                        </td>
-                        <td style={{ padding: "8px", color: "#555", fontSize: "0.7rem" }}>
-                          {new Date(inv.createdAt).toLocaleDateString()} {new Date(inv.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </td>
-                        <td style={{ padding: "8px" }}>
-                          <span style={{ border: "1px solid #00ff66", color: "#00ff66", padding: "1px 6px", fontSize: "0.65rem", background: "#003311" }}>
-                            VERIFIED
-                          </span>
-                        </td>
-                      </tr>
-                    ))
+                    ledgerInvoices.map((inv: any) => {
+                      const pdfUrl = inv.downloadUrl || `${API_BASE}/outputs/invoice_${inv.invoiceNumber}.pdf`;
+                      const xmlUrl = inv.xmlDownloadUrl || (inv.xmlPath ? `${API_BASE}/outputs/${inv.xmlPath.split(/[\\/]/).pop()}` : null);
+                      return (
+                        <tr
+                          key={inv.id || inv.invoiceNumber}
+                          style={{ borderBottom: "1px solid #111", color: "#ccc" }}
+                          title={`HASH: ${inv.invoiceHash}\nPIH: ${inv.previousInvoiceHash || "GENESIS_ROOT"}`}
+                        >
+                          <td style={{ padding: "8px", color: "#00f3ff", fontWeight: "bold" }}>
+                            {inv.invoiceNumber}
+                          </td>
+                          <td style={{ padding: "8px" }}>
+                            {inv.clientName}
+                          </td>
+                          <td style={{ padding: "8px", color: "#777" }}>
+                            {inv.clientTaxId || "300000000000003"}
+                          </td>
+                          <td style={{ padding: "8px" }}>
+                            {Number(inv.subtotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                          <td style={{ padding: "8px", color: "#ffb703" }}>
+                            {Number(inv.vatAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                          <td style={{ padding: "8px", color: "#00ff66", fontWeight: "bold" }}>
+                            {Number(inv.grandTotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {inv.currency || "SAR"}
+                          </td>
+                          <td style={{ padding: "8px", color: "#555", fontSize: "0.7rem" }}>
+                            {inv.createdAt
+                              ? `${new Date(inv.createdAt).toLocaleDateString()} ${new Date(inv.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+                              : "JUST NOW"}
+                          </td>
+                          <td style={{ padding: "8px" }}>
+                            <div style={{ display: "flex", gap: "6px" }}>
+                              {xmlUrl && (
+                                <a
+                                  href={xmlUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  style={{
+                                    color: "#00f3ff",
+                                    textDecoration: "none",
+                                    border: "1px solid #00f3ff",
+                                    padding: "1px 4px",
+                                    fontSize: "0.6rem"
+                                  }}
+                                >
+                                  XML
+                                </a>
+                              )}
+                              <a
+                                href={pdfUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  color: "#ffcc00",
+                                  textDecoration: "none",
+                                  border: "1px solid #ffcc00",
+                                  padding: "1px 4px",
+                                  fontSize: "0.6rem"
+                                }}
+                              >
+                                PDF
+                              </a>
+                            </div>
+                          </td>
+                          <td style={{ padding: "8px", textAlign: "right" }}>
+                            <span style={{ border: "1px solid #00ff66", color: "#00ff66", padding: "1px 6px", fontSize: "0.65rem", background: "#003311" }}>
+                              VERIFIED
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })
                   ) : (
                     <tr>
-                      <td colSpan={8} style={{ padding: "16px 8px", textAlign: "center", color: "#555" }}>
-                        {ledgerLoading ? "Retrieving ledger transactions..." : "No recorded audit records found."}
+                      <td colSpan={9} style={{ padding: "16px 8px", textAlign: "center", color: "#555" }}>
+                        {ledgerLoading ? "// RETRIEVING SOVEREIGN LEDGER BLOCKS..." : "// NO RECORDED AUDIT BLOCKS FOUND. CLICK SYNC LEDGER."}
                       </td>
                     </tr>
                   )}
@@ -1769,7 +1862,6 @@ export default function SovereignCorePage() {
           </div>
         </main>
       )}
-
       {/* ========================================================================= */}
       {/* TAB 4: SITE & BIM HUD TELEMETRY                                           */}
       {/* ========================================================================= */}
@@ -1793,10 +1885,10 @@ export default function SovereignCorePage() {
                   if (droneFile) {
                     formData.append("videoFile", droneFile);
                   }
-                  formData.append("projectTitle", projectTitle);
-                  formData.append("datumElevation", datumElevation);
-                  formData.append("gpsCoordinates", gpsCoords);
-                  formData.append("baladyLicenseNo", baladyLicense);
+                  formData.append("projectTitle", projectTitle.trim() || "MOMRAH CENTRAL TOWER // ZONE 4");
+                  formData.append("datumElevation", datumElevation.trim() || "+12.50m (Structural Slab Level)");
+                  formData.append("gpsCoordinates", gpsCoords.trim() || "24.7136° N, 46.6753° E");
+                  formData.append("baladyLicenseNo", baladyLicense.trim() || "BLD-RYD-2026-9941");
                   formData.append("aspectRatio", aspectRatio);
                   formData.append("is4K", String(is4K));
 
@@ -2003,7 +2095,7 @@ export default function SovereignCorePage() {
               <div style={{ border: "1px solid #00f3ff", padding: "10px", backgroundColor: "#050505", marginTop: "5px" }}>
                 <div style={{ fontSize: "0.75rem", color: "#00f3ff", fontWeight: "bold" }}>✓ MASTER SEQUENCE COMPILED</div>
                 <a
-                  href={bimOutput.downloadUrl}
+                  href={bimOutput.downloadUrl.startsWith("http") ? bimOutput.downloadUrl : `${API_BASE}${bimOutput.downloadUrl}`}
                   target="_blank"
                   rel="noreferrer"
                   style={{ color: "#00ff66", fontSize: "0.75rem", textDecoration: "underline" }}
@@ -2133,7 +2225,7 @@ export default function SovereignCorePage() {
       {/* ========================================================================= */}
       {activeTab === "pitch" && <PitchDeck />}
 
-    {/* Sovereign Enterprise Compliance Footer */}
+      {/* Sovereign Enterprise Compliance Footer */}
       <footer style={{ marginTop: "40px", borderTop: "1px solid #1a1a1a", paddingTop: "20px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.7rem", color: "#555" }}>
         <div style={{ maxWidth: "800px", lineHeight: "1.4" }}>
           <span style={{ color: "#888", fontWeight: "bold" }}>LEGAL &amp; REGULATORY NOTICE:</span>{" "}
@@ -2179,10 +2271,10 @@ export default function SovereignCorePage() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1px solid #1a2936", paddingBottom: "12px" }}>
               <div>
                 <div style={{ fontSize: "0.95rem", color: "#00f3ff", fontWeight: "bold", letterSpacing: "1px" }}>
-                  SETTLEMENT GATEWAY // SARIE WIRE &amp; DIGITAL WALLET [source: 1]
+                  SETTLEMENT GATEWAY // SARIE WIRE &amp; DIGITAL WALLET
                 </div>
                 <div style={{ fontSize: "0.72rem", color: "#aaa", marginTop: "3px" }}>
-                  BENEFICIARY: <span style={{ color: "#fff", fontWeight: "bold" }}>ANAMY DE LA CRUZ PADILLA</span> [source: 1]
+                  BENEFICIARY: <span style={{ color: "#fff", fontWeight: "bold" }}>ANAMY DE LA CRUZ PADILLA</span>
                 </div>
               </div>
               <button
@@ -2193,7 +2285,7 @@ export default function SovereignCorePage() {
                 }}
                 style={{ backgroundColor: "transparent", border: "1px solid #444", color: "#888", padding: "4px 8px", cursor: "pointer", fontFamily: "monospace", fontSize: "0.75rem" }}
               >
-                [CLOSE ✕] [source: 1]
+                [CLOSE ✕]
               </button>
             </div>
 
@@ -2201,8 +2293,8 @@ export default function SovereignCorePage() {
             {output?.downloadUrl && (
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "#061824", border: "1px solid #0088cc", padding: "10px 14px" }}>
                 <div>
-                  <div style={{ fontSize: "0.75rem", color: "#00ff66", fontWeight: "bold" }}>✓ ZATCA PROFORMA INVOICE ISSUED [source: 1]</div>
-                  <div style={{ fontSize: "0.68rem", color: "#888" }}>Ref: {output.invoiceNumber || projectCode} (15% VAT &amp; Base64 QR Encoded) [source: 1]</div>
+                  <div style={{ fontSize: "0.75rem", color: "#00ff66", fontWeight: "bold" }}>✓ ZATCA PROFORMA INVOICE ISSUED</div>
+                  <div style={{ fontSize: "0.68rem", color: "#888" }}>Ref: {output.invoiceNumber || projectCode} (15% VAT &amp; Base64 QR Encoded)</div>
                 </div>
                 <a
                   href={output.downloadUrl}
@@ -2210,7 +2302,7 @@ export default function SovereignCorePage() {
                   rel="noreferrer"
                   style={{ backgroundColor: "#00f3ff", color: "#000", padding: "6px 12px", textDecoration: "none", fontWeight: "bold", fontSize: "0.7rem", fontFamily: "monospace" }}
                 >
-                  VIEW PDF [source: 1]
+                  VIEW PDF
                 </a>
               </div>
             )}
@@ -2222,12 +2314,12 @@ export default function SovereignCorePage() {
               <div style={{ border: "1px solid #1a2936", backgroundColor: "#04070d", padding: "12px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                 <div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #1a2230", paddingBottom: "6px", marginBottom: "8px" }}>
-                    <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: "#00f3ff" }}>URPAY // AL RAJHI [source: 1]</span>
-                    <span style={{ fontSize: "0.62rem", color: "#00ff66", backgroundColor: "#022010", padding: "2px 5px", border: "1px solid #006633" }}>SARIE [source: 1]</span>
+                    <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: "#00f3ff" }}>URPAY // AL RAJHI</span>
+                    <span style={{ fontSize: "0.62rem", color: "#00ff66", backgroundColor: "#022010", padding: "2px 5px", border: "1px solid #006633" }}>SARIE</span>
                   </div>
-                  <div style={{ fontSize: "0.68rem", color: "#888", marginBottom: "4px" }}>IBAN (Instant Local Transfer): [source: 1]</div>
+                  <div style={{ fontSize: "0.68rem", color: "#888", marginBottom: "4px" }}>IBAN (Instant Local Transfer):</div>
                   <div style={{ fontSize: "0.7rem", color: "#00ff66", fontWeight: "bold", backgroundColor: "#000", padding: "6px", border: "1px solid #1a2230", wordBreak: "break-all", userSelect: "all" }}>
-                    SA4880207781501222121011 [source: 1]
+                    SA4880207781501222121011
                   </div>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "10px" }}>
@@ -2236,7 +2328,7 @@ export default function SovereignCorePage() {
                     alt="urpay QR"
                     style={{ width: "130px", height: "130px", backgroundColor: "#fff", padding: "4px", borderRadius: "3px", objectFit: "contain", border: "1px solid #00f3ff" }}
                   />
-                  <span style={{ fontSize: "0.65rem", color: "#666", marginTop: "6px" }}>Scan with urpay app [source: 1]</span>
+                  <span style={{ fontSize: "0.65rem", color: "#666", marginTop: "6px" }}>Scan with urpay app</span>
                 </div>
               </div>
 
@@ -2244,12 +2336,12 @@ export default function SovereignCorePage() {
               <div style={{ border: "1px solid #1a2936", backgroundColor: "#04070d", padding: "12px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                 <div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #1a2230", paddingBottom: "6px", marginBottom: "8px" }}>
-                    <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: "#b366ff" }}>STC BANK [source: 1]</span>
-                    <span style={{ fontSize: "0.62rem", color: "#00ff66", backgroundColor: "#022010", padding: "2px 5px", border: "1px solid #006633" }}>SARIE [source: 1]</span>
+                    <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: "#b366ff" }}>STC BANK</span>
+                    <span style={{ fontSize: "0.62rem", color: "#00ff66", backgroundColor: "#022010", padding: "2px 5px", border: "1px solid #006633" }}>SARIE</span>
                   </div>
-                  <div style={{ fontSize: "0.68rem", color: "#888", marginBottom: "4px" }}>IBAN (Instant Local Transfer): [source: 1]</div>
+                  <div style={{ fontSize: "0.68rem", color: "#888", marginBottom: "4px" }}>IBAN (Instant Local Transfer):</div>
                   <div style={{ fontSize: "0.7rem", color: "#00ff66", fontWeight: "bold", backgroundColor: "#000", padding: "6px", border: "1px solid #1a2230", wordBreak: "break-all", userSelect: "all" }}>
-                    SA277800000001261965468 [source: 1]
+                    SA277800000001261965468
                   </div>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "10px" }}>
@@ -2258,7 +2350,7 @@ export default function SovereignCorePage() {
                     alt="STC Bank QR"
                     style={{ width: "130px", height: "130px", backgroundColor: "#fff", padding: "4px", borderRadius: "3px", objectFit: "contain", border: "1px solid #b366ff" }}
                   />
-                  <span style={{ fontSize: "0.65rem", color: "#666", marginTop: "6px" }}>Scan with STC Pay / Bank [source: 1]</span>
+                  <span style={{ fontSize: "0.65rem", color: "#666", marginTop: "6px" }}>Scan with STC Pay / Bank</span>
                 </div>
               </div>
 
@@ -2268,10 +2360,10 @@ export default function SovereignCorePage() {
             <div style={{ borderTop: "1px solid #1a2936", paddingTop: "14px", textAlign: "center" }}>
               <div style={{ backgroundColor: "#061824", border: "1px solid #0088cc", padding: "12px", display: "flex", flexDirection: "column", gap: "6px" }}>
                 <div style={{ fontSize: "0.78rem", color: "#00ff66", fontWeight: "bold" }}>
-                  ⏳ WAITING FOR SARIE SETTLEMENT CLEARANCE... [source: 1]
+                  ⏳ WAITING FOR SARIE SETTLEMENT CLEARANCE...
                 </div>
                 <div style={{ fontSize: "0.68rem", color: "#aaa", lineHeight: "1.4" }}>
-                  Scan either QR code above and complete your transfer with your banking app [source: 1]. Once confirmed on the network, this terminal detects clearance and unlocks the dossier archive automatically in this window [source: 1].
+                  Scan either QR code above and complete your transfer with your banking app. Once confirmed on the network, this terminal detects clearance and unlocks the dossier archive automatically in this window.
                 </div>
 
                 <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
@@ -2309,7 +2401,7 @@ export default function SovereignCorePage() {
                       fontFamily: "monospace"
                     }}
                   >
-                    VERIFY REF [source: 1]
+                    VERIFY REF
                   </button>
                 </div>
               </div>
@@ -2318,10 +2410,55 @@ export default function SovereignCorePage() {
             {/* Status Feedbacks */}
             {clearanceStatus === "VERIFIED" && (
               <div style={{ backgroundColor: "#022010", border: "1px solid #00ff66", padding: "8px", textAlign: "center", fontSize: "0.72rem", color: "#00ff66", fontWeight: "bold" }}>
-                ✓ SETTLEMENT CONFIRMED — UNLOCKING MUNICIPAL COMPLIANCE DOSSIER... [source: 1]
+                ✓ SETTLEMENT CONFIRMED — UNLOCKING MUNICIPAL COMPLIANCE DOSSIER...
               </div>
             )}
 
+          </div>
+        </div>
+      )}
+
+      {/* RAW DATA INGESTION MODAL */}
+      {isIngestModalOpen && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100vw",
+          height: "100vh",
+          backgroundColor: "rgba(0, 0, 0, 0.90)",
+          backdropFilter: "blur(6px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 99999,
+          padding: "20px"
+        }}>
+          <div style={{ width: "680px", maxWidth: "95%", position: "relative" }}>
+            <button
+              type="button"
+              onClick={() => setIsIngestModalOpen(false)}
+              style={{
+                position: "absolute",
+                top: "-28px",
+                right: "0",
+                background: "transparent",
+                border: "none",
+                color: "#00f3ff",
+                cursor: "pointer",
+                fontFamily: "monospace",
+                fontSize: "0.8rem",
+                fontWeight: "bold"
+              }}
+            >
+              [CLOSE ✕]
+            </button>
+            <TerminalIngestModal
+              onCommitPayload={(cleanItems) => {
+                setIsIngestModalOpen(false);
+                handleGenerateInvoice(cleanItems);
+              }}
+            />
           </div>
         </div>
       )}

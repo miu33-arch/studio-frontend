@@ -1,0 +1,47 @@
+# ==============================================================================
+# MIU STUDIO // SOVEREIGN ARCHITECTURE ROBOTS.TXT
+# ==============================================================================
+
+User-agent: *
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /api/services/invoices/verify-chain
+Disallow: /api/services/invoice
+Disallow: /api/services/landed-cost
+Disallow: /api/admin/
+Disallow: /outputs/
+Disallow: /uploads/
+
+# Generative AI & Retrieval Bots Allowed for AEO/GEO/AIO
+User-agent: GPTBot
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+
+User-agent: ClaudeBot
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+
+User-agent: PerplexityBot
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+
+User-agent: Google-Extended
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+
+User-agent: Applebot-Extended
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+
+User-agent: Amazonbot
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+
+Sitemap: https://miu33archstudio.xyz/sitemap.xml

@@ -1,0 +1,50 @@
+const fs = require('fs');
+
+const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 576" width="1024" height="576">
+  <defs>
+    <radialGradient id="obsidianBg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#121824" />
+      <stop offset="100%" stop-color="#07090e" />
+    </radialGradient>
+    <linearGradient id="cyanNeon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f0ff" />
+      <stop offset="100%" stop-color="#0077ff" />
+    </linearGradient>
+    <linearGradient id="goldCore" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffe600" />
+      <stop offset="100%" stop-color="#cc9900" />
+    </linearGradient>
+    <filter id="cyanGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <rect width="1024" height="576" fill="url(#obsidianBg)" />
+  
+  <g stroke="#00f0ff" stroke-opacity="0.12" stroke-width="1.5">
+    <line x1="0" y1="144" x2="1024" y2="144" />
+    <line x1="0" y1="288" x2="1024" y2="288" />
+    <line x1="0" y1="432" x2="1024" y2="432" />
+    <line x1="256" y1="0" x2="256" y2="576" />
+    <line x1="512" y1="0" x2="512" y2="576" />
+    <line x1="768" y1="0" x2="768" y2="576" />
+  </g>
+
+  <rect x="24" y="24" width="976" height="528" rx="16" fill="none" stroke="url(#cyanNeon)" stroke-width="4" filter="url(#cyanGlow)" />
+  <rect x="24" y="24" width="976" height="528" rx="16" fill="none" stroke="#ffffff" stroke-opacity="0.1" stroke-width="1" />
+
+  <g transform="translate(80, 180)">
+    <text x="0" y="80" font-family="Courier New, monospace" font-weight="900" font-size="96" fill="url(#cyanNeon)" filter="url(#cyanGlow)" letter-spacing="2">MIU_33</text>
+    <text x="0" y="150" font-family="Courier New, monospace" font-weight="700" font-size="36" fill="#ffffff" opacity="0.85" letter-spacing="6">DIGITAL ARCHITECTURE STUDIO</text>
+  </g>
+
+  <g transform="translate(820, 288)">
+    <circle cx="0" cy="0" r="80" fill="none" stroke="url(#cyanNeon)" stroke-dasharray="6 8" stroke-width="3" filter="url(#cyanGlow)" />
+    <circle cx="0" cy="0" r="48" fill="url(#goldCore)" filter="url(#cyanGlow)" />
+    <circle cx="0" cy="0" r="30" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="4" />
+  </g>
+</svg>`;
+
+fs.writeFileSync('gbp-banner.svg', svg);
+console.log('Banner generated successfully!');

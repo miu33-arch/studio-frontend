@@ -1,0 +1,103 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "MIU_33 Sovereign Compliance & Invoicing Core",
+    "version": "1.0.0",
+    "description": "Deterministic trade compliance, cryptographic ledger verification, and ZATCA Phase-2 UBL 2.1 tax invoice compilation API."
+  },
+  "servers": [
+    {
+      "url": "https://api.miu33archstudio.xyz",
+      "description": "Production Sovereign Core Gateway"
+    },
+    {
+      "url": "http://localhost:5000",
+      "description": "Local Development Sandbox"
+    }
+  ],
+  "paths": {
+    "/api/services/invoices/verify-chain": {
+      "get": {
+        "summary": "Verify Cryptographic Ledger Integrity",
+        "description": "Calculates and verifies SHA-256 sequential hash anchors across the sovereign SQLite ledger.",
+        "responses": {
+          "200": {
+            "description": "Ledger state and integrity report.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "chainLength": { "type": "integer" },
+                    "chainValid": { "type": "boolean" },
+                    "headHash": { "type": "string" },
+                    "details": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/services/invoice": {
+      "post": {
+        "summary": "Compile ZATCA Invoice & Append Block",
+        "description": "Sanitizes line items against the schema guard, validates 15-digit KSA Tax ID checksums, generates Phase-2 UBL 2.1 XML and PDF, and chains a new block to the ledger.",
+        "security": [{ "ApiKeyAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["clientName", "clientTaxId", "items"],
+                "properties": {
+                  "clientName": { "type": "string", "example": "AL-RAJHI COMMERCIAL CONTRACTING" },
+                  "clientTaxId": { 
+                    "type": "string", 
+                    "pattern": "^3\\d{13}3$", 
+                    "example": "300000000000003", 
+                    "description": "15-digit ZATCA Tax ID starting and ending with 3" 
+                  },
+                  "invoiceNumber": { "type": "string", "example": "INV-2026-001" },
+                  "currency": { "type": "string", "default": "SAR" },
+                  "vatRate": { "type": "number", "default": 0.15 },
+                  "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "required": ["code", "name", "qty", "unitPrice"],
+                      "properties": {
+                        "code": { "type": "string", "example": "CW-01" },
+                        "name": { "type": "string", "example": "Curtain Wall Mullion" },
+                        "qty": { "type": "number", "minimum": 0.01, "example": 100 },
+                        "unitPrice": { "type": "number", "minimum": 0.01, "example": 45.50 },
+                        "hsCode": { "type": "string", "example": "7604.29.00" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Invoice compiled and anchored to immutable chain." },
+          "422": { "description": "Schema guard barrier rejected invalid tax ID or negative line quantities." }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key"
+      }
+    }
+  }
+}

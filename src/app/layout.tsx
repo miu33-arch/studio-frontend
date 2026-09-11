@@ -61,6 +61,13 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
 };
 
@@ -77,13 +84,21 @@ export default function RootLayout({
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web, Linux, Docker",
     url: "https://miu33archstudio.xyz",
-    author: {
+    creator: {
       "@type": "Organization",
       name: "MIU_33 Studio",
       url: "https://miu33archstudio.xyz",
     },
     description:
       "Autonomous cross-border execution pipeline for China-Saudi trade: SFDA cold-chain telemetry audits, SASO 2831 material parity, and ZATCA Phase-2 tax invoicing.",
+    featureList: [
+      "Dual-Track Multi-Vertical Ingest",
+      "SFDA Cold-Chain Thermal Telemetry",
+      "SASO & SABER MTC Engineering Parity",
+      "ZATCA Phase-2 Cryptographic Ledger",
+      "BOM & Standard Localization",
+      "BIM HUD Telemetry"
+    ],
   };
 
   return (
@@ -92,6 +107,8 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased bg-black text-slate-100`}
     >
       <head>
+        <link rel="help" type="text/plain" href="/llms.txt" />
+        <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

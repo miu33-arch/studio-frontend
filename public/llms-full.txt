@@ -1,0 +1,22 @@
+# MIU STUDIO // SOVEREIGN ENGINE TECHNICAL MANUAL & SPECIFICATION
+
+## Regulatory Parity Engines
+1. **SASO 2831 / ASTM Alloy Parity**: Automated mechanical composition matching for structural aluminum (6063-T6) and carbon structural steel (ASTM A36 / GB/T Q235B).
+2. **SFDA Food & Cold-Chain Telemetry**: Enforces critical temperature control thresholds (< 4.0°C) and minimum 70% shelf-life validation before clearance approval.
+3. **ZATCA Phase-2 Fiscal Engine**: Enforces KSA 15-digit Tax Identification Number syntax, generates signed UBL 2.1 XML, encodes Base64 TLV data, and compiles standard 15% VAT proforma invoices.
+
+## Cryptographic Ledger Architecture
+- **Storage**: Persistent SQLite ledger (`sovereign_ledger.db`).
+- **Chaining Algorithm**: SHA-256 hash chaining using RFC 4648 standard Base64 representation.
+- **Verification**: Invariant verification ensures block n links to block n-1's `headHash`.
+
+## Schema Guard & Validation Invariants
+- Tax ID Checksum: `^3\d{13}3$` (15-digit sequence with starting and trailing 3).
+- Quantity Invariant: `qty > 0`.
+- Unit Price Invariant: `unitPrice > 0`.
+- Middleware Barrier: Pre-compute rejection returning HTTP 422 with an array of specific row and property errors.
+
+## External Tooling Manifests
+- OpenAPI 3.1: https://miu33archstudio.xyz/openapi.json
+- Root Manifest: https://miu33archstudio.xyz/llms.txt
+- Ledger Check: https://api.miu33archstudio.xyz/api/services/invoices/verify-chain
