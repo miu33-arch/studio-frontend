@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import PitchDeck from "@/components/PitchDeck";
 import { TerminalIngestModal } from "@/components/TerminalIngestModal";
 import { getClientGeoContext, GeoAuditData } from "@/lib/geo";
+import CommunityFaqHub from "@/components/CommunityFaqHub";
 
 const API_BASE =
   typeof window !== "undefined" &&
@@ -29,7 +30,7 @@ const SAMPLE_EN: StagedBomItem[] = [
 ];
 
 export default function SovereignCorePage() {
- const [activeTab, setActiveTab] = useState<
+  const [activeTab, setActiveTab] = useState<
     "pipeline" | "multi_vertical" | "spec" | "invoice" | "site_hud" | "pitch" | "auditor"
   >("pipeline");
   const [projectCode, setProjectCode] = useState("MOMRAH-RYD-2026-04");
@@ -588,7 +589,7 @@ export default function SovereignCorePage() {
     reader.readAsText(file);
   };
 
-// --- Edge Auditor Actions ---
+  // --- Edge Auditor Actions ---
   const handleRunAudit = async () => {
     setIsAuditing(true);
     setError(null);
@@ -618,7 +619,7 @@ export default function SovereignCorePage() {
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#04070a", color: "#00f3ff", fontFamily: "monospace", padding: "30px 40px" }}>
 
-     {/* Header Bar */}
+      {/* Header Bar */}
       <header style={{ borderBottom: "1px solid #142838", paddingBottom: "20px", marginBottom: "30px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <h1 style={{ fontSize: "1.2rem", letterSpacing: "2px", margin: 0, color: "#fff", display: "flex", alignItems: "center", gap: "8px" }}>
@@ -677,7 +678,7 @@ export default function SovereignCorePage() {
           </div>
         </div>
 
-       {/* 7-Tab Enterprise Navigation */}
+        {/* 7-Tab Enterprise Navigation */}
         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
           {[
             { id: "pipeline", label: "🚢 LOGISTICS & TARIFF" },
@@ -2300,12 +2301,12 @@ export default function SovereignCorePage() {
       {/* ========================================================================= */}
       {activeTab === "pitch" && <PitchDeck />}
 
-{/* ========================================================================= */}
+      {/* ========================================================================= */}
       {/* TAB 6: EDGE GENERATIVE ENGINE (GEO) & AEO COMPLIANCE AUDITOR              */}
       {/* ========================================================================= */}
       {activeTab === "auditor" && (
         <main style={{ width: "100%", maxWidth: "1200px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "25px", padding: "10px" }}>
-          
+
           {/* Header Bar */}
           <section style={{ border: "1px solid #142838", padding: "20px", backgroundColor: "#061017", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
@@ -2375,7 +2376,7 @@ export default function SovereignCorePage() {
           {/* Audit Telemetry Output Panels */}
           {auditResult && (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "25px" }}>
-              
+
               {/* Left Column: Security, Manifest & Bot Clearance */}
               <section style={{ border: "1px solid #142838", padding: "20px", backgroundColor: "#061017", display: "flex", flexDirection: "column", gap: "16px" }}>
                 <div style={{ fontSize: "0.85rem", color: "#fff", fontWeight: "bold", borderBottom: "1px solid #142838", paddingBottom: "8px" }}>
@@ -2494,7 +2495,11 @@ export default function SovereignCorePage() {
           )}
         </main>
       )}
-      
+
+      {/* Community Relay & AEO Structured Knowledge Graph */}
+      <div style={{ maxWidth: "1200px", margin: "0 auto", width: "100%" }}>
+        <CommunityFaqHub />
+      </div>
       {/* Sovereign Enterprise Compliance Footer */}
       <footer style={{ marginTop: "40px", borderTop: "1px solid #1a1a1a", paddingTop: "20px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.7rem", color: "#555" }}>
         <div style={{ maxWidth: "800px", lineHeight: "1.4" }}>
