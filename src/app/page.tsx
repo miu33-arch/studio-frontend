@@ -29,9 +29,15 @@ const SAMPLE_EN: StagedBomItem[] = [
 ];
 
 export default function SovereignCorePage() {
-  const [activeTab, setActiveTab] = useState<"pipeline" | "multi_vertical" | "spec" | "invoice" | "site_hud" | "pitch">("pipeline");
+ const [activeTab, setActiveTab] = useState<
+    "pipeline" | "multi_vertical" | "spec" | "invoice" | "site_hud" | "pitch" | "auditor"
+  >("pipeline");
   const [projectCode, setProjectCode] = useState("MOMRAH-RYD-2026-04");
   const [isIngestModalOpen, setIsIngestModalOpen] = useState(false);
+  // Edge GEO / AEO Auditor State
+  const [auditUrl, setAuditUrl] = useState("https://miu33archstudio.xyz");
+  const [isAuditing, setIsAuditing] = useState(false);
+  const [auditResult, setAuditResult] = useState<any>(null);
 
   // Edge Telemetry State
   const [geo, setGeo] = useState<GeoAuditData | null>(null);
@@ -582,6 +588,33 @@ export default function SovereignCorePage() {
     reader.readAsText(file);
   };
 
+// --- Edge Auditor Actions ---
+  const handleRunAudit = async () => {
+    setIsAuditing(true);
+    setError(null);
+    try {
+      const res = await fetch("https://geo.miu33archstudio.xyz", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: auditUrl.trim() }),
+      });
+      const data = await res.json();
+      if (data.status === "success") {
+        setAuditResult(data.audit);
+      } else {
+        throw new Error(data.error || "Edge audit inspection failed");
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to reach edge auditor");
+    } finally {
+      setIsAuditing(false);
+    }
+  };
+
+  const handleExportAuditDossier = () => {
+    alert(`Audit dossier compilation queued for: ${auditUrl}`);
+  };
+
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#04070a", color: "#00f3ff", fontFamily: "monospace", padding: "30px 40px" }}>
 
@@ -644,8 +677,8 @@ export default function SovereignCorePage() {
           </div>
         </div>
 
-        {/* 6-Tab Enterprise Navigation */}
-        <div style={{ display: "flex", gap: "8px" }}>
+       {/* 7-Tab Enterprise Navigation */}
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
           {[
             { id: "pipeline", label: "🚢 LOGISTICS & TARIFF" },
             { id: "multi_vertical", label: "❄️ DUAL-TRACK INGEST" },
@@ -653,6 +686,7 @@ export default function SovereignCorePage() {
             { id: "invoice", label: "💳 COMMERCIAL & ZATCA" },
             { id: "site_hud", label: "📐 SITE & BIM HUD" },
             { id: "pitch", label: "📊 PROPOSAL DECK" },
+            { id: "auditor", label: "⚡ GEO & AEO AUDITOR" },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -2266,6 +2300,201 @@ export default function SovereignCorePage() {
       {/* ========================================================================= */}
       {activeTab === "pitch" && <PitchDeck />}
 
+{/* ========================================================================= */}
+      {/* TAB 6: EDGE GENERATIVE ENGINE (GEO) & AEO COMPLIANCE AUDITOR              */}
+      {/* ========================================================================= */}
+      {activeTab === "auditor" && (
+        <main style={{ width: "100%", maxWidth: "1200px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "25px", padding: "10px" }}>
+          
+          {/* Header Bar */}
+          <section style={{ border: "1px solid #142838", padding: "20px", backgroundColor: "#061017", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <h2 style={{ fontSize: "0.95rem", color: "#00f3ff", margin: 0, letterSpacing: "1px" }}>
+                EDGE GEO / AEO &amp; GENERATIVE ENGINE AUDIT ENGINE
+              </h2>
+              <div style={{ fontSize: "0.72rem", color: "#888", marginTop: "4px" }}>
+                PROBING CLOUDFLARE HTMLREWRITER &bull; /llms.txt MANIFESTS &bull; CRAWLER CLEARANCE &bull; SCHEMA INTEGRITY
+              </div>
+            </div>
+
+            {auditResult && (
+              <div style={{
+                fontSize: "1.2rem",
+                fontWeight: "bold",
+                color: (auditResult.geoAeoReadiness?.geoScore || 0) >= 80 ? "#00ff66" : "#ffaa00",
+                border: `1px solid ${(auditResult.geoAeoReadiness?.geoScore || 0) >= 80 ? "#00ff66" : "#ffaa00"}`,
+                padding: "6px 18px",
+                backgroundColor: "#021208",
+                letterSpacing: "1px"
+              }}>
+                GEO SCORE: {auditResult.geoAeoReadiness?.geoScore ?? 0} / 100
+              </div>
+            )}
+          </section>
+
+          {/* URL Input Form */}
+          <section style={{ border: "1px solid #142838", padding: "20px", backgroundColor: "#061017" }}>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <input
+                type="text"
+                value={auditUrl}
+                onChange={(e) => setAuditUrl(e.target.value)}
+                placeholder="https://target-domain.com"
+                style={{
+                  flex: 1,
+                  backgroundColor: "#02070b",
+                  border: "1px solid #1c364a",
+                  color: "#00f3ff",
+                  padding: "12px 14px",
+                  fontFamily: "monospace",
+                  fontSize: "0.85rem",
+                  outline: "none"
+                }}
+              />
+              <button
+                type="button"
+                disabled={isAuditing}
+                onClick={handleRunAudit}
+                style={{
+                  backgroundColor: isAuditing ? "#142838" : "#00f3ff",
+                  color: "#000",
+                  border: "none",
+                  padding: "12px 24px",
+                  fontFamily: "monospace",
+                  fontWeight: "bold",
+                  fontSize: "0.8rem",
+                  cursor: isAuditing ? "not-allowed" : "pointer",
+                  letterSpacing: "1px"
+                }}
+              >
+                {isAuditing ? "INTERROGATING EDGE..." : "⚡ RUN EDGE AUDIT"}
+              </button>
+            </div>
+          </section>
+
+          {/* Audit Telemetry Output Panels */}
+          {auditResult && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "25px" }}>
+              
+              {/* Left Column: Security, Manifest & Bot Clearance */}
+              <section style={{ border: "1px solid #142838", padding: "20px", backgroundColor: "#061017", display: "flex", flexDirection: "column", gap: "16px" }}>
+                <div style={{ fontSize: "0.85rem", color: "#fff", fontWeight: "bold", borderBottom: "1px solid #142838", paddingBottom: "8px" }}>
+                  1. PROTOCOL &amp; INDEXING HEALTH
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "0.75rem" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "#888" }}>TARGET HOST:</span>
+                    <span style={{ color: "#fff", wordBreak: "break-all" }}>{auditResult.target}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "#888" }}>HTTP RESPONSE:</span>
+                    <span style={{ color: auditResult.httpStatus === 200 ? "#00ff66" : "#ffaa00" }}>{auditResult.httpStatus} OK</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "#888" }}>HSTS PROTOCOL:</span>
+                    <strong style={{ color: auditResult.headers?.strictTransportSecurity === "PRESENT" ? "#00ff66" : "#ff3366" }}>
+                      {auditResult.headers?.strictTransportSecurity}
+                    </strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "#888" }}>CONTENT SECURITY POLICY (CSP):</span>
+                    <strong style={{ color: auditResult.headers?.contentSecurityPolicy === "PRESENT" ? "#00ff66" : "#ff3366" }}>
+                      {auditResult.headers?.contentSecurityPolicy}
+                    </strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "#888" }}>/llms.txt MANIFEST:</span>
+                    <strong style={{ color: auditResult.llmManifest?.hasLlmsTxt ? "#00ff66" : "#ffaa00" }}>
+                      {auditResult.llmManifest?.hasLlmsTxt ? "ACTIVE (HTTP 200)" : "ABSENT (HTTP 404)"}
+                    </strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "#888" }}>OPEN GRAPH ENTITY:</span>
+                    <strong style={{ color: auditResult.geoAeoReadiness?.hasOpenGraph ? "#00ff66" : "#ff3366" }}>
+                      {auditResult.geoAeoReadiness?.hasOpenGraph ? "PRESENT" : "MISSING"}
+                    </strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "#888" }}>JSON-LD SCHEMAS:</span>
+                    <span style={{ color: "#00f3ff", fontWeight: "bold" }}>
+                      {auditResult.geoAeoReadiness?.jsonLdSchemas?.length > 0
+                        ? auditResult.geoAeoReadiness.jsonLdSchemas.join(", ")
+                        : "NONE DETECTED"}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ fontSize: "0.85rem", color: "#fff", fontWeight: "bold", borderBottom: "1px solid #142838", paddingBottom: "8px", marginTop: "10px" }}>
+                  2. AI ENGINE CRAWLER DIRECTIVES
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", fontSize: "0.72rem" }}>
+                  {auditResult.aiCrawlers &&
+                    Object.entries(auditResult.aiCrawlers).map(([bot, status]) => (
+                      <div key={bot} style={{ border: "1px solid #142838", padding: "8px 6px", textAlign: "center", backgroundColor: "#02070b" }}>
+                        <div style={{ color: "#888", marginBottom: "4px" }}>{bot}</div>
+                        <div style={{ color: status === "ALLOWED" ? "#00ff66" : "#ff3366", fontWeight: "bold" }}>
+                          {status as string}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </section>
+
+              {/* Right Column: Recommendations & Proposal Pipeline */}
+              <section style={{ border: "1px solid #142838", padding: "20px", backgroundColor: "#061017", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                <div>
+                  <div style={{ fontSize: "0.85rem", color: "#fff", fontWeight: "bold", borderBottom: "1px solid #142838", paddingBottom: "8px", marginBottom: "14px" }}>
+                    3. DEFICITS &amp; ACTIONABLE REMEDIATIONS
+                  </div>
+
+                  {auditResult.recommendations?.length === 0 ? (
+                    <div style={{ padding: "16px", border: "1px solid #00ff66", backgroundColor: "#021a0d", color: "#00ff66", fontSize: "0.8rem", lineHeight: "1.5" }}>
+                      ✓ High Authority Profile: Target site presents full edge transport security, structured knowledge schemas, and unrestricted AI crawler access.
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                      {auditResult.recommendations.map((rec: string, idx: number) => (
+                        <div key={idx} style={{ padding: "10px 14px", border: "1px solid #ffaa00", backgroundColor: "#1c1402", color: "#ffaa00", fontSize: "0.75rem", lineHeight: "1.4" }}>
+                          ⚠ {rec}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {auditResult.title && (
+                    <div style={{ marginTop: "16px", fontSize: "0.72rem", color: "#666" }}>
+                      PARSED TITLE: <span style={{ color: "#aaa" }}>{auditResult.title}</span>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleExportAuditDossier}
+                  style={{
+                    backgroundColor: "transparent",
+                    border: "1px solid #00f3ff",
+                    color: "#00f3ff",
+                    padding: "14px",
+                    fontWeight: "bold",
+                    fontSize: "0.8rem",
+                    cursor: "pointer",
+                    fontFamily: "monospace",
+                    letterSpacing: "1px",
+                    marginTop: "20px"
+                  }}
+                >
+                  📄 COMPILE CLIENT PROPOSAL DOSSIER (.PDF)
+                </button>
+              </section>
+
+            </div>
+          )}
+        </main>
+      )}
+      
       {/* Sovereign Enterprise Compliance Footer */}
       <footer style={{ marginTop: "40px", borderTop: "1px solid #1a1a1a", paddingTop: "20px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.7rem", color: "#555" }}>
         <div style={{ maxWidth: "800px", lineHeight: "1.4" }}>
