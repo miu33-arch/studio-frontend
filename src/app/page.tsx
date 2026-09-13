@@ -34,6 +34,22 @@ export default function SovereignCorePage() {
   const [activeTab, setActiveTab] = useState<
     "pipeline" | "multi_vertical" | "spec" | "invoice" | "site_hud" | "pitch" | "auditor"
   >("pipeline");
+  const [engineMode, setEngineMode] = useState<"trade" | "geo" | "unified">("trade");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const mode = params.get("mode");
+      if (mode === "geo") {
+        setEngineMode("geo");
+        setActiveTab("auditor");
+      } else if (mode === "unified") {
+        setEngineMode("unified");
+      } else {
+        setEngineMode("trade");
+      }
+    }
+  }, []);
   const [projectCode, setProjectCode] = useState("MOMRAH-RYD-2026-04");
   const [isIngestModalOpen, setIsIngestModalOpen] = useState(false);
   // Edge GEO / AEO Auditor State
@@ -244,7 +260,7 @@ export default function SovereignCorePage() {
   const [history, setHistory] = useState<any[]>([]);
 
   // Tenancy Authentication & Session State
-  const [activeApiKey] = useState("miu_master_agency_key");
+  const [activeApiKey, setActiveApiKey] = useState<string>("");
   const [clientBalance, setClientBalance] = useState<any>(null);
 
   // Settlement & Paywall Gate State
@@ -252,8 +268,22 @@ export default function SovereignCorePage() {
   const [settlementRef, setSettlementRef] = useState("");
   const [isSettled, setIsSettled] = useState(false);
   const [clearanceStatus, setClearanceStatus] = useState<"IDLE" | "VERIFIED" | "FAILED">("IDLE");
-  const [pendingAction, setPendingAction] = useState<"spec" | "dossier" | null>(null);
+  const [pendingAction, setPendingAction] = useState<"spec" | "dossier" | "remediation" | null>(null);
+// Master Key Persistence & URL Token Gate
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedKey = localStorage.getItem("miu_master_key");
+      const params = new URLSearchParams(window.location.search);
+      const keyParam = params.get("key");
 
+      if (savedKey === "miu_master_agency_key" || keyParam === "miu_master_agency_key") {
+        setActiveApiKey("miu_master_agency_key");
+        setIsSettled(true);
+        setClearanceStatus("VERIFIED");
+        if (keyParam) localStorage.setItem("miu_master_key", "miu_master_agency_key");
+      }
+    }
+  }, []);
   const fetchClientBalance = async () => {
     try {
       if (!API_BASE) return;
@@ -285,7 +315,7 @@ export default function SovereignCorePage() {
     fetchHistory();
     fetchClientBalance();
   }, [activeApiKey]);
-
+  
   // Automated Webhook Listener Polling
   useEffect(() => {
     if (!showSettlementModal || isSettled) return;
@@ -304,7 +334,7 @@ export default function SovereignCorePage() {
             setShowSettlementModal(false);
             if (pendingAction === "spec") handleCompileSubmittal(projectCode);
             else if (pendingAction === "dossier") handleZipDossier(projectCode);
-            setPendingAction(null);
+            else if (pendingAction === "remediation") setIsRemediationOpen(true);
             setClearanceStatus("IDLE");
           }, 1000);
           clearInterval(interval);
@@ -613,7 +643,20 @@ export default function SovereignCorePage() {
       setIsAuditing(false);
     }
   };
+const handleLockedAction = (action: "dossier" | "remediation") => {
+    if (!isSettled && clearanceStatus !== "VERIFIED") {
+      setPendingAction(action);
+      setShowSettlementModal(true);
+      return;
+    }
 
+    if (action === "dossier") {
+      handleExportAuditDossier();
+    } else {
+      setIsRemediationOpen(true);
+    }
+  };
+  
   const handleExportAuditDossier = () => {
     if (!auditResult) {
       alert("Run an audit first before compiling a dossier.");
@@ -631,37 +674,35 @@ export default function SovereignCorePage() {
       return;
     }
 
-    const htmlContent = `
+const htmlContent = `
       <!DOCTYPE html>
       <html>
       <head>
         <title>SOVEREIGN AUDIT DOSSIER - ${auditResult.target}</title>
         <style>
-        @page { 
-  size: A4 portrait; 
-  margin: 12mm; 
-}
-body {
-  font-family: 'Courier New', Courier, monospace;
-  background-color: #050a0e;
-  color: #d1d5db;
-  padding: 0;
-  margin: 0;
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
-}
-.dossier-container { 
-  max-width: 760px;
-  margin: 0 auto;
-  padding: 24px 30px;
-  box-sizing: border-box; 
-}
-.section-block { 
-  page-break-inside: avoid; 
-  margin-bottom: 12px; 
-}
-          .dossier-container { width: 100%; box-sizing: border-box; }
-          .section-block { page-break-inside: avoid; margin-bottom: 12px; }
+          @page { 
+            size: A4 portrait; 
+            margin: 12mm; 
+          }
+          body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #050a0e;
+            color: #d1d5db;
+            padding: 0;
+            margin: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .dossier-container { 
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 24px 30px;
+            box-sizing: border-box; 
+          }
+          .section-block { 
+            page-break-inside: avoid; 
+            margin-bottom: 12px; 
+          }
           .header { border-bottom: 2px solid #00f3ff; padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: flex-end; }
           .title { font-size: 16px; font-weight: bold; color: #00f3ff; letter-spacing: 1px; }
           .meta { font-size: 9px; color: #888; text-transform: uppercase; }
@@ -767,12 +808,19 @@ body {
                 ${!auditResult.geoAeoReadiness?.hasFaqSchema ? '<tr style="background: transparent;"><td style="border: none; border-bottom: 1px dashed #142838; padding: 3px 0;">FAQPage &amp; Organization JSON-LD Graph Injection</td><td style="border: none; border-bottom: 1px dashed #142838; text-align: right; color: #aaa;">SAR 2,000.00</td></tr>' : ''}
               </table>
               <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #00ff66;">
-                <span style="font-size: 10px; color: #aaa;">SETTLEMENT CLEARANCE (SARIE / STC PAY)</span>
+                <span style="font-size: 10px; color: #aaa;">SETTLEMENT CLEARANCE // CORPORATE WIRE (SARIE)</span>
                 <span class="total-fee">TOTAL: SAR ${baseFee.toLocaleString()}.00</span>
               </div>
-              <div style="font-size: 9px; color: #888; margin-top: 8px; line-height: 1.3;">
-                <strong>Settlement Routing:</strong> Al Rajhi Commercial Gateway / STC Pay Direct<br>
-                <em>Remediation deployment commences within 24 hours of settlement confirmation.</em>
+              <div style="margin-top: 10px; padding: 8px 10px; border: 1px solid #00ff66; background: rgba(0, 255, 102, 0.03);">
+                <div style="font-size: 9px; color: #00ff66; font-weight: bold; margin-bottom: 3px;">
+                  COMMERCIAL CLEARANCE // ZATCA PHASE-2 COMPLIANT
+                </div>
+                <div style="font-size: 8px; color: #888; line-height: 1.4;">
+                  <strong>Beneficiary:</strong> MIU_33 Sovereign Engineering &amp; Technology<br>
+                  <strong>Corporate Settlement:</strong> Al Rajhi Corporate Banking (SAR Corporate Wire / IBAN)<br>
+                  <strong>IBAN Routing:</strong> SA4880207781501222121011<br>
+                  <strong>Tax Treatment:</strong> 15% Statutory ZATCA Electronic Tax Invoice Dispatched Post-Settlement
+                </div>
               </div>
             </div>
           </div>
@@ -896,7 +944,7 @@ body {
           </div>
         </div>
 
-        {/* 7-Tab Enterprise Navigation */}
+        {/* Enterprise Filtered Navigation */}
         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
           {[
             { id: "pipeline", label: "🚢 LOGISTICS & TARIFF" },
@@ -906,25 +954,31 @@ body {
             { id: "site_hud", label: "📐 SITE & BIM HUD" },
             { id: "pitch", label: "📊 PROPOSAL DECK" },
             { id: "auditor", label: "⚡ GEO & AEO AUDITOR" },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id as any)}
-              style={{
-                backgroundColor: activeTab === tab.id ? "#00f3ff" : "transparent",
-                color: activeTab === tab.id ? "#000" : "#00f3ff",
-                border: "1px solid #00f3ff",
-                padding: "8px 14px",
-                fontFamily: "monospace",
-                fontWeight: "bold",
-                fontSize: "0.75rem",
-                cursor: "pointer",
-              }}
-            >
-              {tab.label}
-            </button>
-          ))}
+          ]
+            .filter((tab) => {
+              if (engineMode === "trade") return tab.id !== "auditor";
+              if (engineMode === "geo") return tab.id === "auditor" || tab.id === "pitch";
+              return true;
+            })
+            .map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id as any)}
+                style={{
+                  backgroundColor: activeTab === tab.id ? "#00f3ff" : "transparent",
+                  color: activeTab === tab.id ? "#000" : "#00f3ff",
+                  border: "1px solid #00f3ff",
+                  padding: "8px 14px",
+                  fontFamily: "monospace",
+                  fontWeight: "bold",
+                  fontSize: "0.75rem",
+                  cursor: "pointer",
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
         </div>
       </header>
 
@@ -2692,11 +2746,11 @@ body {
                   <button
                     type="button"
                     disabled={!auditResult}
-                    onClick={handleExportAuditDossier}
+                    onClick={() => handleLockedAction("dossier")}
                     style={{
-                      backgroundColor: "transparent",
-                      color: auditResult ? "#d1d5db" : "#333",
-                      border: auditResult ? "1px solid #d1d5db" : "1px solid #333",
+                      backgroundColor: !auditResult ? "transparent" : (isSettled || clearanceStatus === "VERIFIED") ? "transparent" : "rgba(255, 170, 0, 0.05)",
+                      color: !auditResult ? "#333" : (isSettled || clearanceStatus === "VERIFIED") ? "#d1d5db" : "#ffaa00",
+                      border: !auditResult ? "1px solid #333" : (isSettled || clearanceStatus === "VERIFIED") ? "1px solid #d1d5db" : "1px solid #ffaa00",
                       padding: "10px 20px",
                       fontFamily: "monospace",
                       fontSize: "0.75rem",
@@ -2708,16 +2762,25 @@ body {
                       justifyContent: "center"
                     }}
                   >
-                    📄 COMPILE CLIENT PROPOSAL DOSSIER (.PDF)
+                    {!auditResult
+                      ? "📄 COMPILE CLIENT PROPOSAL DOSSIER (.PDF)"
+                      : (isSettled || clearanceStatus === "VERIFIED")
+                      ? "📄 COMPILE CLIENT PROPOSAL DOSSIER (.PDF)"
+                      : "🔒 COMPILE DOSSIER (SETTLEMENT REQUIRED)"}
                   </button>
+
                   <button
                     type="button"
                     disabled={!auditResult}
-                    onClick={() => setIsRemediationOpen(true)}
+                    onClick={() => handleLockedAction("remediation")}
                     style={{
-                      backgroundColor: auditResult ? "rgba(0, 243, 255, 0.1)" : "transparent",
-                      color: auditResult ? "#00f3ff" : "#333",
-                      border: auditResult ? "1px solid #00f3ff" : "1px solid #333",
+                      backgroundColor: !auditResult
+                        ? "transparent"
+                        : (isSettled || clearanceStatus === "VERIFIED")
+                        ? "rgba(0, 243, 255, 0.1)"
+                        : "rgba(255, 170, 0, 0.05)",
+                      color: !auditResult ? "#333" : (isSettled || clearanceStatus === "VERIFIED") ? "#00f3ff" : "#ffaa00",
+                      border: !auditResult ? "1px solid #333" : (isSettled || clearanceStatus === "VERIFIED") ? "1px solid #00f3ff" : "1px solid #ffaa00",
                       padding: "10px 20px",
                       fontFamily: "monospace",
                       fontSize: "0.75rem",
@@ -2730,20 +2793,14 @@ body {
                       justifyContent: "center"
                     }}
                   >
-                    ⚡ OPEN LAYER 3 REMEDIATION STUDIO
+                    {!auditResult
+                      ? "⚡ OPEN LAYER 3 REMEDIATION STUDIO"
+                      : (isSettled || clearanceStatus === "VERIFIED")
+                      ? "⚡ OPEN LAYER 3 REMEDIATION STUDIO"
+                      : "🔒 LAYER 3 REMEDIATION (ENTERPRISE LICENSE)"}
                   </button>
                 </div>
               </section>
-
-              {isRemediationOpen && auditResult && (
-                <RemediationStudioModal
-                  {...({
-                    auditResult,
-                    onClose: () => setIsRemediationOpen(false)
-                  } as any)}
-                />
-              )}
-
             </div>
           )}
         </main>
