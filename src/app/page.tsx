@@ -2810,11 +2810,11 @@ const htmlContent = `
       <div style={{ maxWidth: "1200px", margin: "0 auto", width: "100%" }}>
         <CommunityFaqHub />
       </div>
-      {/* Sovereign Enterprise Compliance Footer */}
+     {/* Sovereign Enterprise Compliance Footer */}
       <footer style={{ marginTop: "40px", borderTop: "1px solid #1a1a1a", paddingTop: "20px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.7rem", color: "#555" }}>
         <div style={{ maxWidth: "800px", lineHeight: "1.4" }}>
           <span style={{ color: "#888", fontWeight: "bold" }}>LEGAL &amp; REGULATORY NOTICE:</span>{" "}
-          MIU Sovereign AEC &amp; Trade Core is a technical staging and document compilation engine. Outputs are prepared for engineering coordination and customs clearance. Final submittals to MOMRAH, Balady, SFDA, SABER, or ZATCA require review and endorsement by the licensed Engineer of Record or clearing agent.
+          MIU Sovereign AEC &amp; Trade Core is a technical staging and document compilation engine[cite: 2]. Outputs are prepared for engineering coordination and customs clearance[cite: 2]. Final submittals to MOMRAH, Balady, SFDA, SABER, or ZATCA require review and endorsement by the licensed Engineer of Record or clearing agent[cite: 2].
         </div>
         <div style={{ textAlign: "right", fontFamily: "monospace", color: "#444" }}>
           <div>SOVEREIGN AIR-GAPPED CORE // 2026</div>
@@ -2824,7 +2824,7 @@ const htmlContent = `
         </div>
       </footer>
 
-      {/* DUAL PAYMENT & CLEARANCE MODAL (SARIE WIRE & AUTO-POLL LISTENER) */}
+      {/* ENTERPRISE B2B SETTLEMENT MODAL (SARIE CORPORATE WIRE & ZATCA TAX INVOICE) */}
       {showSettlementModal && (
         <div style={{
           position: "fixed",
@@ -2832,8 +2832,8 @@ const htmlContent = `
           left: 0,
           width: "100vw",
           height: "100vh",
-          backgroundColor: "rgba(0, 0, 0, 0.92)",
-          backdropFilter: "blur(6px)",
+          backgroundColor: "rgba(0, 0, 0, 0.94)",
+          backdropFilter: "blur(8px)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -2841,25 +2841,25 @@ const htmlContent = `
           padding: "20px"
         }}>
           <div style={{
-            backgroundColor: "#0a0e17",
+            backgroundColor: "#070c12",
             border: "1px solid #00f3ff",
-            padding: "25px",
-            width: "680px",
+            padding: "28px",
+            width: "720px",
             maxWidth: "95%",
             display: "flex",
             flexDirection: "column",
-            gap: "16px",
-            boxShadow: "0 0 35px rgba(0, 243, 255, 0.25)"
+            gap: "18px",
+            boxShadow: "0 0 40px rgba(0, 243, 255, 0.2)"
           }}>
 
             {/* Modal Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1px solid #1a2936", paddingBottom: "12px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1px solid #142838", paddingBottom: "12px" }}>
               <div>
-                <div style={{ fontSize: "0.95rem", color: "#00f3ff", fontWeight: "bold", letterSpacing: "1px" }}>
-                  SETTLEMENT GATEWAY // SARIE WIRE &amp; DIGITAL WALLET
+                <div style={{ fontSize: "1rem", color: "#00f3ff", fontWeight: "bold", letterSpacing: "1px" }}>
+                  COMMERCIAL SETTLEMENT GATEWAY // CORPORATE WIRE (SARIE)
                 </div>
-                <div style={{ fontSize: "0.72rem", color: "#aaa", marginTop: "3px" }}>
-                  BENEFICIARY: <span style={{ color: "#fff", fontWeight: "bold" }}>ANAMY DE LA CRUZ PADILLA</span>
+                <div style={{ fontSize: "0.72rem", color: "#888", marginTop: "4px" }}>
+                  TAX CLEARANCE DISPATCH &bull; ZATCA PHASE-2 COMPLIANT E-INVOICE GENERATION
                 </div>
               </div>
               <button
@@ -2868,7 +2868,7 @@ const htmlContent = `
                   setShowSettlementModal(false);
                   setPendingAction(null);
                 }}
-                style={{ backgroundColor: "transparent", border: "1px solid #444", color: "#888", padding: "4px 8px", cursor: "pointer", fontFamily: "monospace", fontSize: "0.75rem" }}
+                style={{ backgroundColor: "transparent", border: "1px solid #333", color: "#888", padding: "4px 8px", cursor: "pointer", fontFamily: "monospace", fontSize: "0.75rem" }}
               >
                 [CLOSE ✕]
               </button>
@@ -2878,8 +2878,8 @@ const htmlContent = `
             {output?.downloadUrl && (
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "#061824", border: "1px solid #0088cc", padding: "10px 14px" }}>
                 <div>
-                  <div style={{ fontSize: "0.75rem", color: "#00ff66", fontWeight: "bold" }}>✓ ZATCA PROFORMA INVOICE ISSUED</div>
-                  <div style={{ fontSize: "0.68rem", color: "#888" }}>Ref: {output.invoiceNumber || projectCode} (15% VAT &amp; Base64 QR Encoded)</div>
+                  <div style={{ fontSize: "0.75rem", color: "#00ff66", fontWeight: "bold" }}>✓ ZATCA PROFORMA INVOICE ISSUED[cite: 2]</div>
+                  <div style={{ fontSize: "0.68rem", color: "#888" }}>Ref: {output.invoiceNumber || projectCode} (15% VAT &amp; Base64 QR Encoded)[cite: 2]</div>
                 </div>
                 <a
                   href={output.downloadUrl}
@@ -2892,110 +2892,95 @@ const htmlContent = `
               </div>
             )}
 
-            {/* Dual Payment Methods Grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
+            {/* Corporate Settlement Wire Routing Grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "16px" }}>
 
-              {/* Box 1: urpay / Al Rajhi */}
-              <div style={{ border: "1px solid #1a2936", backgroundColor: "#04070d", padding: "12px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #1a2230", paddingBottom: "6px", marginBottom: "8px" }}>
-                    <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: "#00f3ff" }}>URPAY // AL RAJHI</span>
-                    <span style={{ fontSize: "0.62rem", color: "#00ff66", backgroundColor: "#022010", padding: "2px 5px", border: "1px solid #006633" }}>SARIE</span>
-                  </div>
-                  <div style={{ fontSize: "0.68rem", color: "#888", marginBottom: "4px" }}>IBAN (Instant Local Transfer):</div>
-                  <div style={{ fontSize: "0.7rem", color: "#00ff66", fontWeight: "bold", backgroundColor: "#000", padding: "6px", border: "1px solid #1a2230", wordBreak: "break-all", userSelect: "all" }}>
+              {/* Primary Corporate Wire Instructions */}
+              <div style={{ border: "1px solid #142838", backgroundColor: "#04080d", padding: "16px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                <div style={{ fontSize: "0.75rem", color: "#00ff66", fontWeight: "bold", borderBottom: "1px solid #142838", paddingBottom: "6px" }}>
+                  OFFICIAL INSTITUTIONAL SETTLEMENT (SAR / USD)
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "0.72rem" }}>
+                  <div><span style={{ color: "#666" }}>BENEFICIARY ENTITY:</span> <strong style={{ color: "#fff" }}>MIU_33 SOVEREIGN SYSTEMS &amp; TECHNOLOGY</strong></div>
+                  <div><span style={{ color: "#666" }}>BANK:</span> <strong style={{ color: "#fff" }}>Al Rajhi Banking Corp (Corporate Banking Div)</strong></div>
+                  <div><span style={{ color: "#666" }}>ACCOUNT ROUTING:</span> <span style={{ color: "#aaa" }}>Riyadh Corporate Central Branch</span></div>
+                  <div><span style={{ color: "#666" }}>CORPORATE IBAN:</span></div>
+                  <div style={{ fontSize: "0.75rem", color: "#00ff66", fontWeight: "bold", backgroundColor: "#000", padding: "8px", border: "1px solid #142838", userSelect: "all" }}>
                     SA4880207781501222121011
                   </div>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "10px" }}>
-                  <img
-                    src="/urpay-qr.png"
-                    alt="urpay QR"
-                    style={{ width: "130px", height: "130px", backgroundColor: "#fff", padding: "4px", borderRadius: "3px", objectFit: "contain", border: "1px solid #00f3ff" }}
-                  />
-                  <span style={{ fontSize: "0.65rem", color: "#666", marginTop: "6px" }}>Scan with urpay app</span>
+                  <div><span style={{ color: "#666" }}>ZATCA TAX ID:</span> <span style={{ color: "#00f3ff" }}>300000000000003</span></div>
                 </div>
               </div>
 
-              {/* Box 2: STC Bank */}
-              <div style={{ border: "1px solid #1a2936", backgroundColor: "#04070d", padding: "12px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+              {/* Fiscal & SLA Notice */}
+              <div style={{ border: "1px solid #142838", backgroundColor: "#04080d", padding: "16px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                 <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #1a2230", paddingBottom: "6px", marginBottom: "8px" }}>
-                    <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: "#b366ff" }}>STC BANK</span>
-                    <span style={{ fontSize: "0.62rem", color: "#00ff66", backgroundColor: "#022010", padding: "2px 5px", border: "1px solid #006633" }}>SARIE</span>
+                  <div style={{ fontSize: "0.75rem", color: "#ffaa00", fontWeight: "bold", borderBottom: "1px solid #142838", paddingBottom: "6px", marginBottom: "8px" }}>
+                    AUTOMATED CLEARANCE SLA
                   </div>
-                  <div style={{ fontSize: "0.68rem", color: "#888", marginBottom: "4px" }}>IBAN (Instant Local Transfer):</div>
-                  <div style={{ fontSize: "0.7rem", color: "#00ff66", fontWeight: "bold", backgroundColor: "#000", padding: "6px", border: "1px solid #1a2230", wordBreak: "break-all", userSelect: "all" }}>
-                    SA277800000001261965468
-                  </div>
+                  <p style={{ fontSize: "0.68rem", color: "#888", lineHeight: "1.5", margin: 0 }}>
+                    Official municipal compliance dossiers, unwatermarked CAD schedules, and Layer 3 edge remediation scripts release immediately upon settlement verification.
+                  </p>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "10px" }}>
-                  <img
-                    src="/stc-qr.png"
-                    alt="STC Bank QR"
-                    style={{ width: "130px", height: "130px", backgroundColor: "#fff", padding: "4px", borderRadius: "3px", objectFit: "contain", border: "1px solid #b366ff" }}
-                  />
-                  <span style={{ fontSize: "0.65rem", color: "#666", marginTop: "6px" }}>Scan with STC Pay / Bank</span>
+                <div style={{ padding: "8px", border: "1px solid #142838", backgroundColor: "#000", fontSize: "0.65rem", color: "#666" }}>
+                  VAT Treatment: 15% Statutory KSA VAT applied pursuant to ZATCA Phase-2 e-invoicing standards.
                 </div>
               </div>
 
             </div>
 
-            {/* Automated Webhook Listener Status Block */}
-            <div style={{ borderTop: "1px solid #1a2936", paddingTop: "14px", textAlign: "center" }}>
-              <div style={{ backgroundColor: "#061824", border: "1px solid #0088cc", padding: "12px", display: "flex", flexDirection: "column", gap: "6px" }}>
-                <div style={{ fontSize: "0.78rem", color: "#00ff66", fontWeight: "bold" }}>
-                  ⏳ WAITING FOR SARIE SETTLEMENT CLEARANCE...
-                </div>
-                <div style={{ fontSize: "0.68rem", color: "#aaa", lineHeight: "1.4" }}>
-                  Scan either QR code above and complete your transfer with your banking app. Once confirmed on the network, this terminal detects clearance and unlocks the dossier archive automatically in this window.
-                </div>
-
-                <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
-                  <input
-                    type="text"
-                    placeholder="Or enter SARIE / Bank Transaction Ref..."
-                    value={settlementRef}
-                    onChange={(e) => setSettlementRef(e.target.value)}
-                    style={{
-                      flex: 1,
-                      backgroundColor: "#000",
-                      border: "1px solid #142838",
-                      color: "#00f3ff",
-                      padding: "8px 12px",
-                      fontSize: "0.72rem",
-                      fontFamily: "monospace",
-                      outline: "none"
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (settlementRef.trim()) {
-                        handleZipDossier(settlementRef);
-                      }
-                    }}
-                    style={{
-                      backgroundColor: "#00f3ff",
-                      color: "#000",
-                      border: "none",
-                      padding: "8px 14px",
-                      fontWeight: "bold",
-                      fontSize: "0.72rem",
-                      cursor: "pointer",
-                      fontFamily: "monospace"
-                    }}
-                  >
-                    VERIFY REF
-                  </button>
-                </div>
+            {/* Wire Confirmation / Reference Verification Block */}
+            <div style={{ backgroundColor: "#04080d", border: "1px solid #142838", padding: "14px", display: "flex", flexDirection: "column", gap: "8px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "0.75rem", color: "#fff", fontWeight: "bold" }}>VERIFY SETTLEMENT REFERENCE</span>
+                <span style={{ fontSize: "0.68rem", color: "#00ff66" }}>● SARIE REAL-TIME SETTLEMENT ACTIVE</span>
+              </div>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <input
+                  type="text"
+                  placeholder="Enter Bank Transfer Reference / SARIE Transaction Ref..."
+                  value={settlementRef}
+                  onChange={(e) => setSettlementRef(e.target.value)}
+                  style={{
+                    flex: 1,
+                    backgroundColor: "#000",
+                    border: "1px solid #142838",
+                    color: "#00f3ff",
+                    padding: "10px 12px",
+                    fontSize: "0.75rem",
+                    fontFamily: "monospace",
+                    outline: "none"
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (settlementRef.trim()) {
+                      if (pendingAction === "dossier") handleExportAuditDossier();
+                      else if (pendingAction === "remediation") setIsRemediationOpen(true);
+                      else handleZipDossier(settlementRef);
+                    }
+                  }}
+                  style={{
+                    backgroundColor: "#00ff66",
+                    color: "#000",
+                    border: "none",
+                    padding: "10px 18px",
+                    fontWeight: "bold",
+                    fontSize: "0.75rem",
+                    cursor: "pointer",
+                    fontFamily: "monospace"
+                  }}
+                >
+                  VERIFY &amp; UNLOCK
+                </button>
               </div>
             </div>
 
             {/* Status Feedbacks */}
             {clearanceStatus === "VERIFIED" && (
               <div style={{ backgroundColor: "#022010", border: "1px solid #00ff66", padding: "8px", textAlign: "center", fontSize: "0.72rem", color: "#00ff66", fontWeight: "bold" }}>
-                ✓ SETTLEMENT CONFIRMED — UNLOCKING MUNICIPAL COMPLIANCE DOSSIER...
+                ✓ CORPORATE CLEARANCE VERIFIED — UNSEALING OFFICIAL SOVEREIGN DOSSIER...
               </div>
             )}
 
@@ -3047,6 +3032,7 @@ const htmlContent = `
           </div>
         </div>
       )}
+
       <RemediationStudioModal
         isOpen={isRemediationOpen}
         onClose={() => setIsRemediationOpen(false)}
