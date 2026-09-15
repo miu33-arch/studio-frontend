@@ -205,29 +205,30 @@ export default function SovereignCorePage() {
   const [freightUSD, setFreightUSD] = useState("2400");
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [customsLoading, setCustomsLoading] = useState(false);
-  const [ledgerInvoices, setLedgerInvoices] = useState<any[]>([]);
+ // Edge D1 Ledger & Integrity State
+ const [ledgerInvoices, setLedgerInvoices] = useState<any[]>([]);
   const [ledgerLoading, setLedgerLoading] = useState<boolean>(false);
+  const [chainValid, setChainValid] = useState<boolean | null>(null);
+  const [totalBlocks, setTotalBlocks] = useState<number>(0);
 
   const fetchLedger = async () => {
     setLedgerLoading(true);
     try {
-      const apiUrl = API_BASE;
-      const res = await fetch(`${apiUrl}/api/services/invoices?limit=10`, {
-        headers: {
-          "x-api-key": "miu_master_agency_key",
-        },
-      });
-
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-
+      // 1. Fetch D1 entries through Next.js edge proxy
+      const res = await fetch("/api/edge/entries");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      if (data.invoices) {
-        setLedgerInvoices(data.invoices);
+      setLedgerInvoices(Array.isArray(data) ? data : []);
+
+      // 2. Validate cryptographic hash chain integrity
+      const verifyRes = await fetch("/api/edge/verify");
+      if (verifyRes.ok) {
+        const vData = await verifyRes.json();
+        setChainValid(vData.verified);
+        setTotalBlocks(vData.total_blocks || 0);
       }
     } catch (err) {
-      console.warn("Failed to sync ledger:", err);
+      console.warn("Failed to sync D1 ledger:", err);
     } finally {
       setLedgerLoading(false);
     }
@@ -529,6 +530,23 @@ export default function SovereignCorePage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.details?.join(" | ") || data.error || "Invoice generation failed");
       setOutput(data);
+      // Commit to Edge D1 Ledger
+      try {
+        await fetch("/api/edge/tx", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            invoice_no: data.invoiceNumber || `INV-${Date.now().toString().slice(-6)}`,
+            issue_date: new Date().toISOString().split("T")[0],
+            currency: invoiceCurrency,
+            subtotal: itemsPayload.reduce((sum: number, item: any) => sum + (item.unitPrice * (item.qty || 1)), 0),
+            tax_rate: invoiceCurrency === "SAR" ? 0.15 : 0.00,
+          }),
+        });
+      } catch (err) {
+        console.error("D1 commit failed:", err);
+      }
+
       fetchLedger();
       setShowSettlementModal(true);
       fetchHistory();
@@ -979,6 +997,26 @@ const htmlContent = `
                 {tab.label}
               </button>
             ))}
+            <a
+            href="https://wps.miu33archstudio.xyz"
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              backgroundColor: "transparent",
+              color: "#00ff66",
+              border: "1px solid #00ff66",
+              padding: "8px 14px",
+              fontFamily: "monospace",
+              fontWeight: "bold",
+              fontSize: "0.75rem",
+              textDecoration: "none",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            💼 MUDAD WPS &bull; GOSI ➔
+          </a>
         </div>
       </header>
 
@@ -1994,10 +2032,23 @@ const htmlContent = `
 
           {/* SOVEREIGN TRANSACTION AUDIT LEDGER */}
           <section style={{ border: "1px solid #1a2e26", padding: "16px 20px", backgroundColor: "#050807", fontFamily: "monospace" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #162620", paddingBottom: "10px", marginBottom: "12px" }}>
-              <span style={{ fontSize: "0.8rem", color: "#00ff66", fontWeight: "bold", letterSpacing: "1px" }}>
-                ⚡ SOVEREIGN_LEDGER // ZATCA TRANSACTION AUDIT
-              </span>
+           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #162620", paddingBottom: "10px", marginBottom: "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <span style={{ fontSize: "0.8rem", color: "#00ff66", fontWeight: "bold", letterSpacing: "1px" }}>
+                  ⚡ SOVEREIGN_LEDGER // ZATCA D1 PERSISTENCE
+                </span>
+                {chainValid !== null && (
+                  <span style={{
+                    fontSize: "0.65rem",
+                    padding: "2px 6px",
+                    border: chainValid ? "1px solid #00ff66" : "1px solid #ff3366",
+                    color: chainValid ? "#00ff66" : "#ff3366",
+                    backgroundColor: chainValid ? "#03170c" : "#1f0408"
+                  }}>
+                    {chainValid ? `CHAIN VALID [${totalBlocks} BLOCKS]` : "TAMPER DETECTED"}
+                  </span>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={fetchLedger}
@@ -2010,13 +2061,11 @@ const htmlContent = `
                   padding: "3px 10px",
                   cursor: ledgerLoading ? "not-allowed" : "pointer",
                   fontFamily: "monospace",
-                  opacity: ledgerLoading ? 0.6 : 1
                 }}
               >
-                {ledgerLoading ? "SYNCING..." : "SYNC LEDGER"}
+                {ledgerLoading ? "SYNCING..." : "SYNC D1 LEDGER"}
               </button>
             </div>
-
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem", textAlign: "left" }}>
                 <thead>
@@ -2039,15 +2088,15 @@ const htmlContent = `
                       const xmlUrl = inv.xmlDownloadUrl || (inv.xmlPath ? `${API_BASE}/outputs/${inv.xmlPath.split(/[\\/]/).pop()}` : null);
                       return (
                         <tr
-                          key={inv.id || inv.invoiceNumber}
+                          key={inv.id || inv.invoice_no || inv.invoiceNumber}
                           style={{ borderBottom: "1px solid #111", color: "#ccc" }}
-                          title={`HASH: ${inv.invoiceHash}\nPIH: ${inv.previousInvoiceHash || "GENESIS_ROOT"}`}
+                          title={`HASH: ${inv.current_hash || inv.invoiceHash || "PENDING"}\nPIH: ${inv.pih || inv.previousInvoiceHash || "GENESIS_ROOT"}`}
                         >
                           <td style={{ padding: "8px", color: "#00f3ff", fontWeight: "bold" }}>
-                            {inv.invoiceNumber}
+                            {inv.invoice_no || inv.invoiceNumber}
                           </td>
                           <td style={{ padding: "8px" }}>
-                            {inv.clientName}
+                            {inv.clientName || (inv.country ? `JURISDICTION [${inv.country}]` : "ENTERPRISE B2B")}
                           </td>
                           <td style={{ padding: "8px", color: "#777" }}>
                             {inv.clientTaxId || "300000000000003"}
@@ -2056,10 +2105,10 @@ const htmlContent = `
                             {Number(inv.subtotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
                           <td style={{ padding: "8px", color: "#ffb703" }}>
-                            {Number(inv.vatAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            {Number(inv.tax_amount ?? inv.vatAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
                           <td style={{ padding: "8px", color: "#00ff66", fontWeight: "bold" }}>
-                            {Number(inv.grandTotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {inv.currency || "SAR"}
+                            {Number(inv.total_amount ?? inv.grandTotal ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {inv.currency || "SAR"}
                           </td>
                           <td style={{ padding: "8px", color: "#555", fontSize: "0.7rem" }}>
                             {inv.createdAt
