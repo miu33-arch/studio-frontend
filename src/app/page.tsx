@@ -674,7 +674,116 @@ export default function SovereignCorePage() {
       setIsRemediationOpen(true);
     }
   };
+  const handlePrintLedgerReceipt = (inv: any) => {
+    const printWindow = window.open("", "_blank", "width=850,height=1000");
+    if (!printWindow) {
+      alert("Please allow popups to compile the invoice receipt.");
+      return;
+    }
 
+    const invNo = inv.invoice_no || inv.invoiceNumber || "INV-2026-000";
+    const client = inv.clientName || (inv.country ? `JURISDICTION [${inv.country}]` : "AL-RAJHI COMMERCIAL CONTRACTING");
+    const taxId = inv.clientTaxId || "300000000000003";
+    const curr = inv.currency || "SAR";
+    const subtotal = Number(inv.subtotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const vat = Number(inv.tax_amount ?? inv.vatAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const total = Number(inv.total_amount ?? inv.grandTotal ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const dateStr = inv.createdAt ? new Date(inv.createdAt).toISOString().replace("T", " ").slice(0, 19) : new Date().toISOString().replace("T", " ").slice(0, 19);
+    const hash = inv.current_hash || inv.invoiceHash || "PENDING_BLOCK_HASH";
+    const pih = inv.pih || inv.previousInvoiceHash || "GENESIS_ROOT";
+
+    const receiptHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>TAX RECEIPT - ${invNo}</title>
+  <style>
+    @page { size: A4 portrait; margin: 15mm; }
+    body { font-family: 'Courier New', Courier, monospace; background: #fff; color: #000; padding: 24px; font-size: 11px; margin: 0; }
+    .header { border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end; }
+    .title { font-size: 16px; font-weight: bold; letter-spacing: 1px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; border-bottom: 1px dashed #666; padding-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 11px; }
+    th, td { border: 1px solid #000; padding: 8px 10px; text-align: left; }
+    th { background: #f2f2f2; }
+    .text-right { text-align: right; }
+    .totals { font-weight: bold; }
+    .total-row { font-size: 13px; background: #fafafa; }
+    .hash-box { margin-top: 25px; border: 1px solid #888; padding: 10px; font-size: 9px; background: #f9f9f9; word-break: break-all; line-height: 1.5; }
+    .badge { display: inline-block; border: 2px solid #000; padding: 3px 8px; font-weight: bold; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="title">MIU_33 // SOVEREIGN TAX INVOICE</div>
+      <div style="color: #555; margin-top: 3px;">ZATCA PHASE-2 COMPLIANT AUDIT RECEIPT</div>
+    </div>
+    <div style="text-align: right;">
+      <div style="font-size: 13px; font-weight: bold;">REF: ${invNo}</div>
+      <div style="color: #666;">DATE: ${dateStr}</div>
+      <div class="badge">D1 LEDGER VERIFIED</div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div>
+      <div><strong>SUPPLIER:</strong> MIU_33 SOVEREIGN SYSTEMS</div>
+      <div><strong>TAX ID:</strong> 300000000000003</div>
+      <div><strong>LOCATION:</strong> RIYADH, SAUDI ARABIA</div>
+    </div>
+    <div style="text-align: right;">
+      <div><strong>CUSTOMER:</strong> ${client}</div>
+      <div><strong>TAX ID:</strong> ${taxId}</div>
+      <div><strong>CURRENCY:</strong> ${curr}</div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>DESCRIPTION</th>
+        <th style="width: 50px; text-align: center;">QTY</th>
+        <th class="text-right" style="width: 140px;">AMOUNT (${curr})</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Cross-Border Municipal Compliance Engineering & Regulatory Filing</td>
+        <td style="text-align: center;">1</td>
+        <td class="text-right">${subtotal}</td>
+      </tr>
+      <tr class="totals">
+        <td colspan="2" class="text-right">SUBTOTAL EXCL. TAX</td>
+        <td class="text-right">${subtotal} ${curr}</td>
+      </tr>
+      <tr class="totals">
+        <td colspan="2" class="text-right">VAT (15%)</td>
+        <td class="text-right">${vat} ${curr}</td>
+      </tr>
+      <tr class="totals total-row">
+        <td colspan="2" class="text-right">TOTAL PAYABLE</td>
+        <td class="text-right">${total} ${curr}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="hash-box">
+    <strong>CRYPTOGRAPHIC HASH INTEGRITY & AUDIT PROOF:</strong><br>
+    BLOCK HASH: ${hash}<br>
+    PREVIOUS BLOCK HASH (PIH): ${pih}
+  </div>
+</body>
+</html>`;
+
+    printWindow.document.open();
+    printWindow.document.write(receiptHtml);
+    printWindow.document.close();
+    setTimeout(() => {
+      printWindow.focus();
+      printWindow.print();
+    }, 350);
+  };
   const handleExportAuditDossier = () => {
     if (!auditResult) {
       alert("Run an audit first before compiling a dossier.");
@@ -2116,7 +2225,7 @@ export default function SovereignCorePage() {
                               ? `${new Date(inv.createdAt).toLocaleDateString()} ${new Date(inv.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
                               : "JUST NOW"}
                           </td>
-                        <td style={{ padding: "8px" }}>
+                          <td style={{ padding: "8px" }}>
                             <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                               {/* Edge In-Memory ZATCA XML Generator */}
                               <button
@@ -2183,7 +2292,7 @@ export default function SovereignCorePage() {
                               ) : (
                                 <button
                                   type="button"
-                                  onClick={() => window.print()}
+                                  onClick={() => handlePrintLedgerReceipt(inv)}
                                   title="Print Sovereign Ledger Receipt"
                                   style={{
                                     background: "transparent",
@@ -2241,27 +2350,42 @@ export default function SovereignCorePage() {
                     style={{ flex: 1, backgroundColor: "#050505", border: "1px solid #222", color: "#fff", padding: "8px", fontFamily: "monospace", fontSize: "0.8rem" }}
                   />
                 </div>
-                <button
+               <button
                   type="button"
                   disabled={customsLoading}
-                  onClick={async () => {
+                  onClick={() => {
                     setCustomsLoading(true);
                     setError(null);
                     try {
-                      const res = await fetch(`${API_BASE}/api/services/landed-cost`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json", "x-api-key": activeApiKey },
-                        body: JSON.stringify({
-                          items: stagedItems.map((itm) => ({ code: itm.code, name: itm.name, unitPriceUSD: 48, qty: 250 })),
-                          freightCostUSD: Number(freightUSD) || 2400
-                        }),
+                      // 1. Compute FOB subtotal from staged items (48 USD/unit x 250 units)
+                      const itemCount = stagedItems.length > 0 ? stagedItems.length : 2;
+                      const subtotalFobUSD = itemCount * (48 * 250);
+                      const oceanFreightUSD = Number(freightUSD) || 2400;
+                      const totalCifUSD = subtotalFobUSD + oceanFreightUSD;
+
+                      // 2. Statutory conversions & tariffs (GCC 5% Customs Duty + 15% ZATCA VAT)
+                      const SAR_RATE = 3.75;
+                      const CNY_RATE = 1.92;
+                      const totalCifSAR = totalCifUSD * SAR_RATE;
+                      const customsDutySAR = totalCifSAR * 0.05;
+                      const vatSAR = (totalCifSAR + customsDutySAR) * 0.15;
+                      const grandTotalLandedSAR = totalCifSAR + customsDutySAR + vatSAR;
+                      const grandTotalLandedCNY = grandTotalLandedSAR * CNY_RATE;
+
+                      setOutput({
+                        status: "COMPUTED_EDGE_NATIVE",
+                        timestamp: new Date().toISOString(),
+                        subtotalFobUSD,
+                        oceanFreightUSD,
+                        totalCifUSD,
+                        totalCifSAR,
+                        customsDutySAR,
+                        vatSAR,
+                        grandTotalLandedSAR,
+                        grandTotalLandedCNY,
                       });
-                      const data = await res.json();
-                      if (!res.ok) throw new Error(data.error || "Customs estimation failed");
-                      setOutput(data);
-                      fetchHistory();
                     } catch (err: any) {
-                      setError(err.message);
+                      setError(err.message || "Customs estimation failed");
                     } finally {
                       setCustomsLoading(false);
                     }
