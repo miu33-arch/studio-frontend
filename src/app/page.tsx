@@ -2117,37 +2117,87 @@ export default function SovereignCorePage() {
                               : "JUST NOW"}
                           </td>
                         <td style={{ padding: "8px" }}>
-                            <div style={{ display: "flex", gap: "6px" }}>
-                              {xmlUrl && (
+                            <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                              {/* Edge In-Memory ZATCA XML Generator */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  if (inv.xmlDownloadUrl || inv.xmlPath) {
+                                    window.open(inv.xmlDownloadUrl || `${API_BASE}/outputs/${inv.xmlPath}`, "_blank");
+                                    return;
+                                  }
+                                  const xmlPayload = `<?xml version="1.0" encoding="UTF-8"?>
+<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2" xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2" xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+  <cbc:ProfileID>reporting:1.0</cbc:ProfileID>
+  <cbc:ID>${inv.invoice_no || inv.invoiceNumber || "INV-2026-000"}</cbc:ID>
+  <cbc:UUID>${inv.id || "urn:uuid:zatca-phase2-edge"}</cbc:UUID>
+  <cbc:IssueDate>${(inv.createdAt ? new Date(inv.createdAt).toISOString() : new Date().toISOString()).split("T")[0]}</cbc:IssueDate>
+  <cbc:InvoiceTypeCode name="0100000">388</cbc:InvoiceTypeCode>
+  <cbc:DocumentCurrencyCode>${inv.currency || "SAR"}</cbc:DocumentCurrencyCode>
+  <cac:LegalMonetaryTotal>
+    <cbc:LineExtensionAmount currencyID="${inv.currency || "SAR"}">${inv.subtotal || 0}</cbc:LineExtensionAmount>
+    <cbc:TaxExclusiveAmount currencyID="${inv.currency || "SAR"}">${inv.subtotal || 0}</cbc:TaxExclusiveAmount>
+    <cbc:TaxInclusiveAmount currencyID="${inv.currency || "SAR"}">${inv.total_amount ?? inv.grandTotal ?? 0}</cbc:TaxInclusiveAmount>
+    <cbc:PayableAmount currencyID="${inv.currency || "SAR"}">${inv.total_amount ?? inv.grandTotal ?? 0}</cbc:PayableAmount>
+  </cac:LegalMonetaryTotal>
+</Invoice>`;
+                                  const blob = new Blob([xmlPayload], { type: "application/xml" });
+                                  const blobUrl = URL.createObjectURL(blob);
+                                  const a = document.createElement("a");
+                                  a.href = blobUrl;
+                                  a.download = `${inv.invoice_no || inv.invoiceNumber || "invoice"}.xml`;
+                                  a.click();
+                                  URL.revokeObjectURL(blobUrl);
+                                }}
+                                title="Download ZATCA Phase-2 UBL 2.1 XML"
+                                style={{
+                                  backgroundColor: "transparent",
+                                  color: "#00f3ff",
+                                  border: "1px solid #00f3ff",
+                                  padding: "1px 4px",
+                                  fontSize: "0.6rem",
+                                  fontFamily: "monospace",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                XML
+                              </button>
+
+                              {/* Live PDF Link or Direct Print Fallback */}
+                              {inv.downloadUrl ? (
                                 <a
-                                  href={xmlUrl}
+                                  href={inv.downloadUrl}
                                   target="_blank"
                                   rel="noreferrer"
                                   style={{
-                                    color: "#00f3ff",
+                                    color: "#ffcc00",
                                     textDecoration: "none",
-                                    border: "1px solid #00f3ff",
+                                    border: "1px solid #ffcc00",
                                     padding: "1px 4px",
-                                    fontSize: "0.6rem"
+                                    fontSize: "0.6rem",
                                   }}
                                 >
-                                  XML
+                                  PDF
                                 </a>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => window.print()}
+                                  title="Print Sovereign Ledger Receipt"
+                                  style={{
+                                    background: "transparent",
+                                    color: "#00ff66",
+                                    border: "1px solid #00ff66",
+                                    padding: "1px 4px",
+                                    fontSize: "0.6rem",
+                                    fontFamily: "monospace",
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  PRINT
+                                </button>
                               )}
-                              <a
-                                href={pdfUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                style={{
-                                  color: "#ffcc00",
-                                  textDecoration: "none",
-                                  border: "1px solid #ffcc00",
-                                  padding: "1px 4px",
-                                  fontSize: "0.6rem"
-                                }}
-                              >
-                                PDF
-                              </a>
                             </div>
                           </td>
                           <td style={{ padding: "8px", textAlign: "right" }}>
