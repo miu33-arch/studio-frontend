@@ -205,8 +205,8 @@ export default function SovereignCorePage() {
   const [freightUSD, setFreightUSD] = useState("2400");
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [customsLoading, setCustomsLoading] = useState(false);
- // Edge D1 Ledger & Integrity State
- const [ledgerInvoices, setLedgerInvoices] = useState<any[]>([]);
+  // Edge D1 Ledger & Integrity State
+  const [ledgerInvoices, setLedgerInvoices] = useState<any[]>([]);
   const [ledgerLoading, setLedgerLoading] = useState<boolean>(false);
   const [chainValid, setChainValid] = useState<boolean | null>(null);
   const [totalBlocks, setTotalBlocks] = useState<number>(0);
@@ -270,7 +270,7 @@ export default function SovereignCorePage() {
   const [isSettled, setIsSettled] = useState(false);
   const [clearanceStatus, setClearanceStatus] = useState<"IDLE" | "VERIFIED" | "FAILED">("IDLE");
   const [pendingAction, setPendingAction] = useState<"spec" | "dossier" | "remediation" | null>(null);
-// Master Key Persistence & URL Token Gate
+  // Master Key Persistence & URL Token Gate
   useEffect(() => {
     if (typeof window !== "undefined") {
       const savedKey = localStorage.getItem("miu_master_key");
@@ -316,7 +316,7 @@ export default function SovereignCorePage() {
     fetchHistory();
     fetchClientBalance();
   }, [activeApiKey]);
-  
+
   // Automated Webhook Listener Polling
   useEffect(() => {
     if (!showSettlementModal || isSettled) return;
@@ -661,7 +661,7 @@ export default function SovereignCorePage() {
       setIsAuditing(false);
     }
   };
-const handleLockedAction = (action: "dossier" | "remediation") => {
+  const handleLockedAction = (action: "dossier" | "remediation") => {
     if (!isSettled && clearanceStatus !== "VERIFIED") {
       setPendingAction(action);
       setShowSettlementModal(true);
@@ -674,7 +674,7 @@ const handleLockedAction = (action: "dossier" | "remediation") => {
       setIsRemediationOpen(true);
     }
   };
-  
+
   const handleExportAuditDossier = () => {
     if (!auditResult) {
       alert("Run an audit first before compiling a dossier.");
@@ -692,7 +692,7 @@ const handleLockedAction = (action: "dossier" | "remediation") => {
       return;
     }
 
-const htmlContent = `
+    const htmlContent = `
       <!DOCTYPE html>
       <html>
       <head>
@@ -997,7 +997,7 @@ const htmlContent = `
                 {tab.label}
               </button>
             ))}
-            <a
+          <a
             href="https://wps.miu33archstudio.xyz"
             target="_blank"
             rel="noreferrer"
@@ -2032,7 +2032,7 @@ const htmlContent = `
 
           {/* SOVEREIGN TRANSACTION AUDIT LEDGER */}
           <section style={{ border: "1px solid #1a2e26", padding: "16px 20px", backgroundColor: "#050807", fontFamily: "monospace" }}>
-           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #162620", paddingBottom: "10px", marginBottom: "12px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #162620", paddingBottom: "10px", marginBottom: "12px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <span style={{ fontSize: "0.8rem", color: "#00ff66", fontWeight: "bold", letterSpacing: "1px" }}>
                   ⚡ SOVEREIGN_LEDGER // ZATCA D1 PERSISTENCE
@@ -2084,8 +2084,9 @@ const htmlContent = `
                 <tbody>
                   {ledgerInvoices && ledgerInvoices.length > 0 ? (
                     ledgerInvoices.map((inv: any) => {
-                      const pdfUrl = inv.downloadUrl || `${API_BASE}/outputs/invoice_${inv.invoiceNumber}.pdf`;
-                      const xmlUrl = inv.xmlDownloadUrl || (inv.xmlPath ? `${API_BASE}/outputs/${inv.xmlPath.split(/[\\/]/).pop()}` : null);
+                      const invId = inv.invoice_no || inv.invoiceNumber;
+                      const pdfUrl = inv.downloadUrl || (invId ? `${API_BASE}/outputs/invoice_${invId}.pdf` : "#");
+                      const xmlUrl = inv.xmlDownloadUrl || (inv.xmlPath ? `${API_BASE}/outputs/${inv.xmlPath}` : "#");
                       return (
                         <tr
                           key={inv.id || inv.invoice_no || inv.invoiceNumber}
@@ -2115,7 +2116,7 @@ const htmlContent = `
                               ? `${new Date(inv.createdAt).toLocaleDateString()} ${new Date(inv.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
                               : "JUST NOW"}
                           </td>
-                          <td style={{ padding: "8px" }}>
+                        <td style={{ padding: "8px" }}>
                             <div style={{ display: "flex", gap: "6px" }}>
                               {xmlUrl && (
                                 <a
@@ -2814,8 +2815,8 @@ const htmlContent = `
                     {!auditResult
                       ? "📄 COMPILE CLIENT PROPOSAL DOSSIER (.PDF)"
                       : (isSettled || clearanceStatus === "VERIFIED")
-                      ? "📄 COMPILE CLIENT PROPOSAL DOSSIER (.PDF)"
-                      : "🔒 COMPILE DOSSIER (SETTLEMENT REQUIRED)"}
+                        ? "📄 COMPILE CLIENT PROPOSAL DOSSIER (.PDF)"
+                        : "🔒 COMPILE DOSSIER (SETTLEMENT REQUIRED)"}
                   </button>
 
                   <button
@@ -2826,8 +2827,8 @@ const htmlContent = `
                       backgroundColor: !auditResult
                         ? "transparent"
                         : (isSettled || clearanceStatus === "VERIFIED")
-                        ? "rgba(0, 243, 255, 0.1)"
-                        : "rgba(255, 170, 0, 0.05)",
+                          ? "rgba(0, 243, 255, 0.1)"
+                          : "rgba(255, 170, 0, 0.05)",
                       color: !auditResult ? "#333" : (isSettled || clearanceStatus === "VERIFIED") ? "#00f3ff" : "#ffaa00",
                       border: !auditResult ? "1px solid #333" : (isSettled || clearanceStatus === "VERIFIED") ? "1px solid #00f3ff" : "1px solid #ffaa00",
                       padding: "10px 20px",
@@ -2845,8 +2846,8 @@ const htmlContent = `
                     {!auditResult
                       ? "⚡ OPEN LAYER 3 REMEDIATION STUDIO"
                       : (isSettled || clearanceStatus === "VERIFIED")
-                      ? "⚡ OPEN LAYER 3 REMEDIATION STUDIO"
-                      : "🔒 LAYER 3 REMEDIATION (ENTERPRISE LICENSE)"}
+                        ? "⚡ OPEN LAYER 3 REMEDIATION STUDIO"
+                        : "🔒 LAYER 3 REMEDIATION (ENTERPRISE LICENSE)"}
                   </button>
                 </div>
               </section>
@@ -2859,7 +2860,7 @@ const htmlContent = `
       <div style={{ maxWidth: "1200px", margin: "0 auto", width: "100%" }}>
         <CommunityFaqHub />
       </div>
-     {/* Sovereign Enterprise Compliance Footer */}
+      {/* Sovereign Enterprise Compliance Footer */}
       <footer style={{ marginTop: "40px", borderTop: "1px solid #1a1a1a", paddingTop: "20px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.7rem", color: "#555" }}>
         <div style={{ maxWidth: "800px", lineHeight: "1.4" }}>
           <span style={{ color: "#888", fontWeight: "bold" }}>LEGAL &amp; REGULATORY NOTICE:</span>{" "}
