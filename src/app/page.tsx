@@ -884,7 +884,7 @@ export default function SovereignCorePage() {
 
           ${auditResult.aiShareOfVoice?.breakdown ? `
             <div class="section-block">
-              <div class="section-title">2. LAYER 2 REGIONAL GROUNDING &amp; SHARE OF VOICE (${auditResult.aiShareOfVoice.termsIndexed || 7}/${auditResult.aiShareOfVoice.totalTermsChecked || 7} INDEXED)</div>
+             <div class="section-title">2. LAYER 2 REGIONAL GROUNDING &amp; SHARE OF VOICE (${auditResult.aiShareOfVoice.termsIndexed ?? 0}/${auditResult.aiShareOfVoice.totalTermsChecked ?? 7} INDEXED)</div>
               <table>
                 <thead>
                   <tr><th>REGIONAL PROCUREMENT TERM</th><th>STATUS</th><th>GROUNDING VECTOR</th></tr>
@@ -1023,46 +1023,7 @@ export default function SovereignCorePage() {
             }}>
               {isSettled ? "✓ OFFICIAL REGULATORY SEAL LICENSED" : "● TRIAL MODE // WATERMARKED DRAFT"}
             </span>
-            {auditResult?.aiShareOfVoice && (
-              <div style={{
-                marginTop: "16px",
-                padding: "16px",
-                backgroundColor: "#050a0e",
-                border: "1px solid #142838",
-                fontFamily: "monospace"
-              }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                  <span style={{ fontSize: "12px", color: "#00f3ff", fontWeight: "bold" }}>
-        // LAYER 2 // AI SHARE OF VOICE & KERNEL GROUNDING
-                  </span>
-                  <span style={{ fontSize: "14px", color: "#00ff66", fontWeight: "bold" }}>
-                    {auditResult.aiShareOfVoice.shareOfVoiceScore}% INDEXED
-                  </span>
-                </div>
-
-                <div style={{ fontSize: "11px", color: "#888", marginBottom: "12px" }}>
-                  Regional Procurement Terms Checked: {auditResult.aiShareOfVoice.termsIndexed} / {auditResult.aiShareOfVoice.totalTermsChecked} verified active in DOM.
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "8px" }}>
-                  {auditResult.aiShareOfVoice.breakdown.map((item: { term: string; indexed: boolean }, idx: number) => (
-                    <div key={idx} style={{
-                      padding: "8px",
-                      background: "rgba(0, 243, 255, 0.03)",
-                      border: `1px solid ${item.indexed ? "#00ff6633" : "#ff336633"}`,
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center"
-                    }}>
-                      <span style={{ fontSize: "11px", color: "#ccc", textTransform: "uppercase" }}>{item.term}</span>
-                      <span style={{ fontSize: "10px", color: item.indexed ? "#00ff66" : "#ff3366" }}>
-                        {item.indexed ? "✓" : "X"}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            
             {clientBalance && (
               <span style={{ fontSize: "0.75rem", color: "#888", borderLeft: "1px solid #333", paddingLeft: "15px" }}>
                 CLIENT: <span style={{ color: "#00f3ff" }}>{clientBalance.clientName || "ENTERPRISE"}</span>
@@ -3025,6 +2986,47 @@ export default function SovereignCorePage() {
                   </button>
                 </div>
               </section>
+              {/* Layer 2: Regional Grounding & Share of Voice */}
+              {auditResult?.aiShareOfVoice && (
+                <section style={{
+                  gridColumn: "1 / -1",
+                  padding: "20px",
+                  backgroundColor: "#061017",
+                  border: "1px solid #142838",
+                  fontFamily: "monospace"
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                    <span style={{ fontSize: "0.85rem", color: "#00f3ff", fontWeight: "bold" }}>
+                      // LAYER 2 // AI SHARE OF VOICE &amp; KERNEL GROUNDING
+                    </span>
+                    <span style={{ fontSize: "0.9rem", color: auditResult.aiShareOfVoice.shareOfVoiceScore >= 80 ? "#00ff66" : "#ffaa00", fontWeight: "bold" }}>
+                      {auditResult.aiShareOfVoice.shareOfVoiceScore}% INDEXED
+                    </span>
+                  </div>
+
+                  <div style={{ fontSize: "0.72rem", color: "#888", marginBottom: "12px" }}>
+                    Regional Procurement Terms Checked: {auditResult.aiShareOfVoice.termsIndexed ?? 0} / {auditResult.aiShareOfVoice.totalTermsChecked ?? 7} verified active in DOM.
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "8px" }}>
+                    {auditResult.aiShareOfVoice.breakdown.map((item: { term: string; indexed: boolean }, idx: number) => (
+                      <div key={idx} style={{
+                        padding: "8px 12px",
+                        background: "rgba(0, 243, 255, 0.03)",
+                        border: `1px solid ${item.indexed ? "#00ff6633" : "#ff336633"}`,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center"
+                      }}>
+                        <span style={{ fontSize: "0.72rem", color: "#ccc", textTransform: "uppercase" }}>{item.term}</span>
+                        <span style={{ fontSize: "0.72rem", color: item.indexed ? "#00ff66" : "#ff3366", fontWeight: "bold" }}>
+                          {item.indexed ? "✓" : "X"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
               {/* Prompt Journey Routing Matrix (L1 - L3) */}
               {auditResult.promptJourneyRanking && (
                 <section style={{ gridColumn: "1 / -1", border: "1px solid #142838", padding: "20px", backgroundColor: "#061017", display: "flex", flexDirection: "column", gap: "12px" }}>
