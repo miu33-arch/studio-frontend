@@ -34,7 +34,7 @@ export default function SovereignCorePage() {
   const [activeTab, setActiveTab] = useState<
     "pipeline" | "multi_vertical" | "spec" | "invoice" | "site_hud" | "pitch" | "auditor"
   >("pipeline");
-  const [engineMode, setEngineMode] = useState<"trade" | "geo" | "unified">("trade");
+  const [engineMode, setEngineMode] = useState<"trade" | "geo" | "unified">("unified");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -2350,7 +2350,7 @@ export default function SovereignCorePage() {
                     style={{ flex: 1, backgroundColor: "#050505", border: "1px solid #222", color: "#fff", padding: "8px", fontFamily: "monospace", fontSize: "0.8rem" }}
                   />
                 </div>
-               <button
+                <button
                   type="button"
                   disabled={customsLoading}
                   onClick={() => {
@@ -3025,6 +3025,93 @@ export default function SovereignCorePage() {
                   </button>
                 </div>
               </section>
+              {/* Prompt Journey Routing Matrix (L1 - L3) */}
+              {auditResult.promptJourneyRanking && (
+                <section style={{ gridColumn: "1 / -1", border: "1px solid #142838", padding: "20px", backgroundColor: "#061017", display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #142838", paddingBottom: "8px" }}>
+                    <span style={{ fontSize: "0.85rem", color: "#00f3ff", fontWeight: "bold" }}>
+                      PROMPT JOURNEY SIMULATION // ENTERPRISE DECISION VECTORS
+                    </span>
+                    <span style={{ fontSize: "0.7rem", color: "#888" }}>NODE: RIYADH (RUH-01)</span>
+                  </div>
+
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid #142838", color: "#888", textAlign: "left" }}>
+                        <th style={{ padding: "8px" }}>STAGE</th>
+                        <th style={{ padding: "8px" }}>SIMULATED BUYER QUERY</th>
+                        <th style={{ padding: "8px", textAlign: "right" }}>CITATION ODDS</th>
+                        <th style={{ padding: "8px", textAlign: "right" }}>STATUS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { label: "L1: Discovery", data: auditResult.promptJourneyRanking.l1Discovery },
+                        { label: "L2: Technical Intent", data: auditResult.promptJourneyRanking.l2TechnicalIntent },
+                        { label: "L3: Procurement", data: auditResult.promptJourneyRanking.l3VendorSelection }
+                      ].map((row, idx) => (
+                        <tr key={idx} style={{ borderBottom: "1px solid #0d1b26" }}>
+                          <td style={{ padding: "8px", color: "#fff", fontWeight: "bold" }}>{row.label}</td>
+                          <td style={{ padding: "8px", color: "#aaa" }}>{row.data?.samplePrompt}</td>
+                          <td style={{ padding: "8px", textAlign: "right", color: row.data?.color === "GREEN" ? "#00ff66" : row.data?.color === "AMBER" ? "#ffaa00" : "#ff3366", fontWeight: "bold" }}>
+                            {row.data?.probabilityScore}%
+                          </td>
+                          <td style={{ padding: "8px", textAlign: "right" }}>
+                            <span style={{
+                              fontSize: "0.65rem",
+                              padding: "2px 6px",
+                              border: `1px solid ${row.data?.color === "GREEN" ? "#00ff66" : row.data?.color === "AMBER" ? "#ffaa00" : "#ff3366"}`,
+                              color: row.data?.color === "GREEN" ? "#00ff66" : row.data?.color === "AMBER" ? "#ffaa00" : "#ff3366"
+                            }}>
+                              {row.data?.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </section>
+              )}
+
+              {/* Edge Remediation Pitch Card */}
+              {auditResult.projectedRemediation && (
+                <section style={{ gridColumn: "1 / -1", border: "1px solid #00f3ff", padding: "18px 20px", backgroundColor: "#021208", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <div style={{ fontSize: "0.85rem", color: "#00ff66", fontWeight: "bold" }}>
+                      ⚡ EDGE INJECTION REMEDIATION PROPOSAL
+                    </div>
+                    <div style={{ fontSize: "0.72rem", color: "#aaa", marginTop: "4px" }}>
+                      Method: {auditResult.projectedRemediation.remediationMethod} &bull; Window: {auditResult.projectedRemediation.deploymentDurationHours} Hours
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "#fff", marginTop: "6px" }}>
+                      Projected AEO Lift: <strong style={{ color: "#ff3366" }}>{auditResult.projectedRemediation.currentAeoScore}</strong> ➔ <strong style={{ color: "#00ff66" }}>{auditResult.projectedRemediation.projectedAeoScore} / 100</strong>
+                    </div>
+                  </div>
+
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: "1.1rem", color: "#00ff66", fontWeight: "bold" }}>
+                      SAR {auditResult.projectedRemediation.costSAR?.toLocaleString()}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsRemediationOpen(true)}
+                      style={{
+                        marginTop: "6px",
+                        backgroundColor: "#00ff66",
+                        color: "#000",
+                        border: "none",
+                        padding: "8px 16px",
+                        fontSize: "0.75rem",
+                        fontWeight: "bold",
+                        fontFamily: "monospace",
+                        cursor: "pointer"
+                      }}
+                    >
+                      DEPLOY EDGE PATCH ➔
+                    </button>
+                  </div>
+                </section>
+              )}
             </div>
           )}
         </main>
@@ -3038,7 +3125,7 @@ export default function SovereignCorePage() {
       <footer style={{ marginTop: "40px", borderTop: "1px solid #1a1a1a", paddingTop: "20px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.7rem", color: "#555" }}>
         <div style={{ maxWidth: "800px", lineHeight: "1.4" }}>
           <span style={{ color: "#888", fontWeight: "bold" }}>LEGAL &amp; REGULATORY NOTICE:</span>{" "}
-          MIU Sovereign AEC &amp; Trade Core is a technical staging and document compilation engine[cite: 2]. Outputs are prepared for engineering coordination and customs clearance[cite: 2]. Final submittals to MOMRAH, Balady, SFDA, SABER, or ZATCA require review and endorsement by the licensed Engineer of Record or clearing agent[cite: 2].
+          MIU Sovereign AEC &amp; Trade Core is a technical staging and document compilation engine. Outputs are prepared for engineering coordination and customs clearance. Final submittals to MOMRAH, Balady, SFDA, SABER, or ZATCA require review and endorsement by the licensed Engineer of Record or clearing agent.
         </div>
         <div style={{ textAlign: "right", fontFamily: "monospace", color: "#444" }}>
           <div>SOVEREIGN AIR-GAPPED CORE // 2026</div>
@@ -3102,8 +3189,8 @@ export default function SovereignCorePage() {
             {output?.downloadUrl && (
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "#061824", border: "1px solid #0088cc", padding: "10px 14px" }}>
                 <div>
-                  <div style={{ fontSize: "0.75rem", color: "#00ff66", fontWeight: "bold" }}>✓ ZATCA PROFORMA INVOICE ISSUED[cite: 2]</div>
-                  <div style={{ fontSize: "0.68rem", color: "#888" }}>Ref: {output.invoiceNumber || projectCode} (15% VAT &amp; Base64 QR Encoded)[cite: 2]</div>
+                  <div style={{ fontSize: "0.75rem", color: "#00ff66", fontWeight: "bold" }}>✓ ZATCA PROFORMA INVOICE ISSUED</div>
+                  <div style={{ fontSize: "0.68rem", color: "#888" }}>Ref: {output.invoiceNumber || projectCode} (15% VAT &amp; Base64 QR Encoded)</div>
                 </div>
                 <a
                   href={output.downloadUrl}
