@@ -23,7 +23,7 @@ const FAQ_ITEMS = [
 
 export default function CommunityFaqHub() {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
-  const [showQrModal, setShowQrModal] = useState<"wechat" | "rednote" | null>(null);
+  const [copiedWeChat, setCopiedWeChat] = useState(false);
 
   // Structured Data payload for Perplexity, Google, and LLM web crawlers
   const faqSchema = {
@@ -37,6 +37,16 @@ export default function CommunityFaqHub() {
         "text": item.a
       }
     }))
+  };
+
+  const handleCopyWeChat = async () => {
+    try {
+      await navigator.clipboard.writeText("witty_wanderer_88");
+      setCopiedWeChat(true);
+      setTimeout(() => setCopiedWeChat(false), 3000);
+    } catch (e) {
+      alert("WeChat ID: witty_wanderer_88");
+    }
   };
 
   return (
@@ -99,7 +109,7 @@ export default function CommunityFaqHub() {
           </div>
         </div>
 
-        {/* RIGHT: Community & Social Hub (Fanpage Relay) */}
+        {/* RIGHT: Community & Social Hub (Direct Profile Routing) */}
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", borderBottom: "1px solid #142838", paddingBottom: "8px" }}>
@@ -114,76 +124,98 @@ export default function CommunityFaqHub() {
             </p>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+              {/* 1. LINKEDIN COMPANY PAGE */}
               <a
-                href="https://youtube.com"
+                href="https://www.linkedin.com/company/miu_33-studio"
                 target="_blank"
                 rel="noreferrer"
                 style={{
                   backgroundColor: "#030a10",
-                  border: "1px solid #142838",
-                  color: "#ff3366",
-                  padding: "12px",
-                  textAlign: "center",
-                  textDecoration: "none",
-                  fontFamily: "monospace",
-                  fontSize: "0.75rem",
-                  fontWeight: "bold"
-                }}
-              >
-                ▶ YOUTUBE CHANNEL
-              </a>
-
-              <a
-                href="https://x.com"
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  backgroundColor: "#030a10",
-                  border: "1px solid #142838",
+                  border: "1px solid #00f3ff",
                   color: "#00f3ff",
                   padding: "12px",
                   textAlign: "center",
                   textDecoration: "none",
                   fontFamily: "monospace",
                   fontSize: "0.75rem",
-                  fontWeight: "bold"
+                  fontWeight: "bold",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px"
                 }}
               >
-                𝕏 DISPATCH FEED
+                <span>💼</span> LINKEDIN
               </a>
 
-              <button
-                type="button"
-                onClick={() => setShowQrModal("rednote")}
+              {/* 2. REDDIT DISPATCH */}
+              <a
+                href="https://www.reddit.com/user/DevIntheDark-33/"
+                target="_blank"
+                rel="noreferrer"
                 style={{
                   backgroundColor: "#030a10",
-                  border: "1px solid #142838",
-                  color: "#ff5555",
+                  border: "1px solid #ff4500",
+                  color: "#ff4500",
                   padding: "12px",
-                  cursor: "pointer",
+                  textAlign: "center",
+                  textDecoration: "none",
                   fontFamily: "monospace",
                   fontSize: "0.75rem",
-                  fontWeight: "bold"
+                  fontWeight: "bold",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px"
                 }}
               >
-                📕 REDNOTE (小红书)
-              </button>
+                <span>🌐</span> REDDIT
+              </a>
 
-              <button
-                type="button"
-                onClick={() => setShowQrModal("wechat")}
+              {/* 3. REDNOTE (小红书) DIRECT */}
+              <a
+                href="https://xhslink.cn/m/2MTrflYQqPr"
+                target="_blank"
+                rel="noreferrer"
                 style={{
                   backgroundColor: "#030a10",
-                  border: "1px solid #142838",
-                  color: "#00ff66",
+                  border: "1px solid #ff2442",
+                  color: "#ff2442",
+                  padding: "12px",
+                  textAlign: "center",
+                  textDecoration: "none",
+                  fontFamily: "monospace",
+                  fontSize: "0.75rem",
+                  fontWeight: "bold",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px"
+                }}
+              >
+                <span>📕</span> REDNOTE (小红书)
+              </a>
+
+              {/* 4. WECHAT DIRECT CLIPBOARD INGESTION */}
+              <button
+                type="button"
+                onClick={handleCopyWeChat}
+                style={{
+                  backgroundColor: "#030a10",
+                  border: copiedWeChat ? "1px solid #00ff66" : "1px solid #07c160",
+                  color: copiedWeChat ? "#00ff66" : "#07c160",
                   padding: "12px",
                   cursor: "pointer",
                   fontFamily: "monospace",
                   fontSize: "0.75rem",
-                  fontWeight: "bold"
+                  fontWeight: "bold",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px"
                 }}
               >
-                💬 WECHAT DIRECT
+                <span>💬</span> {copiedWeChat ? "COPIED: witty_wanderer_88" : "WECHAT DIRECT"}
               </button>
             </div>
           </div>
@@ -197,38 +229,6 @@ export default function CommunityFaqHub() {
         </div>
 
       </div>
-
-      {/* QR Modal for WeChat / Rednote */}
-      {showQrModal && (
-        <div style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "100vw",
-          height: "100vh",
-          backgroundColor: "rgba(0,0,0,0.85)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 99999
-        }}>
-          <div style={{ backgroundColor: "#061017", border: "1px solid #00f3ff", padding: "20px", textAlign: "center" }}>
-            <div style={{ fontSize: "0.85rem", color: "#00f3ff", fontWeight: "bold", marginBottom: "12px" }}>
-              SCAN TO CONNECT VIA {showQrModal.toUpperCase()}
-            </div>
-            <div style={{ width: "160px", height: "160px", backgroundColor: "#fff", margin: "0 auto 12px", display: "flex", alignItems: "center", justifyContent: "center", color: "#000", fontSize: "0.75rem" }}>
-              [QR CODE PLACEHOLDER]
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowQrModal(null)}
-              style={{ backgroundColor: "transparent", border: "1px solid #888", color: "#888", padding: "6px 14px", cursor: "pointer", fontFamily: "monospace", fontSize: "0.75rem" }}
-            >
-              CLOSE ✕
-            </button>
-          </div>
-        </div>
-      )}
 
     </section>
   );
