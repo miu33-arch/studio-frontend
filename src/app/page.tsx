@@ -6,6 +6,9 @@ import { TerminalIngestModal } from "@/components/TerminalIngestModal";
 import { getClientGeoContext, GeoAuditData } from "@/lib/geo";
 import CommunityFaqHub from "@/components/CommunityFaqHub";
 import RemediationStudioModal from "@/components/RemediationStudioModal";
+import SaberComplianceAuditor from "@/components/SaberComplianceAuditor";
+import InspectionVault from "@/components/InspectionVault";
+import IndustrialBOMVault from '@/components/IndustrialBOMVault';
 
 const API_BASE =
   typeof window !== "undefined" &&
@@ -32,7 +35,7 @@ const SAMPLE_EN: StagedBomItem[] = [
 
 export default function SovereignCorePage() {
   const [activeTab, setActiveTab] = useState<
-    "pipeline" | "multi_vertical" | "spec" | "invoice" | "site_hud" | "pitch" | "auditor"
+    "pipeline" | "multi_vertical" | "spec" | "invoice" | "site_hud" | "pitch" | "auditor" | "saber_auditor" | "inspection_vault" | "industrial_bom"
   >("pipeline");
   const [engineMode, setEngineMode] = useState<"trade" | "geo" | "unified">("unified");
 
@@ -1023,7 +1026,7 @@ export default function SovereignCorePage() {
             }}>
               {isSettled ? "✓ OFFICIAL REGULATORY SEAL LICENSED" : "● TRIAL MODE // WATERMARKED DRAFT"}
             </span>
-            
+
             {clientBalance && (
               <span style={{ fontSize: "0.75rem", color: "#888", borderLeft: "1px solid #333", paddingLeft: "15px" }}>
                 CLIENT: <span style={{ color: "#00f3ff" }}>{clientBalance.clientName || "ENTERPRISE"}</span>
@@ -1040,6 +1043,9 @@ export default function SovereignCorePage() {
             { id: "spec", label: "📑 BOM & SASO LOCALIZER" },
             { id: "invoice", label: "💳 COMMERCIAL & ZATCA" },
             { id: "site_hud", label: "📐 SITE & BIM HUD" },
+            { id: "saber_auditor", label: "🛡️ SABER / PCoC AUDIT" },
+            { id: "inspection_vault", label: "🗂️ INSPECTION VAULT" },
+            { id: 'industrial_bom', label: 'Industrial BOM / CST' },
             { id: "pitch", label: "📊 PROPOSAL DECK" },
             { id: "auditor", label: "⚡ GEO & AEO AUDITOR" },
           ]
@@ -2758,6 +2764,33 @@ export default function SovereignCorePage() {
       {/* ========================================================================= */}
       {activeTab === "pitch" && <PitchDeck />}
 
+      {/* ========================================================================= */}
+      {/* TAB: SASO SABER & PCoC COMPLIANCE AUDITOR                                */}
+      {/* ========================================================================= */}
+      {activeTab === "saber_auditor" && (
+        <main style={{ width: "100%", maxWidth: "1200px", margin: "0 auto", padding: "10px" }}>
+          <div style={{ backgroundColor: "#061017", border: "1px solid #142838", padding: "20px", marginBottom: "20px" }}>
+            <h2 style={{ fontSize: "0.95rem", color: "#00f3ff", margin: 0, letterSpacing: "1px" }}>
+              SASO SABER &amp; PCoC PRE-ARRIVAL COMPLIANCE ENGINE
+            </h2>
+            <div style={{ fontSize: "0.72rem", color: "#888", marginTop: "4px" }}>
+              Verify product-level conformity certificates and pre-clearance rules to prevent port detention and demurrage fees in KSA ports.
+            </div>
+          </div>
+
+          <SaberComplianceAuditor />
+        </main>
+      )}
+      {activeTab === "inspection_vault" && (
+        <main style={{ width: "100%", maxWidth: "1200px", margin: "0 auto", padding: "10px" }}>
+          <InspectionVault />
+        </main>
+      )}
+      {activeTab === 'industrial_bom' && (
+        <main style={{ width: "100%", maxWidth: "1200px", margin: "0 auto", padding: "10px" }}>
+          <IndustrialBOMVault />
+        </main>
+      )}
       {/* ========================================================================= */}
       {/* TAB 6: EDGE GENERATIVE ENGINE (GEO) & AEO COMPLIANCE AUDITOR              */}
       {/* ========================================================================= */}
