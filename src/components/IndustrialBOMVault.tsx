@@ -119,6 +119,17 @@ export default function IndustrialBOMVault() {
         </span>
       </div>
 
+      {/* Legal & Regulatory Notice Banner */}
+      <div 
+        role="region" 
+        aria-label="Regulatory and Legal Notice" 
+        className="mb-4 border-l-2 border-amber-500/60 bg-zinc-950/40 p-3"
+      >
+        <p className="text-xs font-mono text-zinc-400 leading-relaxed">
+          <strong className="text-zinc-300">LEGAL & REGULATORY NOTICE:</strong> MIU Sovereign AEC & Trade Core is a technical staging and document compilation engine. Outputs are prepared for engineering coordination and customs clearance. Final submittals to MOMRAH, Balady, SFDA, SABER, or ZATCA require review and endorsement by the licensed Engineer of Record or clearing agent. <span className="text-amber-500 font-bold">// SYSTEM STATUS: UNLICENSED TRIAL DRAFT. All fiscal values, HS code mappings, and calculated landed costs are watermarked simulations and must not be used for official regulatory filings.</span>
+        </p>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs text-slate-400 mb-1">INCOMING BILL OF MATERIALS (JSON):</label>
@@ -137,7 +148,7 @@ export default function IndustrialBOMVault() {
           </button>
         </div>
 
-        <div className="flex flex-col bg-slate-900 border border-slate-800 p-4 rounded overflow-auto max-h-105">
+        <div className="flex flex-col bg-slate-900 border border-slate-800 p-4 rounded overflow-auto max-h-100">
           <div className="flex justify-between items-center mb-2 border-b border-slate-800 pb-2">
             <h3 className="text-xs text-slate-400">AUDIT MANIFEST OUTPUT:</h3>
             {auditResult && (

@@ -3156,19 +3156,32 @@ export default function SovereignCorePage() {
       <div style={{ maxWidth: "1200px", margin: "0 auto", width: "100%" }}>
         <CommunityFaqHub />
       </div>
-      {/* Sovereign Enterprise Compliance Footer */}
-      <footer style={{ marginTop: "40px", borderTop: "1px solid #1a1a1a", paddingTop: "20px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.7rem", color: "#555" }}>
-        <div style={{ maxWidth: "800px", lineHeight: "1.4" }}>
-          <span style={{ color: "#888", fontWeight: "bold" }}>LEGAL &amp; REGULATORY NOTICE:</span>{" "}
-          MIU Sovereign AEC &amp; Trade Core is a technical staging and document compilation engine. Outputs are prepared for engineering coordination and customs clearance. Final submittals to MOMRAH, Balady, SFDA, SABER, or ZATCA require review and endorsement by the licensed Engineer of Record or clearing agent.
+      <div className="mt-10 space-y-4">
+        {/* Air-Gapped Simulation Guardrail Banner */}
+        <div
+          role="region"
+          aria-label="Regulatory and Legal Notice"
+          className="border-l-2 border-amber-500/60 bg-zinc-950/40 p-3 max-w-2xl"
+        >
+          <p className="text-xs font-mono text-zinc-400 leading-relaxed">
+            <strong className="text-zinc-300">LEGAL & REGULATORY NOTICE:</strong> MIU Sovereign AEC & Trade Core is a technical staging and document compilation engine. Outputs are prepared for engineering coordination and customs clearance. Final submittals to MOMRAH, Balady, SFDA, SABER, or ZATCA require review and endorsement by the licensed Engineer of Record or clearing agent. <span className="text-amber-500 font-bold">// SYSTEM STATUS: UNLICENSED TRIAL DRAFT. All fiscal values, HS code mappings, and calculated landed costs are watermarked simulations and must not be used for official regulatory filings.</span>
+          </p>
         </div>
-        <div style={{ textAlign: "right", fontFamily: "monospace", color: "#444" }}>
-          <div>SOVEREIGN AIR-GAPPED CORE // 2026</div>
-          <div style={{ color: isSettled ? "#00ff66" : "#00f3ff" }}>
-            ● {isSettled ? "LICENSED FOR OFFICIAL FILING" : "TRIAL PREVIEW MODE"}
+
+        {/* Sovereign Enterprise Compliance Footer */}
+        <footer className="border-t border-zinc-900 pt-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-[0.7rem] text-zinc-500 font-mono">
+          <div className="max-w-3xl leading-relaxed">
+            <span className="text-zinc-300 font-bold">LEGAL & REGULATORY NOTICE:</span>{" "}
+            MIU Sovereign AEC & Trade Core is a technical staging and document compilation engine. Outputs are prepared for engineering coordination and customs clearance. Final submittals to MOMRAH, Balady, SFDA, SABER, or ZATCA require review and endorsement by the licensed Engineer of Record or clearing agent.
           </div>
-        </div>
-      </footer>
+          <div className="text-left sm:text-right text-zinc-600 shrink-0">
+            <div>SOVEREIGN AIR-GAPPED CORE // 2026</div>
+            <div className={isSettled ? "text-emerald-400 font-semibold" : "text-cyan-400 font-semibold"}>
+              ● {isSettled ? "LICENSED FOR OFFICIAL FILING" : "TRIAL PREVIEW MODE"}
+            </div>
+          </div>
+        </footer>
+      </div>
 
       {/* ENTERPRISE B2B SETTLEMENT MODAL (SARIE CORPORATE WIRE & ZATCA TAX INVOICE) */}
       {showSettlementModal && (
