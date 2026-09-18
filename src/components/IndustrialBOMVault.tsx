@@ -2,6 +2,37 @@
 
 import React, { useState } from 'react';
 
+const SAMPLE_SINO_SAUDI_BOM = [
+    {
+        id: '1',
+        sku: 'AL-6063-T6-CURTAIN-EXT',
+        category: 'construction',
+        qty: 12500,
+        specSummary: 'GB/T 5237 Architectural Extrusions -> SASO 2831 / ASTM B221 (Jeddah Islamic Port)'
+    },
+    {
+        id: '2',
+        sku: 'STEEL-Q235B-STRUCT-COL',
+        category: 'construction',
+        qty: 48000,
+        specSummary: 'GB/T 700 Structural Steel Framing -> ASTM A36 Parity (Dammam Port)'
+    },
+    {
+        id: '3',
+        sku: 'HIK-4K-PTZ-CCTV-SURV',
+        category: 'surveillance',
+        qty: 140,
+        specSummary: 'Industrial 4K PTZ Surveillance -> SASO IEC 62368-1 / CST Radio Pre-Clearance'
+    },
+    {
+        id: '4',
+        sku: 'DS-3E1526P-EI-Equivalent',
+        category: 'networking',
+        qty: 12,
+        specSummary: '24-Port PoE+ Managed Industrial Switch (CST Type-Approval Scope)'
+    }
+];
+
 export default function IndustrialBOMVault() {
     const [bomInput, setBomInput] = useState(
         JSON.stringify(
@@ -21,6 +52,31 @@ export default function IndustrialBOMVault() {
     const [auditResult, setAuditResult] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [pasteFeedback, setPasteFeedback] = useState<string | null>(null);
+
+    const executeAuditPayload = async (payload: any[]) => {
+        setLoading(true);
+        try {
+            const res = await fetch('/api/compliance/cst-saber-bom', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items: payload }),
+            });
+            const data = await res.json();
+            setAuditResult(data);
+        } catch (e) {
+            alert('Failed to evaluate BOM payload via compliance gateway.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleLoadSampleBOM = () => {
+        const jsonStr = JSON.stringify(SAMPLE_SINO_SAUDI_BOM, null, 2);
+        setBomInput(jsonStr);
+        setPasteFeedback('Loaded real-world Sino-Saudi industrial BOM sample.');
+        setTimeout(() => setPasteFeedback(null), 3500);
+        executeAuditPayload(SAMPLE_SINO_SAUDI_BOM);
+    };
 
     const handlePasteManifest = async () => {
         try {
@@ -47,20 +103,11 @@ export default function IndustrialBOMVault() {
     };
 
     const handleEvaluate = async () => {
-        setLoading(true);
         try {
             const parsed = JSON.parse(bomInput);
-            const res = await fetch('/api/compliance/cst-saber-bom', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ items: parsed }),
-            });
-            const data = await res.json();
-            setAuditResult(data);
+            await executeAuditPayload(parsed);
         } catch (e) {
             alert('Invalid JSON format in BOM input.');
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -157,17 +204,27 @@ export default function IndustrialBOMVault() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div>
-                    <div className="flex justify-between items-center mb-1">
+                    <div className="flex flex-wrap justify-between items-center gap-2 mb-2">
                         <label className="text-xs text-slate-400">INCOMING BILL OF MATERIALS (JSON):</label>
-                        <button
-                            onClick={handlePasteManifest}
-                            className="text-[10px] bg-slate-900 hover:bg-cyan-950 text-cyan-300 border border-cyan-500/40 px-2 py-0.5 rounded transition"
-                        >
-                            PASTE CSV/TSV FROM CLIPBOARD
-                        </button>
+                        <div className="flex gap-2">
+                            <button
+                                type="button"
+                                onClick={handleLoadSampleBOM}
+                                className="text-[10px] bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-2 py-0.5 rounded transition"
+                            >
+                                ⚡ LOAD SAMPLE SINO-SAUDI BOM
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handlePasteManifest}
+                                className="text-[10px] bg-slate-900 hover:bg-cyan-950 text-cyan-300 border border-cyan-500/40 px-2 py-0.5 rounded transition"
+                            >
+                                PASTE CSV/TSV
+                            </button>
+                        </div>
                     </div>
                     {pasteFeedback && (
-                        <div className="text-[10px] text-emerald-400 mb-1 bg-emerald-950/40 border border-emerald-500/30 px-2 py-1 rounded">
+                        <div className="text-[10px] text-emerald-400 mb-2 bg-emerald-950/40 border border-emerald-500/30 px-2 py-1 rounded">
                             {pasteFeedback}
                         </div>
                     )}
