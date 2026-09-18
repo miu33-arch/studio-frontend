@@ -6,6 +6,7 @@ const SAMPLE_SINO_SAUDI_BOM = [
     {
         id: '1',
         sku: 'AL-6063-T6-CURTAIN-EXT',
+        hsCode: '760421000000',
         category: 'construction',
         qty: 12500,
         specSummary: 'GB/T 5237 Architectural Extrusions -> SASO 2831 / ASTM B221 (Jeddah Islamic Port)'
@@ -13,6 +14,7 @@ const SAMPLE_SINO_SAUDI_BOM = [
     {
         id: '2',
         sku: 'STEEL-Q235B-STRUCT-COL',
+        hsCode: '721631000000',
         category: 'construction',
         qty: 48000,
         specSummary: 'GB/T 700 Structural Steel Framing -> ASTM A36 Parity (Dammam Port)'
@@ -20,6 +22,7 @@ const SAMPLE_SINO_SAUDI_BOM = [
     {
         id: '3',
         sku: 'HIK-4K-PTZ-CCTV-SURV',
+        hsCode: '851762900001',
         category: 'surveillance',
         qty: 140,
         specSummary: 'Industrial 4K PTZ Surveillance -> SASO IEC 62368-1 / CST Radio Pre-Clearance'
@@ -27,6 +30,7 @@ const SAMPLE_SINO_SAUDI_BOM = [
     {
         id: '4',
         sku: 'DS-3E1526P-EI-Equivalent',
+        hsCode: '851762000000',
         category: 'networking',
         qty: 12,
         specSummary: '24-Port PoE+ Managed Industrial Switch (CST Type-Approval Scope)'
@@ -35,18 +39,7 @@ const SAMPLE_SINO_SAUDI_BOM = [
 
 export default function IndustrialBOMVault() {
     const [bomInput, setBomInput] = useState(
-        JSON.stringify(
-            [
-                { id: '1', sku: 'DS-2XA8T25F/AQM-IZS', category: 'surveillance', qty: 20, specSummary: 'Starlight 2MP AI PoE Mini' },
-                { id: '2', sku: 'DS-3E1526P-EI-Equivalent', category: 'networking', qty: 1, specSummary: '24-Port PoE+ Managed Switch' },
-                { id: '3', sku: 'RAID-NVR-30D-16TB', category: 'storage', qty: 1, specSummary: '30-day continuous high-bitrate array' },
-                { id: '4', sku: 'CAT6-SFUTP-2000M', category: 'networking', qty: 2000, specSummary: 'Industrial structured cabling (meters)' },
-                { id: '5', sku: 'WIN75-TOUCH-AIO', category: 'computing', qty: 3, specSummary: '75-inch Windows Touch All-in-One' },
-                { id: '6', sku: 'AND21-FLOOR-CTRL', category: 'computing', qty: 10, specSummary: '21-inch floor-standing Android control terminal' },
-            ],
-            null,
-            2
-        )
+        JSON.stringify(SAMPLE_SINO_SAUDI_BOM, null, 2)
     );
 
     const [auditResult, setAuditResult] = useState<any>(null);
@@ -118,19 +111,35 @@ export default function IndustrialBOMVault() {
             return;
         }
 
-        const items = auditResult?.evaluatedItems || [];
+        const rawItems = auditResult?.results || auditResult?.evaluatedItems || [];
+        let fallbackInputItems: any[] = [];
+        try {
+            fallbackInputItems = JSON.parse(bomInput);
+        } catch {
+            fallbackInputItems = [];
+        }
+
+        const items = rawItems.length > 0 ? rawItems : fallbackInputItems;
+
         const rowsHtml = items
-            .map(
-                (item: any) => `
+            .map((item: any, idx: number) => {
+                const skuCode = item.sku || `SKU-${idx + 1}`;
+                const hsFormatted = item.hsCode ? `<br/><span style="color:#64748b; font-size:10px;">HS: ${item.hsCode}</span>` : '';
+                const categoryDesc = item.description || item.specSummary || item.category || 'Industrial Equipment';
+                const qtyVal = Number(item.qty || 1).toLocaleString();
+                const mandateTag = item.certificateType || (item.cstParityRequired ? 'COC-CST Required' : 'SABER_STANDARD');
+                const clearanceSla = item.estimatedClearanceHours ? `${item.estimatedClearanceHours}h` : (item.cstParityRequired ? '48h (Fast-Track)' : '72h');
+
+                return `
         <tr>
-          <td style="border: 1px solid #000; padding: 6px; font-family: monospace;">${item.sku}</td>
-          <td style="border: 1px solid #000; padding: 6px;">${item.category}</td>
-          <td style="border: 1px solid #000; padding: 6px; text-align: right;">${item.qty}</td>
-          <td style="border: 1px solid #000; padding: 6px;">${item.cstMandate} / ${item.saberMandate}</td>
-          <td style="border: 1px solid #000; padding: 6px; text-align: right;">${item.estimatedClearanceHours}h</td>
+          <td style="border: 1px solid #cbd5e1; padding: 8px; font-family: monospace; font-size: 11px;"><strong>${skuCode}</strong>${hsFormatted}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 8px; font-size: 11px;">${categoryDesc}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: right; font-weight: 600; font-size: 11px;">${qtyVal}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 8px; font-size: 11px;">${mandateTag}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: right; font-weight: 700; color: #047857; font-size: 11px;">${clearanceSla}</td>
         </tr>
-      `
-            )
+      `;
+            })
             .join('');
 
         const htmlContent = `
@@ -139,12 +148,12 @@ export default function IndustrialBOMVault() {
         <head>
           <title>MIU_33 // Riyadh DDP Compliance Submittal</title>
           <style>
-            body { font-family: system-ui, -apple-system, sans-serif; padding: 24px; color: #020617; background: #fff; }
-            h1 { font-size: 16px; border-bottom: 2px solid #000; padding-bottom: 6px; margin: 0 0 4px 0; }
-            .subtitle { font-size: 11px; color: #475569; margin-bottom: 16px; }
-            table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 20px; }
-            th { background-color: #f1f5f9; border: 1px solid #000; padding: 6px; text-align: left; }
-            .footer { font-size: 10px; color: #64748b; border-top: 1px solid #cbd5e1; padding-top: 10px; display: flex; justify-content: space-between; }
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 32px; color: #0f172a; background: #fff; }
+            h1 { font-size: 18px; font-weight: 800; border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin: 0 0 6px 0; letter-spacing: -0.02em; }
+            .subtitle { font-size: 11px; font-family: monospace; color: #475569; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+            th { background-color: #f8fafc; border: 1px solid #94a3b8; padding: 8px; text-align: left; font-size: 11px; text-transform: uppercase; color: #334155; }
+            .footer { font-size: 10px; font-family: monospace; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 12px; display: flex; justify-content: space-between; }
           </style>
         </head>
         <body>
@@ -153,11 +162,11 @@ export default function IndustrialBOMVault() {
           <table>
             <thead>
               <tr>
-                <th>SKU</th>
-                <th>Category</th>
+                <th>SKU / HS Code</th>
+                <th>Category / Specification</th>
                 <th style="text-align: right;">Qty</th>
                 <th>CST / SABER Mandate</th>
-                <th style="text-align: right;">Clearance</th>
+                <th style="text-align: right;">Clearance SLA</th>
               </tr>
             </thead>
             <tbody>
