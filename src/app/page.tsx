@@ -1109,21 +1109,85 @@ export default function SovereignCorePage() {
       {activeTab === "pipeline" && (
         <main style={{ width: "100%", maxWidth: "1200px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "25px" }}>
 
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "#061017", border: "1px solid #142838", padding: "15px 20px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "#061017", border: "1px solid #142838", padding: "15px 20px", flexWrap: "wrap", gap: "10px" }}>
             <div>
               <span style={{ fontSize: "0.85rem", fontWeight: "bold", color: "#fff" }}>MANIFEST &amp; SHIPPING INGESTION</span>
               <div style={{ fontSize: "0.7rem", color: "#888", marginTop: "2px" }}>
                 Ingest eBOL, packing lists, or container manifests to map HS Codes and calculate regional tariffs.
               </div>
             </div>
-            <div>
+
+            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+              {/* ⚡ 1-Click Shanghai to Jeddah Demo Loader */}
               <button
+                type="button"
+                onClick={() => {
+                  setPipeline({
+                    manifestHash: "11f217ab4754a61cb9e08819f2a0149e",
+                    items: [
+                      { itemNo: "CW-001", description: "铝合金主龙骨规格-1 (Mullion Profile)", materialGrade: "6063-T6 Alloy", hsCode: "7604.29.00", sasoStandard: "SASO 2831 / ASTM B221", totalFobUSD: 4500 },
+                      { itemNo: "CW-002", description: "铝合金主龙骨规格-2 (Transom Profile)", materialGrade: "6063-T6 Alloy", hsCode: "7604.29.00", sasoStandard: "SASO 2831 / ASTM B221", totalFobUSD: 4500 },
+                      { itemNo: "GL-001", description: "双银Low-E中空钢化玻璃 (6+12A+6)", materialGrade: "Ultra-Clear Float Glass", hsCode: "7007.19.00", sasoStandard: "SASO ISO 12543", totalFobUSD: 18300 }
+                    ],
+                    fiscal: {
+                      subtotalFobUSD: 27300,
+                      freightUSD: 2400,
+                      insuranceUSD: 136.5,
+                      totalCifSAR: 111886.88,
+                      customsDutySAR: 5594.34,
+                      zatcaVatSAR: 17622.18,
+                      grandTotalLandedSAR: 135103.40
+                    },
+                    compliance: { dutyDebited: false },
+                    logistics: { containerNumber: "CSNU-789421-0", billOfLading: "BOL-1789023185558-CN-KSA", vesselName: "COSCO SHIPPING // V.2604W" },
+                    milestones: [
+                      { stage: "01", name: "FACTORY DISPATCH & QC", status: "COMPLETED", node: "China Export Gate" },
+                      { stage: "02", name: "PORT OF ORIGIN CLEARANCE", status: "IN_TRANSIT", node: "Guangzhou / Ningbo Port" },
+                      { stage: "03", name: "RED SEA MARITIME TRANSIT", status: "SCHEDULED", node: "Bab-el-Mandeb Lane" },
+                      { stage: "04", name: "FASAH / ZATCA PORT CLEARANCE", status: "PENDING", node: "Jeddah Islamic Port" },
+                      { stage: "05", name: "MOMRAH PROJECT SITE RECEIVAL", status: "PENDING", node: "Riyadh Zone 4" }
+                    ]
+                  });
+                }}
+                style={{
+                  backgroundColor: "transparent",
+                  color: "#00ff66",
+                  border: "1px solid #00ff66",
+                  padding: "10px 14px",
+                  fontWeight: "bold",
+                  fontSize: "0.75rem",
+                  cursor: "pointer",
+                  fontFamily: "monospace",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px"
+                }}
+              >
+                ⚡ LOAD DEMO MANIFEST
+              </button>
+
+              {/* 📥 Live File Upload Trigger */}
+              <button
+                type="button"
                 onClick={() => manifestFileRef.current?.click()}
                 disabled={pipelineLoading}
-                style={{ backgroundColor: "#00f3ff", color: "#000", border: "none", padding: "10px 18px", fontWeight: "bold", fontSize: "0.75rem", cursor: "pointer", fontFamily: "monospace" }}
+                style={{
+                  backgroundColor: "#00f3ff",
+                  color: "#000",
+                  border: "none",
+                  padding: "10px 18px",
+                  fontWeight: "bold",
+                  fontSize: "0.75rem",
+                  cursor: pipelineLoading ? "not-allowed" : "pointer",
+                  fontFamily: "monospace",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px"
+                }}
               >
                 {pipelineLoading ? "PARSING MANIFEST..." : "📥 INGEST eBOL / PACKING LIST"}
               </button>
+
               <input
                 type="file"
                 ref={manifestFileRef}
@@ -1286,7 +1350,7 @@ export default function SovereignCorePage() {
             </div>
           </section>
 
-          <section style={{ border: isSettled ? "1px solid #00ff66" : "1px solid #00f3ff", backgroundColor: "#031208", padding: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <section className="no-print" style={{ border: isSettled ? "1px solid #00ff66" : "1px solid #00f3ff", backgroundColor: "#031208", padding: "20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "14px" }}>
             <div>
               <div style={{ fontSize: "0.95rem", color: isSettled ? "#00ff66" : "#00f3ff", fontWeight: "bold" }}>
                 4. UNIVERSAL CUSTOMS CLEARANCE DOSSIER &amp; MUNICIPAL PACKET
@@ -1294,32 +1358,55 @@ export default function SovereignCorePage() {
               <div style={{ fontSize: "0.72rem", color: "#aaa", marginTop: "4px" }}>
                 {isSettled
                   ? "Dossier unsealed. Trilingual SASO parity sheet, ZATCA tax invoice, and HUD verification archives ready."
-                  : "Trial mode active. Wire or wallet clearance required to package the unwatermarked municipal archive."}
+                  : "Trial mode active. Preview draft submittal or settle invoice to unseal production ZIP archive."}
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => handleZipDossier()}
-              disabled={dossierLoading}
-              style={{
-                backgroundColor: dossierLoading ? "#222" : isSettled ? "#00ff66" : "#ffd700",
-                color: "#000",
-                border: "none",
-                padding: "14px 24px",
-                fontWeight: "bold",
-                fontSize: "0.8rem",
-                cursor: dossierLoading ? "not-allowed" : "pointer",
-                fontFamily: "monospace",
-                letterSpacing: "1px"
-              }}
-            >
-              {dossierLoading
-                ? "PACKAGING ARCHIVE..."
-                : isSettled
-                  ? "📦 DOWNLOAD AUDIT-READY DOSSIER (.ZIP)"
-                  : "🔒 UNLOCK COMPLETE DOSSIER (.ZIP)"}
-            </button>
+            <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                style={{
+                  backgroundColor: "#061824",
+                  color: "#00f3ff",
+                  border: "1px solid #00f3ff",
+                  padding: "12px 18px",
+                  fontWeight: "bold",
+                  fontSize: "0.78rem",
+                  cursor: "pointer",
+                  fontFamily: "monospace",
+                  letterSpacing: "0.5px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                🖨️ PRINT / SAVE DRAFT DOSSIER (PDF)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleZipDossier()}
+                disabled={dossierLoading}
+                style={{
+                  backgroundColor: dossierLoading ? "#222" : isSettled ? "#00ff66" : "#ffd700",
+                  color: "#000",
+                  border: "none",
+                  padding: "12px 20px",
+                  fontWeight: "bold",
+                  fontSize: "0.78rem",
+                  cursor: dossierLoading ? "not-allowed" : "pointer",
+                  fontFamily: "monospace",
+                  letterSpacing: "1px",
+                }}
+              >
+                {dossierLoading
+                  ? "PACKAGING ARCHIVE..."
+                  : isSettled
+                    ? "📦 DOWNLOAD AUDIT-READY DOSSIER (.ZIP)"
+                    : "🔒 UNLOCK COMPLETE DOSSIER (.ZIP)"}
+              </button>
+            </div>
           </section>
 
         </main>
@@ -3153,10 +3240,10 @@ export default function SovereignCorePage() {
       )}
 
       {/* Community Relay & AEO Structured Knowledge Graph */}
-      <div style={{ maxWidth: "1200px", margin: "0 auto", width: "100%" }}>
+      <div className="no-print" style={{ maxWidth: "1200px", margin: "0 auto", width: "100%" }}>
         <CommunityFaqHub />
       </div>
-      <div className="mt-12">
+      <div className="no-print mt-12">
         {/* Sovereign Enterprise Compliance Footer */}
         <footer className="border-t border-zinc-900 pt-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-[0.7rem] text-zinc-500 font-mono">
           <div className="max-w-3xl leading-relaxed">
