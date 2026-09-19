@@ -66,18 +66,42 @@ export default function SaberComplianceAuditor() {
 
     const isCst = resultData.cstMandate === 'COC-CST';
 
+    const checklistHtml = resultData.fasahPreflightChecklist ? `
+      <div>
+        <div class="section-title">3. 72-HOUR FASAH PRE-FLIGHT READINESS CHECKLIST</div>
+        <table>
+          <tr>
+            <th style="width: 32%;">AUDIT REQUIREMENT</th>
+            <th style="width: 53%;">OPERATIONAL DIRECTIVE</th>
+            <th style="width: 15%; text-align: center;">RESPONSIBILITY</th>
+          </tr>
+          ${resultData.fasahPreflightChecklist.map((c: any) => `
+            <tr>
+              <td style="font-weight: 600; font-family: monospace; font-size: 10px;">${c.item}</td>
+              <td style="color: #334155; font-size: 10px;">${c.description}</td>
+              <td style="text-align: center; font-family: monospace; font-size: 9px; font-weight: bold; color: ${
+                c.responsibleParty === 'EXPORTER' ? '#0284c7' : c.responsibleParty === 'IMPORTER' ? '#b45309' : '#047857'
+              };">
+                ${c.responsibleParty}
+              </td>
+            </tr>
+          `).join('')}
+        </table>
+      </div>
+    ` : '';
+
     const htmlContent = `
       <!DOCTYPE html>
       <html>
       <head>
         <title>SASO SABER &amp; PCoC COMPLIANCE DOSSIER - HS ${resultData.hsCode}</title>
         <style>
-          @page { size: A4 portrait; margin: 12mm; }
+          @page { size: A4 portrait; margin: 10mm 12mm; }
           body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
             background-color: #fff;
             color: #0f172a;
-            padding: 24px;
+            padding: 16px 20px;
             margin: 0;
             position: relative;
             -webkit-print-color-adjust: exact;
@@ -89,7 +113,7 @@ export default function SaberComplianceAuditor() {
             top: 48%;
             left: 50%;
             transform: translate(-50%, -50%) rotate(-32deg);
-            font-size: 32px;
+            font-size: 30px;
             font-weight: 900;
             font-family: monospace, sans-serif;
             color: rgba(148, 163, 184, 0.28);
@@ -99,23 +123,23 @@ export default function SaberComplianceAuditor() {
             pointer-events: none;
             z-index: 0;
             border: 3px dashed rgba(148, 163, 184, 0.35);
-            padding: 14px 28px;
+            padding: 12px 24px;
             border-radius: 6px;
             text-align: center;
           }
           .dossier-container { max-width: 760px; margin: 0 auto; position: relative; z-index: 1; }
-          .header { border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: flex-end; }
-          .title { font-size: 16px; font-weight: 800; color: #0f172a; letter-spacing: -0.02em; }
+          .header { border-bottom: 2px solid #0f172a; padding-bottom: 6px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: flex-end; }
+          .title { font-size: 15px; font-weight: 800; color: #0f172a; letter-spacing: -0.02em; }
           .meta { font-size: 9px; font-family: monospace; color: #64748b; text-transform: uppercase; }
-          .section-title { font-size: 11px; font-weight: 700; color: #0f172a; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; margin: 16px 0 8px 0; text-transform: uppercase; }
-          table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 12px; }
-          td, th { padding: 8px; border: 1px solid #cbd5e1; text-align: left; }
-          th { background-color: #f8fafc; font-size: 10px; color: #334155; }
-          .badge { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; }
+          .section-title { font-size: 10px; font-weight: 700; color: #0f172a; border-bottom: 1px solid #cbd5e1; padding-bottom: 3px; margin: 12px 0 6px 0; text-transform: uppercase; }
+          table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 8px; }
+          td, th { padding: 6px 8px; border: 1px solid #cbd5e1; text-align: left; }
+          th { background-color: #f8fafc; font-size: 9px; color: #334155; }
+          .badge { display: inline-block; padding: 2px 5px; border-radius: 3px; font-size: 9px; font-weight: bold; }
           .badge-cst { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
           .badge-green { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
-          .warning-box { border: 1px solid #fca5a5; background: #fef2f2; color: #991b1b; padding: 10px; font-size: 11px; margin-top: 10px; border-radius: 4px; }
-          .footer { margin-top: 24px; border-top: 1px solid #cbd5e1; padding-top: 8px; font-size: 9px; font-family: monospace; color: #64748b; display: flex; justify-content: space-between; }
+          .warning-box { border: 1px solid #fca5a5; background: #fef2f2; color: #991b1b; padding: 8px 10px; font-size: 10px; margin-top: 6px; border-radius: 4px; }
+          .footer { margin-top: 14px; border-top: 1px solid #cbd5e1; padding-top: 6px; font-size: 8px; font-family: monospace; color: #64748b; display: flex; justify-content: space-between; }
         </style>
       </head>
       <body>
@@ -138,7 +162,7 @@ export default function SaberComplianceAuditor() {
               <tr><td>HS Tariff Code</td><td style="font-family: monospace; font-weight: bold;">${resultData.hsCode}</td><td>${resultData.category || 'Regulated Industrial Goods'}</td></tr>
               <tr><td>Applicable Standard</td><td style="font-weight: 600;">${resultData.standard}</td><td>Mandatory SASO Technical File verification</td></tr>
               <tr><td>Certification Track</td><td><span class="badge ${isCst ? 'badge-cst' : 'badge-green'}">${resultData.certificates?.pcoc?.type || 'Standard PCoC'}</span></td><td>${resultData.certificates?.pcoc?.scope}</td></tr>
-              <tr><td>FASAH Port SLA</td><td style="color: #047857; font-weight: bold;">${resultData.fasahWindow || 'Green-Channel 48h'}</td><td>Pre-arrival manifest linked before docking</td></tr>
+              <tr><td>FASAH Port SLA</td><td style="color: #047857; font-weight: bold;">${resultData.fasahWindow || '72h Pre-Arrival'}</td><td>Pre-arrival manifest linked before docking</td></tr>
               <tr><td>Accredited Inspection Bodies</td><td colspan="2">${(resultData.accreditedBodies || ['TÜV Rheinland', 'Intertek']).join(' &bull; ')}</td></tr>
             </table>
           </div>
@@ -150,15 +174,17 @@ export default function SaberComplianceAuditor() {
             </div>
           </div>
 
-          <div style="margin-top: 16px; padding: 12px; border: 1px dashed #cbd5e1; background: #f8fafc; display: flex; justify-content: space-between; align-items: center;">
-            <div style="font-family: monospace; font-size: 9px; line-height: 1.5; color: #334155;">
+          ${checklistHtml}
+
+          <div style="margin-top: 10px; padding: 10px; border: 1px dashed #cbd5e1; background: #f8fafc; display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-family: monospace; font-size: 8.5px; line-height: 1.5; color: #334155;">
               <div><strong>SOVEREIGN AUDIT TRAIL:</strong> SASO-SABER-PREFLIGHT-OK</div>
               <div>REGULATORY DIGEST: <code>d9a6c7b1348f02ec3b11899a0e67104b901a</code></div>
-              <div style="color: #047857; font-weight: bold; margin-top: 3px;">✓ SABER / CST ACCREDITED LABORATORY PARITY VERIFIED</div>
+              <div style="color: #047857; font-weight: bold; margin-top: 2px;">✓ 72-HOUR FASAH PRE-ARRIVAL CONFORMANCE ENGINE READY</div>
             </div>
             <div style="text-align: center;">
-              <img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=SABER-MIU33-HS-${resultData.hsCode}" alt="SABER QR" style="width: 65px; height: 65px; border: 1px solid #cbd5e1; background: #fff;" />
-              <div style="font-size: 8px; font-family: monospace; color: #64748b; margin-top: 2px;">SCAN TO VERIFY</div>
+              <img src="https://api.qrserver.com/v1/create-qr-code/?size=70x70&data=SABER-MIU33-HS-${resultData.hsCode}" alt="SABER QR" style="width: 55px; height: 55px; border: 1px solid #cbd5e1; background: #fff;" />
+              <div style="font-size: 7px; font-family: monospace; color: #64748b; margin-top: 1px;">SCAN TO VERIFY</div>
             </div>
           </div>
 
@@ -282,6 +308,40 @@ export default function SaberComplianceAuditor() {
           <div className="p-3 bg-[#05070b] border border-amber-500/30 text-amber-300 rounded text-[11px] leading-relaxed">
             <strong>Penalty Risk:</strong> {result.certificates?.scoc?.penaltyRisk}
           </div>
+
+          {/* FASAH 72-HOUR PRE-FLIGHT COMPLIANCE CHECKLIST */}
+          {result.fasahPreflightChecklist && result.fasahPreflightChecklist.length > 0 && (
+            <div className="mt-4 border border-cyan-500/20 bg-[#05070b] p-3 rounded">
+              <div className="flex justify-between items-center mb-2 pb-1 border-b border-slate-800">
+                <span className="text-[11px] font-bold text-cyan-300">
+                  ⏱️ 72-HOUR FASAH PRE-ARRIVAL CHECKLIST
+                </span>
+                <span className="text-[9px] text-slate-400 font-mono">PORT DISCHARGE SLA</span>
+              </div>
+              <div className="space-y-1.5">
+                {result.fasahPreflightChecklist.map((task: any, index: number) => (
+                  <div key={index} className="text-[10px] flex items-start gap-2 bg-slate-900/40 p-1.5 rounded border border-slate-800/80">
+                    <span className="text-emerald-400 font-bold mt-0.5">✓</span>
+                    <div className="flex-1">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold text-slate-200">{task.item}</span>
+                        <span className={`px-1.5 py-0.2 rounded text-[8px] font-mono ${
+                          task.responsibleParty === 'EXPORTER' 
+                            ? 'bg-cyan-950 text-cyan-300 border border-cyan-500/30'
+                            : task.responsibleParty === 'IMPORTER'
+                            ? 'bg-amber-950 text-amber-300 border border-amber-500/30'
+                            : 'bg-slate-800 text-slate-300'
+                        }`}>
+                          {task.responsibleParty}
+                        </span>
+                      </div>
+                      <p className="text-slate-400 text-[9px] mt-0.5">{task.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <button
             type="button"
