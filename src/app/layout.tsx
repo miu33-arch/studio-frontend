@@ -46,12 +46,21 @@ export const metadata: Metadata = {
     title: "MIU_33 // China-GCC Sovereign Trade & Compliance Engine",
     description:
       "Automated cross-border trade execution: Trilingual SASO/SFDA submittals, cold-chain thermal monitoring, and ZATCA Phase-2 fiscal settlement.",
+    images: [
+      {
+        url: "https://miu33archstudio.xyz/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "MIU_33 China-Saudi Sovereign Trade & Compliance Engine",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "MIU_33 // Sovereign China-GCC Compliance Core",
     description:
       "Automated SFDA cold-chain audit, SASO/ASTM alloy parity, and trilingual ZATCA tax invoice dossiers.",
+    images: ["https://miu33archstudio.xyz/og-image.png"],
   },
   icons: {
     icon: "/icon.svg",
