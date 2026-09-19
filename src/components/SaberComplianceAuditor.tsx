@@ -7,6 +7,7 @@ const PRESET_HS_CODES = [
   { code: '851762900001', label: '8517.62.90', desc: 'Switches / CST Unified RF' },
   { code: '760421000000', label: '7604.21.00', desc: 'Aluminum Extrusions SASO 2831' },
   { code: '852691000000', label: '8526.91.00', desc: 'GPS Trackers / Fleet Hubs' },
+  { code: '845961000000', label: '8459.61.00', desc: 'CNC Milling / SASO Machinery TR' },
 ];
 
 export default function SaberComplianceAuditor() {
@@ -78,10 +79,31 @@ export default function SaberComplianceAuditor() {
             color: #0f172a;
             padding: 24px;
             margin: 0;
+            position: relative;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
           }
-          .dossier-container { max-width: 760px; margin: 0 auto; }
+          /* DIAGONAL AUDIT DISCLAIMER WATERMARK */
+          .watermark {
+            position: fixed;
+            top: 48%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-32deg);
+            font-size: 32px;
+            font-weight: 900;
+            font-family: monospace, sans-serif;
+            color: rgba(148, 163, 184, 0.28);
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 0;
+            border: 3px dashed rgba(148, 163, 184, 0.35);
+            padding: 14px 28px;
+            border-radius: 6px;
+            text-align: center;
+          }
+          .dossier-container { max-width: 760px; margin: 0 auto; position: relative; z-index: 1; }
           .header { border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: flex-end; }
           .title { font-size: 16px; font-weight: 800; color: #0f172a; letter-spacing: -0.02em; }
           .meta { font-size: 9px; font-family: monospace; color: #64748b; text-transform: uppercase; }
@@ -97,6 +119,9 @@ export default function SaberComplianceAuditor() {
         </style>
       </head>
       <body>
+        <!-- FIXED AUDIT WATERMARK -->
+        <div class="watermark">DRAFT AUDIT // UNVERIFIED DEMO PRE-CLEARANCE</div>
+
         <div class="dossier-container">
           <div class="header">
             <div>
@@ -181,15 +206,17 @@ export default function SaberComplianceAuditor() {
         {/* 1-Click Fast-Fill HS Badges */}
         <div>
           <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">Preset High-Frequency HS Codes:</div>
-          <div className="grid grid-cols-2 gap-2">
-            {PRESET_HS_CODES.map((preset) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {PRESET_HS_CODES.map((preset, idx) => (
               <button
                 key={preset.code}
                 type="button"
                 onClick={() => handleSelectPreset(preset.code)}
-                className="text-left p-2 bg-[#05070b] hover:bg-cyan-950/40 border border-cyan-500/30 hover:border-cyan-400 rounded transition"
+                className={`text-left p-2 bg-[#05070b] hover:bg-cyan-950/40 border border-cyan-500/30 hover:border-cyan-400 rounded transition ${
+                  idx === 4 ? 'col-span-2 sm:col-span-1 border-amber-500/30 hover:border-amber-400' : ''
+                }`}
               >
-                <div className="font-bold text-cyan-300 text-xs">{preset.label}</div>
+                <div className={`font-bold text-xs ${idx === 4 ? 'text-amber-300' : 'text-cyan-300'}`}>{preset.label}</div>
                 <div className="text-[10px] text-gray-400 truncate">{preset.desc}</div>
               </button>
             ))}
