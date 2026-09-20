@@ -1,6 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async rewrites() {
+    return [
+      {
+        source: "/outputs/:path*",
+        destination: "http://localhost:5000/outputs/:path*",
+      },
+    ];
+  },
   async headers() {
     return [
       {
