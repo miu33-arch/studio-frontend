@@ -189,9 +189,9 @@ export default function SovereignCorePage() {
     }
   };
 
-  useEffect(() => {
-    loadPipeline();
-  }, [projectCode]);
+ // useEffect(() => {
+  //  loadPipeline();
+ // }, [projectCode]);
 
   // Tab 1: BOM & SASO State
   const fileInputRef = useRef<HTMLInputElement | null>(null);
