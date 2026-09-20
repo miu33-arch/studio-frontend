@@ -1,182 +1,140 @@
 import { NextResponse } from 'next/server';
 
-export interface CstSaberRule {
-  hsPrefix: string;
+export interface BOMItemPayload {
+  id: string;
+  sku: string;
+  hsCode: string;
   category: string;
-  sasoStandard: string;
-  cstRequirement: string;
-  mandateType: 'COC-CST' | 'SABER_STANDARD' | 'DUAL_MANDATORY';
-  effectiveDate: string;
-  notes: string;
+  qty: number;
+  unitPriceUSD: number;
+  specSummary: string;
+  sasoStandardParity: string;
 }
 
-export const CST_SABER_REGULATORY_MATRIX: Record<string, CstSaberRule> = {
-  // HS 8471: Automatic Data Processing Units
-  '847130': {
-    hsPrefix: '847130',
-    category: 'Laptops / Portable Data Terminals',
-    sasoStandard: 'SASO-IEC-62368-1:2020 / SASO-3114:2026',
-    cstRequirement: 'CST Unified RF Type Approval (Wi-Fi 6E/7 / BLE) & USB-C Mandate',
-    mandateType: 'COC-CST',
-    effectiveDate: '2025-02-12',
-    notes: 'Mandatory SABER PCoC (COC-CST track) via accredited Conformity Assessment Body.'
-  },
-  '847141': {
-    hsPrefix: '847141',
-    category: 'Industrial Compute / Edge Servers',
-    sasoStandard: 'SASO-IEC-62368-1:2020 / SASO-CITC-RI056',
-    cstRequirement: 'CST Enterprise IT Telemetry Approval',
-    mandateType: 'COC-CST',
-    effectiveDate: '2025-02-12',
-    notes: 'Dual verification: SASO Electrical Safety & CST technical regulation under SABER.'
-  },
-  '847170': {
-    hsPrefix: '847170',
-    category: 'Storage Units / RAID NVR Arrays',
-    sasoStandard: 'SASO-IEC-62368-1:2020',
-    cstRequirement: 'SABER PCoC Safety Standard Verification',
-    mandateType: 'SABER_STANDARD',
-    effectiveDate: '2025-02-12',
-    notes: 'Standard SASO Electrical Safety verification.'
-  },
-  '847180': {
-    hsPrefix: '847180',
-    category: 'RFID Interrogators / GPON Optical Network Units',
-    sasoStandard: 'SASO-ETSI-EN-302-208',
-    cstRequirement: 'CST Fixed Spectrum Conformity (UHF 920-925 MHz check)',
-    mandateType: 'COC-CST',
-    effectiveDate: '2025-02-12',
-    notes: 'Transmitter EIRP compliance verified under SABER platform.'
-  },
+export interface SaberBomAuditRequest {
+  items: BOMItemPayload[];
+  incoterm: 'FOB' | 'CIF' | 'CFR' | 'DAP' | 'DDP';
+  saberBindingStatus: 'BOUND' | 'PENDING_BUYER_ACTION';
+  governingTR: string;
+  cabId?: string;
+  cabAccreditation?: string;
+  pcocStatus?: 'VALID_ACTIVE' | 'EXPIRED' | 'MISSING_TEST_REPORT';
+  scocReadiness?: 'READY_TO_ISSUE' | 'BLOCKED_BY_PCOC' | 'AWAITING_SHIPPING_DOCS';
+  isFasahReady?: boolean;
+}
 
-  // HS 8517: Telecommunications & RF Apparatus
-  '851762': {
-    hsPrefix: '851762',
-    category: 'Industrial Modems, Managed Switches, UWB & Mesh Nodes',
-    sasoStandard: 'SASO-CITC-RI054 / SASO-IEC-62368-1',
-    cstRequirement: 'CST Integrated SABER Certificate (COC-CST)',
-    mandateType: 'COC-CST',
-    effectiveDate: '2025-02-12',
-    notes: 'Matches Saudi HS 851762900001. CST portal RF direct licensing replaced by SABER.'
-  },
-  '851769': {
-    hsPrefix: '851769',
-    category: 'Wireless Headsets / VoIP Intercom Units',
-    sasoStandard: 'SASO-CITC-RI113 / SASO-IEC-62368-1',
-    cstRequirement: 'CST Short-Range Device (SRD) Type Approval',
-    mandateType: 'COC-CST',
-    effectiveDate: '2025-02-12',
-    notes: 'Automatic SABER flag for Bluetooth/2.4GHz RF conformance.'
-  },
-
-  // HS 8526: Radar, Radio Navigation & Remote Control
-  '852691': {
-    hsPrefix: '852691',
-    category: 'GPS Fleet Trackers / Telematics Hubs',
-    sasoStandard: 'SASO-CITC-RI072 / SASO-IEC-60950',
-    cstRequirement: 'CST Asset Tracking Device Approval (2G/4G/GNSS)',
-    mandateType: 'COC-CST',
-    effectiveDate: '2025-02-12',
-    notes: 'Must declare 4G VoLTE and GNSS frequency plan in technical file.'
-  },
-  '852692': {
-    hsPrefix: '852692',
-    category: 'Industrial Radio Remote Controls / Actuator Receivers',
-    sasoStandard: 'SASO-ETSI-EN-300-220',
-    cstRequirement: 'CST SRD / Remote Actuation Approval (433/868 MHz)',
-    mandateType: 'COC-CST',
-    effectiveDate: '2025-02-12',
-    notes: 'Submittals without accredited lab RED/EMC reports trigger customs hold.'
-  },
-
-  // HS 7216 & 7604: Construction Steel & Aluminum Extrusions
-  '721631': {
-    hsPrefix: '721631',
-    category: 'Structural Steel U/I Sections (GB/T 700 / ASTM A36)',
-    sasoStandard: 'SASO ASTM A36 / SASO-ISO-630',
-    cstRequirement: 'SABER Quality Mark / Conformity Certificate',
-    mandateType: 'SABER_STANDARD',
-    effectiveDate: '2025-01-01',
-    notes: 'Factory mill test certificates mandatory prior to port arrival.'
-  },
-  '760421': {
-    hsPrefix: '760421',
-    category: 'Aluminum Alloy Architectural Profiles (GB/T 5237 / SASO 2831)',
-    sasoStandard: 'SASO 2831:2018 / ASTM B221',
-    cstRequirement: 'SABER PCoC & SCoC Pre-Clearance Verification',
-    mandateType: 'SABER_STANDARD',
-    effectiveDate: '2025-01-01',
-    notes: 'Requires accredited lab metallurgical composition testing.'
-  }
-};
+const PEGGED_USD_SAR = 3.75;
+const GCC_DUTY_RATE = 0.05;
+const ZATCA_VAT_RATE = 0.15;
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const items = body.items || [];
+    const body: SaberBomAuditRequest = await req.json();
+    const {
+      items = [],
+      incoterm = 'CIF',
+      saberBindingStatus = 'BOUND',
+      governingTR = 'General Cargo',
+      cabId = 'astc',
+      cabAccreditation = 'P-CB 0372',
+      pcocStatus = 'VALID_ACTIVE',
+      scocReadiness = 'READY_TO_ISSUE',
+      isFasahReady = true,
+    } = body;
 
-    const auditResults = items.map((item: any, idx: number) => {
-      let rawHs = (item.hsCode || '').trim();
+    // 1. Line-by-line Standard Parity & Regulatory Mapping
+    const auditedManifest = items.map((item) => {
+      const qty = Number(item.qty || 1);
+      const unitPrice = Number(item.unitPriceUSD || 0);
+      const lineFobUsd = qty * unitPrice;
+      const lineFreightUsd = lineFobUsd * 0.08;
+      const lineCifUsd = lineFobUsd + lineFreightUsd;
+      const lineCifSar = lineCifUsd * PEGGED_USD_SAR;
+      const lineDutySar = lineCifSar * GCC_DUTY_RATE;
+      const lineVatSar = (lineCifSar + lineDutySar) * ZATCA_VAT_RATE;
 
-      // Smart HS detection fallback based on SKU keywords and category
-      if (!rawHs) {
-        const skuUpper = (item.sku || '').toUpperCase();
-        const specUpper = (item.specSummary || '').toUpperCase();
-
-        if (skuUpper.includes('HIK') || skuUpper.includes('CCTV') || skuUpper.includes('SURV') || specUpper.includes('SURVEILLANCE')) {
-          rawHs = '851762900001';
-        } else if (skuUpper.includes('SWITCH') || skuUpper.includes('3E1526P') || skuUpper.includes('POE') || item.category === 'networking') {
-          rawHs = '851762000000';
-        } else if (skuUpper.includes('STEEL') || skuUpper.includes('Q235B') || specUpper.includes('STRUCTURAL STEEL')) {
-          rawHs = '721631000000';
-        } else if (skuUpper.includes('AL-') || skuUpper.includes('EXTRUSION') || specUpper.includes('EXTRUSIONS')) {
-          rawHs = '760421000000';
-        } else if (skuUpper.includes('WIN75') || skuUpper.includes('AND21') || item.category === 'computing') {
-          rawHs = '847130000000';
-        } else if (skuUpper.includes('RAID') || skuUpper.includes('NVR') || item.category === 'storage') {
-          rawHs = '847170000000';
-        } else if (item.category === 'surveillance') {
-          rawHs = '851762900001';
-        } else {
-          rawHs = '847141000000';
-        }
-      }
-
-      const cleanHs = rawHs.replace(/\D/g, '');
-      const prefix6 = cleanHs.slice(0, 6);
-      const prefix4 = cleanHs.slice(0, 4);
-
-      const matchedRule = CST_SABER_REGULATORY_MATRIX[prefix6] || null;
-      const isTelecomOrRf = ['8471', '8517', '8526'].includes(prefix4);
+      const isHsValid = /^\d{12}$/.test(item.hsCode.trim());
 
       return {
-        id: item.id || String(idx + 1),
-        sku: item.sku || `SKU-${idx + 1}`,
-        hsCode: rawHs,
-        category: item.category || 'industrial',
-        qty: Number(item.qty) || 1,
-        description: item.specSummary || item.description || item.sku,
-        cstParityRequired: Boolean(matchedRule?.mandateType === 'COC-CST' || (isTelecomOrRf && matchedRule?.mandateType !== 'SABER_STANDARD')),
-        certificateType: matchedRule?.mandateType || (isTelecomOrRf ? 'COC-CST' : 'SABER_STANDARD'),
-        applicableStandard: matchedRule?.sasoStandard || (isTelecomOrRf ? 'SASO-CITC-RI054 / SASO-IEC-62368-1' : 'SASO-STANDARD'),
-        technicalRegulation: 'Technical Regulation for Communications and Information Technology Devices',
-        effectiveDate: matchedRule?.effectiveDate || '2025-02-12',
-        estimatedClearanceHours: isTelecomOrRf ? 48 : 72,
-        notes: matchedRule?.notes || (isTelecomOrRf ? 'CST-SABER Unified RF Mandate' : 'Standard SASO clearance.')
+        sku: item.sku,
+        hsCode: item.hsCode,
+        hsFormatVerified: isHsValid,
+        sasoStandardTarget: item.sasoStandardParity,
+        lineCifSar: Math.round(lineCifSar * 100) / 100,
+        lineDutySar: Math.round(lineDutySar * 100) / 100,
+        lineVatSar: Math.round(lineVatSar * 100) / 100,
+        conformityAssessment: {
+          governingTR,
+          notifiedBodyCode: cabAccreditation,
+          pcocEligible: pcocStatus === 'VALID_ACTIVE',
+          scocDispatchStatus: scocReadiness === 'READY_TO_ISSUE' ? 'PERMITTED' : 'HOLD_AT_ORIGIN',
+        },
       };
     });
 
+    // 2. Aggregate Fiscal Totals
+    const totalFobUsd = items.reduce((acc, i) => acc + (Number(i.qty || 1) * Number(i.unitPriceUSD || 0)), 0);
+    const totalFreightUsd = totalFobUsd * 0.08;
+    const totalCifUsd = totalFobUsd + totalFreightUsd;
+    const totalCifSar = totalCifUsd * PEGGED_USD_SAR;
+    const totalCustomsDutySar = totalCifSar * GCC_DUTY_RATE;
+    const taxableVatBaseSar = totalCifSar + totalCustomsDutySar;
+    const totalZatcaVatSar = taxableVatBaseSar * ZATCA_VAT_RATE;
+    const totalLandedFiscalSar = taxableVatBaseSar + totalZatcaVatSar;
+
+    // 3. Incoterm Risk & Port Demurrage Assessment
+    const highRiskDemurrage = (incoterm === 'DAP' || incoterm === 'DDP') && (!isFasahReady || saberBindingStatus === 'PENDING_BUYER_ACTION');
+
+    const demurrageAnalysis = {
+      incotermEvaluated: incoterm,
+      isExposedToDemurrage: highRiskDemurrage,
+      estimatedDailyDemurrageUSD: highRiskDemurrage ? '120 - 250 USD / Container / Day' : '0 USD (Risk Mitigated)',
+      portNotice: highRiskDemurrage
+        ? 'DAP/DDP RISK: Unlinked SCoC or missing FASAH 72h pre-filing shifts carrier detention and terminal demurrage costs directly to foreign consignor.'
+        : 'LOW EXPOSURE: Consignee bound and technical regulations reconciled.',
+    };
+
+    // 4. Regulatory Pipeline Assertion
+    const complianceLifecycle = {
+      ruleCheck: 'NO VALID PCoC -> NO SCoC -> CARGO BLOCKED AT PORT',
+      step1_PCoC: {
+        status: pcocStatus,
+        notifiedBody: cabAccreditation,
+        validity: pcocStatus === 'VALID_ACTIVE' ? '1-Year Product Conformity Active' : 'Action Required',
+      },
+      step2_SCoC: {
+        readiness: scocReadiness,
+        scope: 'Single Commercial Invoice & B/L Linked',
+      },
+      step3_FASAH: {
+        preFlightStatus: isFasahReady ? 'PASSED_72H_WINDOW' : 'PRE_CLEARANCE_BLOCKED',
+        targetWindow: '72 Hours Prior to Berth Arrival',
+      },
+    };
+
     return NextResponse.json({
-      status: 'success',
+      status: 'AUDIT_COMPLETE',
       timestamp: new Date().toISOString(),
-      unifiedPlatformMandate: 'Effective February 12, 2025: CST RF type approvals integrated into SABER',
-      totalAudited: auditResults.length,
-      results: auditResults,
+      governingTR,
+      manifestItemCount: auditedManifest.length,
+      complianceLifecycle,
+      demurrageAnalysis,
+      fiscalBreakdown: {
+        peggedExchangeRate: PEGGED_USD_SAR,
+        totalFobUsd: Math.round(totalFobUsd * 100) / 100,
+        totalCifUsd: Math.round(totalCifUsd * 100) / 100,
+        totalCifSar: Math.round(totalCifSar * 100) / 100,
+        customsDutySar: Math.round(totalCustomsDutySar * 100) / 100,
+        zatcaVatSar: Math.round(totalZatcaVatSar * 100) / 100,
+        totalLandedFiscalSar: Math.round(totalLandedFiscalSar * 100) / 100,
+      },
+      auditedManifest,
     });
   } catch (error) {
+    console.error('Error executing CST SABER BOM audit:', error);
     return NextResponse.json(
-      { status: 'error', message: 'Failed to process BOM parity audit', error: String(error) },
-      { status: 400 }
+      { status: 'ERROR', message: 'Failed to process manifest payload' },
+      { status: 500 }
     );
   }
 }
