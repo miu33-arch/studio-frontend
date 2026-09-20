@@ -189,9 +189,9 @@ export default function SovereignCorePage() {
     }
   };
 
- // useEffect(() => {
+  // useEffect(() => {
   //  loadPipeline();
- // }, [projectCode]);
+  // }, [projectCode]);
 
   // Tab 1: BOM & SASO State
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -678,114 +678,12 @@ export default function SovereignCorePage() {
     }
   };
   const handlePrintLedgerReceipt = (inv: any) => {
-    const printWindow = window.open("", "_blank", "width=850,height=1000");
-    if (!printWindow) {
-      alert("Please allow popups to compile the invoice receipt.");
-      return;
-    }
-
     const invNo = inv.invoice_no || inv.invoiceNumber || "INV-2026-000";
-    const client = inv.clientName || (inv.country ? `JURISDICTION [${inv.country}]` : "AL-RAJHI COMMERCIAL CONTRACTING");
-    const taxId = inv.clientTaxId || "300000000000003";
-    const curr = inv.currency || "SAR";
-    const subtotal = Number(inv.subtotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const vat = Number(inv.tax_amount ?? inv.vatAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const total = Number(inv.total_amount ?? inv.grandTotal ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const dateStr = inv.createdAt ? new Date(inv.createdAt).toISOString().replace("T", " ").slice(0, 19) : new Date().toISOString().replace("T", " ").slice(0, 19);
-    const hash = inv.current_hash || inv.invoiceHash || "PENDING_BLOCK_HASH";
-    const pih = inv.pih || inv.previousInvoiceHash || "GENESIS_ROOT";
-
-    const receiptHtml = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>TAX RECEIPT - ${invNo}</title>
-  <style>
-    @page { size: A4 portrait; margin: 15mm; }
-    body { font-family: 'Courier New', Courier, monospace; background: #fff; color: #000; padding: 24px; font-size: 11px; margin: 0; }
-    .header { border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end; }
-    .title { font-size: 16px; font-weight: bold; letter-spacing: 1px; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; border-bottom: 1px dashed #666; padding-bottom: 16px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 11px; }
-    th, td { border: 1px solid #000; padding: 8px 10px; text-align: left; }
-    th { background: #f2f2f2; }
-    .text-right { text-align: right; }
-    .totals { font-weight: bold; }
-    .total-row { font-size: 13px; background: #fafafa; }
-    .hash-box { margin-top: 25px; border: 1px solid #888; padding: 10px; font-size: 9px; background: #f9f9f9; word-break: break-all; line-height: 1.5; }
-    .badge { display: inline-block; border: 2px solid #000; padding: 3px 8px; font-weight: bold; margin-top: 6px; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div>
-      <div class="title">MIU_33 // SOVEREIGN TAX INVOICE</div>
-      <div style="color: #555; margin-top: 3px;">ZATCA PHASE-2 COMPLIANT AUDIT RECEIPT</div>
-    </div>
-    <div style="text-align: right;">
-      <div style="font-size: 13px; font-weight: bold;">REF: ${invNo}</div>
-      <div style="color: #666;">DATE: ${dateStr}</div>
-      <div class="badge">D1 LEDGER VERIFIED</div>
-    </div>
-  </div>
-
-  <div class="grid">
-    <div>
-      <div><strong>SUPPLIER:</strong> MIU_33 SOVEREIGN SYSTEMS</div>
-      <div><strong>TAX ID:</strong> 300000000000003</div>
-      <div><strong>LOCATION:</strong> RIYADH, SAUDI ARABIA</div>
-    </div>
-    <div style="text-align: right;">
-      <div><strong>CUSTOMER:</strong> ${client}</div>
-      <div><strong>TAX ID:</strong> ${taxId}</div>
-      <div><strong>CURRENCY:</strong> ${curr}</div>
-    </div>
-  </div>
-
-  <table>
-    <thead>
-      <tr>
-        <th>DESCRIPTION</th>
-        <th style="width: 50px; text-align: center;">QTY</th>
-        <th class="text-right" style="width: 140px;">AMOUNT (${curr})</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>Cross-Border Municipal Compliance Engineering & Regulatory Filing</td>
-        <td style="text-align: center;">1</td>
-        <td class="text-right">${subtotal}</td>
-      </tr>
-      <tr class="totals">
-        <td colspan="2" class="text-right">SUBTOTAL EXCL. TAX</td>
-        <td class="text-right">${subtotal} ${curr}</td>
-      </tr>
-      <tr class="totals">
-        <td colspan="2" class="text-right">VAT (15%)</td>
-        <td class="text-right">${vat} ${curr}</td>
-      </tr>
-      <tr class="totals total-row">
-        <td colspan="2" class="text-right">TOTAL PAYABLE</td>
-        <td class="text-right">${total} ${curr}</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <div class="hash-box">
-    <strong>CRYPTOGRAPHIC HASH INTEGRITY & AUDIT PROOF:</strong><br>
-    BLOCK HASH: ${hash}<br>
-    PREVIOUS BLOCK HASH (PIH): ${pih}
-  </div>
-</body>
-</html>`;
-
-    printWindow.document.open();
-    printWindow.document.write(receiptHtml);
-    printWindow.document.close();
-    setTimeout(() => {
-      printWindow.focus();
-      printWindow.print();
-    }, 350);
+    window.open(
+      `https://ledger.padillaanamy83.workers.dev/invoice/receipt?inv=${encodeURIComponent(invNo)}`,
+      "_blank",
+      "width=850,height=1000"
+    );
   };
   const handleExportAuditDossier = () => {
     if (!auditResult) {
