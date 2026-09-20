@@ -4,6 +4,42 @@ import React, { useState, useMemo } from 'react';
 
 export type IncotermMode = 'FOB' | 'CIF' | 'CFR' | 'DAP' | 'DDP';
 export type SaberBindingStatus = 'BOUND' | 'PENDING_BUYER_ACTION';
+export type PCoCStatus = 'VALID_ACTIVE' | 'EXPIRED' | 'MISSING_TEST_REPORT';
+export type SCoCReadiness = 'READY_TO_ISSUE' | 'BLOCKED_BY_PCOC' | 'AWAITING_SHIPPING_DOCS';
+
+export interface CABProfile {
+    id: string;
+    name: string;
+    accreditationCode: string;
+    scopeCoverage: string;
+}
+
+export const ACCREDITED_CABS: CABProfile[] = [
+    {
+        id: 'astc',
+        name: 'Arabian Standardization & Testing Co. (ASTC)',
+        accreditationCode: 'P-CB 0372',
+        scopeCoverage: 'Building Materials M-01 / Architectural Envelopes / Low Voltage'
+    },
+    {
+        id: 'sunchine',
+        name: 'Sunchine Inspection',
+        accreditationCode: 'P-CB 0542',
+        scopeCoverage: 'Machinery Safety M-02 / CNC Centers & Mechanical Tooling'
+    },
+    {
+        id: 'sgs',
+        name: 'SGS Gulf Limited',
+        accreditationCode: 'P-CB 0012',
+        scopeCoverage: 'Building Materials Part 1-4 / Industrial Machinery / Pressure Vessels'
+    },
+    {
+        id: 'tuv',
+        name: 'TÜV Rheinland Middle East',
+        accreditationCode: 'P-CB 0008',
+        scopeCoverage: 'Machinery Safety / Electrical Equipment / Heavy Lifting Gear'
+    }
+];
 
 export interface BOMPresetConfig {
     id: string;
@@ -14,6 +50,9 @@ export interface BOMPresetConfig {
     trReferenceCode: string;
     consigneeCR: string;
     saberBindingStatus: SaberBindingStatus;
+    defaultCabId: string;
+    pcocNumber: string;
+    pcocExpiry: string;
     items: Array<{
         id: string;
         sku: string;
@@ -36,6 +75,9 @@ export const MANIFEST_PRESETS: Record<string, BOMPresetConfig> = {
         trReferenceCode: 'SASO M.A. 156-16-03-01',
         consigneeCR: '1010894412 (Verified Active)',
         saberBindingStatus: 'BOUND',
+        defaultCabId: 'astc',
+        pcocNumber: 'PCOC-2026-ASTC-94821',
+        pcocExpiry: '2027-08-15',
         items: [
             {
                 id: '1',
@@ -68,6 +110,9 @@ export const MANIFEST_PRESETS: Record<string, BOMPresetConfig> = {
         trReferenceCode: 'SASO 01-05-21-182 / M.A. 164-18-05-02',
         consigneeCR: 'UNBOUND // PENDING LOCAL BUYER FILING',
         saberBindingStatus: 'PENDING_BUYER_ACTION',
+        defaultCabId: 'sunchine',
+        pcocNumber: 'UNISSUED (Missing ISO 17025 Test Report)',
+        pcocExpiry: 'N/A',
         items: [
             {
                 id: '1',
@@ -103,6 +148,9 @@ export default function IndustrialBOMVault() {
     const [currentSaberStatus, setCurrentSaberStatus] = useState<SaberBindingStatus>('BOUND');
     const [consigneeCR, setConsigneeCR] = useState<string>('1010894412 (Verified Active)');
     const [governingTR, setGoverningTR] = useState<string>('SASO M.A. 156-16-03-01 (Building Materials TR - Part 1)');
+    const [selectedCabId, setSelectedCabId] = useState<string>('astc');
+    const [pcocNumber, setPcocNumber] = useState<string>('PCOC-2026-ASTC-94821');
+    const [pcocExpiry, setPcocExpiry] = useState<string>('2027-08-15');
 
     const [bomInput, setBomInput] = useState<string>(
         JSON.stringify(MANIFEST_PRESETS.ARCHITECTURAL_CURTAIN_WALL.items, null, 2)
@@ -112,9 +160,36 @@ export default function IndustrialBOMVault() {
     const [loading, setLoading] = useState(false);
     const [pasteFeedback, setPasteFeedback] = useState<string | null>(null);
 
+    const currentCab = useMemo(() => {
+        return ACCREDITED_CABS.find(c => c.id === selectedCabId) || ACCREDITED_CABS[0];
+    }, [selectedCabId]);
+
+    // Derived Dual-State Certificate Pipeline Status
+    const pcocStatus: PCoCStatus = useMemo(() => {
+        if (!pcocNumber || pcocNumber.includes('UNISSUED') || pcocNumber.includes('Missing')) {
+            return 'MISSING_TEST_REPORT';
+        }
+        if (pcocExpiry !== 'N/A' && new Date(pcocExpiry) < new Date()) {
+            return 'EXPIRED';
+        }
+        return 'VALID_ACTIVE';
+    }, [pcocNumber, pcocExpiry]);
+
+    const scocReadiness: SCoCReadiness = useMemo(() => {
+        if (pcocStatus !== 'VALID_ACTIVE') {
+            return 'BLOCKED_BY_PCOC';
+        }
+        if (currentSaberStatus === 'PENDING_BUYER_ACTION') {
+            return 'AWAITING_SHIPPING_DOCS';
+        }
+        return 'READY_TO_ISSUE';
+    }, [pcocStatus, currentSaberStatus]);
+
+    const isFasahReady = pcocStatus === 'VALID_ACTIVE' && scocReadiness === 'READY_TO_ISSUE';
+
     const isHighRiskDAP = useMemo(() => {
-        return (currentIncoterm === 'DAP' || currentIncoterm === 'DDP') && currentSaberStatus === 'PENDING_BUYER_ACTION';
-    }, [currentIncoterm, currentSaberStatus]);
+        return (currentIncoterm === 'DAP' || currentIncoterm === 'DDP') && (!isFasahReady || currentSaberStatus === 'PENDING_BUYER_ACTION');
+    }, [currentIncoterm, isFasahReady, currentSaberStatus]);
 
     const fiscalSummary = useMemo(() => {
         try {
@@ -127,7 +202,6 @@ export default function IndustrialBOMVault() {
                 return acc + (q * p);
             }, 0);
 
-            // Standard maritime freight + insurance baseline (~8% of FOB)
             const freightInsuranceUSD = totalFobUSD * 0.08;
             const cifValueUSD = totalFobUSD + freightInsuranceUSD;
             const cifValueSAR = cifValueUSD * USD_TO_SAR_PEGGED_RATE;
@@ -161,7 +235,12 @@ export default function IndustrialBOMVault() {
                     items: payload,
                     incoterm: currentIncoterm,
                     saberBindingStatus: currentSaberStatus,
-                    governingTR
+                    governingTR,
+                    cabId: currentCab.id,
+                    cabAccreditation: currentCab.accreditationCode,
+                    pcocStatus,
+                    scocReadiness,
+                    isFasahReady
                 }),
             });
             const data = await res.json();
@@ -181,6 +260,9 @@ export default function IndustrialBOMVault() {
         setCurrentSaberStatus(preset.saberBindingStatus);
         setConsigneeCR(preset.consigneeCR);
         setGoverningTR(`${preset.trReferenceCode} (${preset.governingTR})`);
+        setSelectedCabId(preset.defaultCabId);
+        setPcocNumber(preset.pcocNumber);
+        setPcocExpiry(preset.pcocExpiry);
         
         const jsonStr = JSON.stringify(preset.items, null, 2);
         setBomInput(jsonStr);
@@ -250,18 +332,18 @@ export default function IndustrialBOMVault() {
 
                 return `
         <tr>
-          <td style="border: 1px solid #cbd5e1; padding: 7px 8px; font-family: monospace; font-size: 11px;">
+          <td style="border: 1px solid #cbd5e1; padding: 6px 8px; font-family: monospace; font-size: 10px;">
             <strong>${skuCode}</strong>${hsFormatted}
           </td>
-          <td style="border: 1px solid #cbd5e1; padding: 7px 8px; font-size: 11px;">
+          <td style="border: 1px solid #cbd5e1; padding: 6px 8px; font-size: 10px;">
             <div>${categoryDesc}</div>
-            <div style="color: #0369a1; font-family: monospace; font-size: 10px; margin-top: 3px;">• Standard: ${sasoParity}</div>
+            <div style="color: #0369a1; font-family: monospace; font-size: 9px; margin-top: 2px;">• Standard: ${sasoParity}</div>
           </td>
-          <td style="border: 1px solid #cbd5e1; padding: 7px 8px; text-align: right; font-weight: 600; font-size: 11px;">${qtyVal}</td>
-          <td style="border: 1px solid #cbd5e1; padding: 7px 8px; text-align: right; font-family: monospace; font-size: 11px;">${unitPrice}</td>
-          <td style="border: 1px solid #cbd5e1; padding: 7px 8px; text-align: center; font-size: 11px;">
-            <span style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 2px 6px; border-radius: 3px; font-family: monospace; font-size: 10px;">
-              ${currentSaberStatus === 'BOUND' ? '✓ SABER PC/SC LINKED' : '⚠️ SCoC PENDING'}
+          <td style="border: 1px solid #cbd5e1; padding: 6px 8px; text-align: right; font-weight: 600; font-size: 10px;">${qtyVal}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 6px 8px; text-align: right; font-family: monospace; font-size: 10px;">${unitPrice}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 6px 8px; text-align: center; font-size: 10px;">
+            <span style="background: ${isFasahReady ? '#ecfdf5' : '#fffbeb'}; border: 1px solid ${isFasahReady ? '#059669' : '#b45309'}; color: ${isFasahReady ? '#065f46' : '#92400e'}; padding: 2px 4px; border-radius: 3px; font-family: monospace; font-size: 9px;">
+              ${isFasahReady ? '✓ PCoC/SCoC BOUND' : '⚠️ SCoC PENDING'}
             </span>
           </td>
         </tr>
@@ -269,56 +351,81 @@ export default function IndustrialBOMVault() {
             })
             .join('');
 
+        const pipelineSummaryHtml = `
+      <div style="margin-bottom: 12px; padding: 10px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; font-family: monospace; font-size: 10px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+          <div>
+            <strong style="color: #475569;">1. PCoC STATUS (1-YEAR):</strong><br/>
+            <span style="font-weight: bold; color: ${pcocStatus === 'VALID_ACTIVE' ? '#047857' : '#b91c1c'};">
+              ${pcocStatus === 'VALID_ACTIVE' ? `✓ VALID (${pcocNumber})` : '✕ MISSING / EXPIRED'}
+            </span>
+          </div>
+          <div>
+            <strong style="color: #475569;">2. SCoC ISSUANCE READINESS:</strong><br/>
+            <span style="font-weight: bold; color: ${scocReadiness === 'READY_TO_ISSUE' ? '#047857' : '#b45309'};">
+              ${scocReadiness === 'READY_TO_ISSUE' ? '✓ READY TO ISSUE' : '⚠️ BLOCKED / PENDING BUYER'}
+            </span>
+          </div>
+          <div>
+            <strong style="color: #475569;">3. FASAH PRE-DECLARATION:</strong><br/>
+            <span style="font-weight: bold; color: ${isFasahReady ? '#047857' : '#b45309'};">
+              ${isFasahReady ? '✓ 72H PRE-FLIGHT READY' : '✕ HOLD AT BERTH RISK'}
+            </span>
+          </div>
+        </div>
+      </div>
+    `;
+
         const dapWarningHtml = isHighRiskDAP ? `
-      <div style="margin-bottom: 16px; padding: 12px; border: 2px solid #b45309; background: #fffbeb; border-radius: 4px; font-family: monospace; font-size: 11px; color: #92400e;">
-        <strong style="color: #b45309;">⚠️ CRITICAL DAP/DDP DEMURRAGE EXPOSURE ALERT:</strong><br/>
-        Consignee Saudi Commercial Registration (CR) is UNBOUND in the SABER platform. Under DAP terms, container demurrage ($500–$1,500/day) at port of destination rests strictly on the consignor until the local buyer issues SCoC digital authorization. Vessel dispatch without prior SCoC linkage creates immediate clearance hold risks.
+      <div style="margin-bottom: 12px; padding: 10px 12px; border: 2px solid #b45309; background: #fffbeb; border-radius: 4px; font-family: monospace; font-size: 10px; color: #92400e;">
+        <strong style="color: #b45309;">⚠️ CRITICAL DAP/DDP DEMURRAGE EXPOSURE WARNING:</strong><br/>
+        Consignee CR is unbound in SABER and SCoC is not yet issued. Under DAP terms, container demurrage ($120–$250/day per container) at port of destination falls strictly on the foreign exporter. <strong>Rule: NO VALID PCoC → NO SCoC → SHIPMENT WILL NOT BE CLEARED.</strong>
       </div>
     ` : `
-      <div style="margin-bottom: 16px; padding: 10px 12px; border: 1px solid #059669; background: #ecfdf5; border-radius: 4px; font-family: monospace; font-size: 11px; color: #065f46;">
-        <strong>✓ INCOTERM CLEARANCE STATUS (${currentIncoterm}):</strong> Consignee CR (${consigneeCR}) bound. Upstream standard parity mapped. Demurrage exposure mitigated.
+      <div style="margin-bottom: 12px; padding: 8px 12px; border: 1px solid #059669; background: #ecfdf5; border-radius: 4px; font-family: monospace; font-size: 10px; color: #065f46;">
+        <strong>✓ INCOTERM CLEARANCE VERIFIED (${currentIncoterm}):</strong> Consignee CR (${consigneeCR}) bound. Issuing CAB: ${currentCab.name} (${currentCab.accreditationCode}).
       </div>
     `;
 
         const fiscalBreakdownHtml = fiscalSummary ? `
-      <div style="margin-top: 16px; padding: 12px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; font-family: monospace; font-size: 11px;">
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; text-align: center;">
-          <div style="border-right: 1px solid #e2e8f0; padding-right: 8px;">
-            <div style="color: #64748b; font-size: 9px; text-transform: uppercase;">CIF Valuation</div>
-            <div style="font-weight: 700; color: #0f172a; margin-top: 2px;">$${fiscalSummary.cifValueUSD.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
-            <div style="color: #64748b; font-size: 9px;">SAR ${fiscalSummary.cifValueSAR.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+      <div style="margin-top: 12px; padding: 10px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; font-family: monospace; font-size: 10px;">
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center;">
+          <div style="border-right: 1px solid #e2e8f0; padding-right: 6px;">
+            <div style="color: #64748b; font-size: 8px; text-transform: uppercase;">CIF Valuation</div>
+            <div style="font-weight: 700; color: #0f172a; margin-top: 2px;">$${fiscalSummary.cifValueUSD.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+            <div style="color: #64748b; font-size: 8px;">SAR ${fiscalSummary.cifValueSAR.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
           </div>
-          <div style="border-right: 1px solid #e2e8f0; padding-right: 8px;">
-            <div style="color: #64748b; font-size: 9px; text-transform: uppercase;">GCC Customs Duty (5%)</div>
-            <div style="font-weight: 700; color: #0369a1; margin-top: 2px;">SAR ${fiscalSummary.customsDutySAR.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
-            <div style="color: #64748b; font-size: 9px;">Unified GCC Base</div>
+          <div style="border-right: 1px solid #e2e8f0; padding-right: 6px;">
+            <div style="color: #64748b; font-size: 8px; text-transform: uppercase;">GCC Customs Duty (5%)</div>
+            <div style="font-weight: 700; color: #0369a1; margin-top: 2px;">SAR ${fiscalSummary.customsDutySAR.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+            <div style="color: #64748b; font-size: 8px;">Unified GCC Base</div>
           </div>
-          <div style="border-right: 1px solid #e2e8f0; padding-right: 8px;">
-            <div style="color: #64748b; font-size: 9px; text-transform: uppercase;">ZATCA VAT (15%)</div>
-            <div style="font-weight: 700; color: #b45309; margin-top: 2px;">SAR ${fiscalSummary.zatcaVatSAR.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
-            <div style="color: #64748b; font-size: 9px;">15% × (CIF + Duty)</div>
+          <div style="border-right: 1px solid #e2e8f0; padding-right: 6px;">
+            <div style="color: #64748b; font-size: 8px; text-transform: uppercase;">ZATCA VAT (15%)</div>
+            <div style="font-weight: 700; color: #b45309; margin-top: 2px;">SAR ${fiscalSummary.zatcaVatSAR.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+            <div style="color: #64748b; font-size: 8px;">15% × (CIF + Duty)</div>
           </div>
           <div>
-            <div style="color: #64748b; font-size: 9px; text-transform: uppercase;">Total Landed Fiscal Base</div>
-            <div style="font-weight: 800; color: #0f172a; margin-top: 2px;">SAR ${fiscalSummary.totalLandedSAR.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
-            <div style="color: #047857; font-size: 9px; font-weight: 600;">Phase-2 Reconciled</div>
+            <div style="color: #64748b; font-size: 8px; text-transform: uppercase;">Total Landed Fiscal Base</div>
+            <div style="font-weight: 800; color: #0f172a; margin-top: 2px;">SAR ${fiscalSummary.totalLandedSAR.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+            <div style="color: #047857; font-size: 8px; font-weight: 600;">Phase-2 Reconciled</div>
           </div>
         </div>
       </div>
     ` : '';
 
         const verificationBlock = `
-      <div style="margin-top: 20px; padding: 12px; border: 1px dashed #94a3b8; background: #ffffff; display: flex; justify-content: space-between; align-items: center; border-radius: 4px;">
-        <div style="font-family: monospace; font-size: 9px; line-height: 1.6; color: #334155;">
+      <div style="margin-top: 14px; padding: 10px; border: 1px dashed #94a3b8; background: #ffffff; display: flex; justify-content: space-between; align-items: center; border-radius: 4px;">
+        <div style="font-family: monospace; font-size: 8.5px; line-height: 1.5; color: #334155;">
           <div><strong style="color: #0f172a;">GOVERNING SAUDI TR:</strong> ${governingTR}</div>
+          <div><strong style="color: #0f172a;">ISSUING NOTIFIED CAB:</strong> ${currentCab.name} [Accreditation: ${currentCab.accreditationCode}]</div>
           <div><strong style="color: #0f172a;">ZATCA CRYPTOGRAPHIC STAMP:</strong> SHA-256 PARITY VERIFIED</div>
-          <div>INVOICE DIGEST: <code>e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</code></div>
           <div>FASAH PRE-DECLARATION BATCH: <code>SA-RUH-2026-09-EXP-${Math.floor(1000 + Math.random() * 9000)}</code></div>
-          <div style="color: #047857; font-weight: bold; margin-top: 3px;">✓ 72-HOUR FASAH PRE-ARRIVAL CONFORMANCE ENGINE READY</div>
+          <div style="color: #047857; font-weight: bold; margin-top: 2px;">✓ 72-HOUR FASAH PRE-ARRIVAL CONFORMANCE ENGINE READY</div>
         </div>
-        <div style="text-align: center; margin-left: 16px;">
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=85x85&data=ZATCA-MIU33-PREFLIGHT-VERIFIED-BOM-BATCH-202609" alt="ZATCA Compliance QR" style="width: 72px; height: 72px; border: 1px solid #cbd5e1; padding: 2px; background: #fff;" />
-          <div style="font-size: 8px; font-family: monospace; color: #64748b; margin-top: 2px;">SCAN TO VERIFY</div>
+        <div style="text-align: center; margin-left: 12px;">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=75x75&data=ZATCA-MIU33-PREFLIGHT-VERIFIED-BOM-BATCH-202609" alt="ZATCA Compliance QR" style="width: 65px; height: 65px; border: 1px solid #cbd5e1; padding: 2px; background: #fff;" />
+          <div style="font-size: 7.5px; font-family: monospace; color: #64748b; margin-top: 2px;">SCAN TO VERIFY</div>
         </div>
       </div>
     `;
@@ -329,13 +436,13 @@ export default function IndustrialBOMVault() {
         <head>
           <title>MIU_33 // Sovereign Trade Compliance Submittal Dossier</title>
           <style>
-            @page { size: A4 portrait; margin: 12mm; }
-            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #0f172a; background: #fff; margin: 0; padding: 8px; }
-            h1 { font-size: 16px; font-weight: 800; border-bottom: 2px solid #0f172a; padding-bottom: 6px; margin: 0 0 4px 0; letter-spacing: -0.01em; }
-            .subtitle { font-size: 10px; font-family: monospace; color: #475569; margin-bottom: 14px; }
-            table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-            th { background-color: #f8fafc; border: 1px solid #94a3b8; padding: 6px 8px; text-align: left; font-size: 10px; text-transform: uppercase; color: #334155; }
-            .footer { font-size: 9px; font-family: monospace; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 8px; margin-top: 16px; display: flex; justify-content: space-between; }
+            @page { size: A4 portrait; margin: 10mm; }
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #0f172a; background: #fff; margin: 0; padding: 4px; }
+            h1 { font-size: 15px; font-weight: 800; border-bottom: 2px solid #0f172a; padding-bottom: 4px; margin: 0 0 2px 0; letter-spacing: -0.01em; }
+            .subtitle { font-size: 9.5px; font-family: monospace; color: #475569; margin-bottom: 10px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+            th { background-color: #f8fafc; border: 1px solid #94a3b8; padding: 5px 6px; text-align: left; font-size: 9px; text-transform: uppercase; color: #334155; }
+            .footer { font-size: 8.5px; font-family: monospace; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 6px; margin-top: 10px; display: flex; justify-content: space-between; }
           </style>
         </head>
         <body>
@@ -344,6 +451,7 @@ export default function IndustrialBOMVault() {
             Port of Discharge: ${MANIFEST_PRESETS[selectedPresetKey]?.destinationPort || 'KSA Maritime Berth'} | Incoterm: ${currentIncoterm} | Consignee CR: ${consigneeCR}
           </div>
 
+          ${pipelineSummaryHtml}
           ${dapWarningHtml}
 
           <table>
@@ -364,8 +472,8 @@ export default function IndustrialBOMVault() {
           ${fiscalBreakdownHtml}
           ${verificationBlock}
 
-          <div style="margin-top: 14px; padding-top: 8px; border-top: 1px solid #cbd5e1; font-family: monospace; font-size: 8px; color: #64748b; line-height: 1.4;">
-            <strong>STATUTORY COMPLIANCE NOTICE:</strong> This document represents an automated upstream pre-clearance parity evaluation compiled by MIU_33 Sovereign Trade Core. Final customs physical release and electronic discharge across Jeddah Islamic Port, King Abdulaziz Port Dammam, and Riyadh Dry Port remain strictly contingent on accredited Conformity Assessment Body (CAB) laboratory approvals, active SABER SCoC linkage by the licensed Saudi importer of record, and successful ZATCA cryptographic clearance.
+          <div style="margin-top: 10px; padding-top: 6px; border-top: 1px solid #cbd5e1; font-family: monospace; font-size: 7.5px; color: #64748b; line-height: 1.3;">
+            <strong>STATUTORY COMPLIANCE NOTICE:</strong> Verified upstream under SASO Saber & FASAH electronic integration rules. SCoC linkage requires prior PCoC issuance by accredited Conformity Assessment Body (${currentCab.accreditationCode}). Final port release is subject to ZATCA Phase-2 cryptographic ledger clearance.
           </div>
 
           <div class="footer">
@@ -407,6 +515,51 @@ export default function IndustrialBOMVault() {
                 </div>
             </div>
 
+            {/* 3-Step Dual-State Certificate Pipeline Indicator */}
+            <div className="mb-4 bg-slate-900 border border-cyan-500/30 p-3 rounded grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="flex flex-col border-b md:border-b-0 md:border-r border-slate-800 pb-2 md:pb-0 md:pr-3">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase">1. PCoC (1-Year Certificate)</span>
+                    <div className="flex items-center gap-2 mt-1">
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded border ${
+                            pcocStatus === 'VALID_ACTIVE'
+                                ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/50'
+                                : 'bg-rose-950/80 text-rose-300 border-rose-500/50'
+                        }`}>
+                            {pcocStatus === 'VALID_ACTIVE' ? '✓ VALID' : '✕ MISSING/EXPIRED'}
+                        </span>
+                        <span className="text-[11px] text-slate-300 truncate">{pcocNumber}</span>
+                    </div>
+                </div>
+
+                <div className="flex flex-col border-b md:border-b-0 md:border-r border-slate-800 pb-2 md:pb-0 md:pr-3">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase">2. SCoC (Shipment Certificate)</span>
+                    <div className="flex items-center gap-2 mt-1">
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded border ${
+                            scocReadiness === 'READY_TO_ISSUE'
+                                ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/50'
+                                : 'bg-amber-950/80 text-amber-300 border-amber-500/50'
+                        }`}>
+                            {scocReadiness.replace(/_/g, ' ')}
+                        </span>
+                        <span className="text-[10px] text-slate-400">Single B/L Scope</span>
+                    </div>
+                </div>
+
+                <div className="flex flex-col">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase">3. FASAH 72h Clearance Link</span>
+                    <div className="flex items-center gap-2 mt-1">
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded border ${
+                            isFasahReady
+                                ? 'bg-cyan-950/80 text-cyan-300 border-cyan-500/50'
+                                : 'bg-slate-800 text-slate-400 border-slate-700'
+                        }`}>
+                            {isFasahReady ? 'PRE-FLIGHT READY' : 'HOLD EXPOSURE'}
+                        </span>
+                        <span className="text-[10px] text-slate-400">72h Pre-Berth</span>
+                    </div>
+                </div>
+            </div>
+
             {/* Incoterm Risk & Consignee Prerequisite Alert */}
             {isHighRiskDAP ? (
                 <div className="mb-4 p-3.5 bg-amber-950/40 border-2 border-amber-500/80 rounded text-xs text-amber-200">
@@ -414,7 +567,7 @@ export default function IndustrialBOMVault() {
                         <span>⚠️ CRITICAL {currentIncoterm} DEMURRAGE EXPOSURE ALERT</span>
                     </div>
                     <p className="leading-relaxed text-[11px]">
-                        <strong>Consignee Commercial Registration (CR) is unbound in SABER.</strong> Under {currentIncoterm} terms, the seller carries total port demurrage risk ($500–$1,500/day per container). If the Saudi buyer does not issue the SCoC via their corporate portal 72 hours prior to arrival, cargo cannot be pre-declared in FASAH.
+                        <strong>Consignee Commercial Registration (CR) is unbound or SCoC is pending.</strong> Under {currentIncoterm} terms, container demurrage ($120–$250/day) at port of destination rests strictly on the seller. <em>Operational Rule: NO VALID PCoC → NO SCoC → SHIPMENT WILL NOT BE CLEARED.</em>
                     </p>
                 </div>
             ) : (
@@ -424,35 +577,58 @@ export default function IndustrialBOMVault() {
                 </div>
             )}
 
-            {/* Manifest Preset Switcher Bar */}
-            <div className="mb-4 bg-slate-900 border border-slate-800 p-3 rounded flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-400">1-CLICK TR PRESETS:</span>
-                    <button
-                        type="button"
-                        onClick={() => handleSelectPreset('ARCHITECTURAL_CURTAIN_WALL')}
-                        className={`text-xs px-3 py-1.5 rounded transition ${
-                            selectedPresetKey === 'ARCHITECTURAL_CURTAIN_WALL'
-                                ? 'bg-cyan-500 text-slate-950 font-bold'
-                                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-                        }`}
-                    >
-                        ARCHITECTURAL ENVELOPE (CIF)
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => handleSelectPreset('INDUSTRIAL_CNC_MACHINERY')}
-                        className={`text-xs px-3 py-1.5 rounded transition ${
-                            selectedPresetKey === 'INDUSTRIAL_CNC_MACHINERY'
-                                ? 'bg-amber-500 text-slate-950 font-bold'
-                                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-                        }`}
-                    >
-                        CNC MACHINERY (DAP RISK DEMO)
-                    </button>
+            {/* Manifest Preset Switcher Bar & CAB Selector */}
+            <div className="mb-4 bg-slate-900 border border-slate-800 p-3 rounded flex flex-col gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-400">1-CLICK TR PRESETS:</span>
+                        <button
+                            type="button"
+                            onClick={() => handleSelectPreset('ARCHITECTURAL_CURTAIN_WALL')}
+                            className={`text-xs px-3 py-1.5 rounded transition ${
+                                selectedPresetKey === 'ARCHITECTURAL_CURTAIN_WALL'
+                                    ? 'bg-cyan-500 text-slate-950 font-bold'
+                                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+                            }`}
+                        >
+                            ARCHITECTURAL ENVELOPE (CIF)
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => handleSelectPreset('INDUSTRIAL_CNC_MACHINERY')}
+                            className={`text-xs px-3 py-1.5 rounded transition ${
+                                selectedPresetKey === 'INDUSTRIAL_CNC_MACHINERY'
+                                    ? 'bg-amber-500 text-slate-950 font-bold'
+                                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+                            }`}
+                        >
+                            CNC MACHINERY (DAP RISK DEMO)
+                        </button>
+                    </div>
+                    <div className="text-[11px] text-slate-400">
+                        Governing TR: <span className="text-cyan-300">{governingTR}</span>
+                    </div>
                 </div>
-                <div className="text-[11px] text-slate-400">
-                    Governing TR: <span className="text-cyan-300">{governingTR}</span>
+
+                {/* Conformity Assessment Body (CAB) Selector Strip */}
+                <div className="pt-2 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                        <label className="text-xs text-slate-400">ACCREDITED CAB / NOTIFIED BODY:</label>
+                        <select
+                            value={selectedCabId}
+                            onChange={(e) => setSelectedCabId(e.target.value)}
+                            className="bg-slate-950 border border-slate-700 text-cyan-300 px-2.5 py-1 rounded text-xs font-mono focus:outline-none focus:border-cyan-400"
+                        >
+                            {ACCREDITED_CABS.map(cab => (
+                                <option key={cab.id} value={cab.id}>
+                                    {cab.name} ({cab.accreditationCode})
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                        CAB Scope: <span className="text-slate-300">{currentCab.scopeCoverage}</span>
+                    </div>
                 </div>
             </div>
 
