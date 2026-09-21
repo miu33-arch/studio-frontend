@@ -1,3 +1,6 @@
+export const STATUTORY_PRE_CLEARANCE_DISCLAIMER =
+  "PRE-SUBMISSION VERIFICATION ONLY: This digital report is an automated technical audit and does not constitute an official statutory certificate (PCoC/SCoC) or customs release. Legal certification and port clearance remain subject to accredited CAB approval and licensed customs brokerage on official government portals (SABER/Fasah).";
+
 export const REGEX_PATTERNS = {
   HS_CODE: /^\d{4}\.\d{2}(\.\d{2})?$/,
   TAX_ID_KSA: /^3\d{13}3$/,

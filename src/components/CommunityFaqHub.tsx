@@ -4,6 +4,10 @@ import React, { useState } from "react";
 
 const FAQ_ITEMS = [
   {
+    q: "Does the platform issue sealed statutory certificates or clear cargo at the port?",
+    a: "No. MIU_33 functions strictly as a digital pre-clearance auditing engine. It validates HS codes, SASO/ASTM technical standards, and ZATCA Phase-2 invoice schemas before formal submission. Physical port release and official sealed certificates (PCoC/SCoC) are issued by accredited CABs and licensed customs brokers through SABER and Fasah.",
+  },
+  {
     q: "How does MIU_33 automate SASO 2831 and ASTM standard parity?",
     a: "The core ingests raw Chinese factory BOMs (GB/T standards) and programmatically cross-references alloy specifications against Saudi SASO and American ASTM standards, generating dual-language municipal submittals in under 5 seconds."
   },
@@ -18,7 +22,7 @@ const FAQ_ITEMS = [
   {
     q: "What generative discovery protocols does this platform deploy?",
     a: "We deploy edge-rendered /llms.txt manifests, Schema.org JSON-LD entities (SoftwareApplication, FAQPage, Organization), and optimized edge headers (HSTS, CSP) to secure sub-50ms citation across ChatGPT Search, Claude, and Perplexity."
-  }
+  },
 ];
 
 export default function CommunityFaqHub() {
@@ -51,7 +55,7 @@ export default function CommunityFaqHub() {
 
   return (
     <section style={{ border: "1px solid #142838", backgroundColor: "#061017", padding: "24px", marginTop: "30px" }}>
-      
+
       {/* 1. Injected AEO Schema for Generative Discovery */}
       <script
         type="application/ld+json"
@@ -59,7 +63,7 @@ export default function CommunityFaqHub() {
       />
 
       <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "30px" }}>
-        
+
         {/* LEFT: AEO Structured Q&A Accordion */}
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", borderBottom: "1px solid #142838", paddingBottom: "8px" }}>

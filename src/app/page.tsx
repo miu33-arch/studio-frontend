@@ -922,7 +922,7 @@ export default function SovereignCorePage() {
               color: isSettled ? "#00ff66" : "#ffaa00",
               backgroundColor: isSettled ? "#041a0d" : "#201400"
             }}>
-              {isSettled ? "✓ OFFICIAL REGULATORY SEAL LICENSED" : "● TRIAL MODE // WATERMARKED DRAFT"}
+              {isSettled ? "✓ SCHEMA PRE-CLEARANCE VERIFIED" : "● TRIAL MODE // WATERMARKED DRAFT"}
             </span>
 
             {clientBalance && (
@@ -3142,15 +3142,22 @@ export default function SovereignCorePage() {
         <CommunityFaqHub />
       </div>
       <div className="no-print mt-12">
-        {/* Sovereign Enterprise Compliance Footer */}
-        <footer className="border-t border-zinc-900 pt-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-[0.7rem] text-zinc-500 font-mono">
-          <div className="max-w-3xl leading-relaxed">
-            <span className="text-zinc-400 font-bold">SOVEREIGN AEC &amp; TRADE CORE:</span> Technical staging engine for engineering coordination and customs pre-clearance under KSA municipal and trade frameworks.
+       {/* Sovereign Enterprise Compliance Footer */}
+        <footer className="border-t border-zinc-900 pt-5 pb-6 flex flex-col sm:flex-row justify-between items-start gap-4 text-[0.7rem] text-zinc-500 font-mono">
+          <div className="max-w-3xl leading-relaxed space-y-1.5">
+            <div>
+              <span className="text-zinc-300 font-bold">SOVEREIGN AEC &amp; TRADE CORE:</span>{" "}
+              Technical staging engine for engineering coordination and digital pre-clearance auditing under KSA municipal and trade frameworks.
+            </div>
+            <div className="text-[0.62rem] text-zinc-600 leading-normal border-l border-zinc-800 pl-2">
+              <span className="text-zinc-500 font-semibold">STATUTORY SCOPE:</span> Digital document verification and schema validation tool only. Not an accredited Conformity Assessment Body (CAB), government portal, or licensed customs broker. Official certification (PCoC/SCoC) and port customs release require statutory submission via SABER and Fasah.
+            </div>
           </div>
-          <div className="text-left sm:text-right text-zinc-600 shrink-0">
+
+          <div className="text-left sm:text-right text-zinc-600 shrink-0 self-start sm:self-auto">
             <div>SOVEREIGN AIR-GAPPED CORE // 2026</div>
             <div className={isSettled ? "text-emerald-400 font-semibold" : "text-cyan-400 font-semibold"}>
-              ● {isSettled ? "LICENSED FOR OFFICIAL FILING" : "TRIAL PREVIEW MODE"}
+              ● {isSettled ? "STAGED FOR STATUTORY SUBMISSION" : "TECHNICAL PREVIEW MODE"}
             </div>
           </div>
         </footer>

@@ -1,5 +1,10 @@
 import React, { useState } from "react";
-import { validateAndSanitizePayload, ValidationReport, RawLineItem } from "../utils/validationSchema";
+import { 
+  validateAndSanitizePayload, 
+  ValidationReport, 
+  RawLineItem,
+  STATUTORY_PRE_CLEARANCE_DISCLAIMER 
+} from "../utils/validationSchema";
 
 export function TerminalIngestModal({ onCommitPayload }: { onCommitPayload: (cleanItems: any[]) => void }) {
   const [rawText, setRawText] = useState("");
@@ -44,8 +49,13 @@ export function TerminalIngestModal({ onCommitPayload }: { onCommitPayload: (cle
 
   return (
     <div style={{ backgroundColor: "#050807", border: "1px solid #1a2e26", padding: "16px", fontFamily: "monospace", color: "#c2e0d0" }}>
-      <div style={{ fontSize: "0.75rem", color: "#00e5ff", fontWeight: "bold", marginBottom: "8px" }}>
-        &gt; RAW DATA INGESTION // CLIENT_SIDE_SANDBOX
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+        <span style={{ fontSize: "0.75rem", color: "#00e5ff", fontWeight: "bold" }}>
+          &gt; RAW DATA INGESTION // CLIENT_SIDE_SANDBOX
+        </span>
+        <span style={{ fontSize: "0.6rem", color: "#44554c", textTransform: "uppercase" }}>
+          PRE-SUBMISSION AUDITOR
+        </span>
       </div>
 
       <div style={{ marginBottom: "10px" }}>
@@ -83,6 +93,20 @@ export function TerminalIngestModal({ onCommitPayload }: { onCommitPayload: (cle
               ✓ SCHEMA VALIDATION PASSED: {report.sanitizedItems.length} items staged. Zero layout faults predicted.
             </div>
           )}
+
+          {/* Statutory Scope & Regulatory Disclaimer Callout */}
+          <div style={{
+            marginTop: "8px",
+            padding: "8px",
+            borderLeft: "2px solid #00e5ff",
+            backgroundColor: "rgba(0, 229, 255, 0.03)",
+            color: "#6b8b80",
+            fontSize: "0.62rem",
+            lineHeight: 1.4
+          }}>
+            <span style={{ color: "#00e5ff", fontWeight: "bold" }}>[STATUTORY BOUNDARY]: </span>
+            {STATUTORY_PRE_CLEARANCE_DISCLAIMER}
+          </div>
         </div>
       )}
 
@@ -106,6 +130,10 @@ export function TerminalIngestModal({ onCommitPayload }: { onCommitPayload: (cle
       >
         {report?.isValid ? "⚡ STAGE CLEAN PAYLOAD FOR ENGINE" : "🔒 RESOLVE ERRORS TO UNLOCK STAGING"}
       </button>
+
+      <div style={{ marginTop: "6px", textAlign: "center", fontSize: "0.58rem", color: "#44554c" }}>
+        NOT A CUSTOMS BROKERAGE OR LICENSED CAB • DATA PREPARATION ONLY
+      </div>
     </div>
   );
 }
