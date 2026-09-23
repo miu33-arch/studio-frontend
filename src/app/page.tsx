@@ -873,7 +873,65 @@ export default function SovereignCorePage() {
   };
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#04070a", color: "#00f3ff", fontFamily: "monospace", padding: "30px 40px" }}>
+{/* Print-Ready Media Overrides for Official Dossier PDF */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          /* 1. Force crisp white background & pure black text */
+          html, body, div, main, section {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            box-shadow: none !important;
+          }
 
+          /* 2. Strip interactive elements and UI headers */
+          header, button, .no-print, input, select {
+            display: none !important;
+          }
+
+          /* 3. Expand tables & containers across A4 pages */
+          main {
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            display: block !important;
+          }
+
+          section {
+            border: 1px solid #111111 !important;
+            margin-bottom: 20px !important;
+            page-break-inside: avoid !important;
+            display: block !important;
+          }
+
+          table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            display: table !important;
+          }
+
+          thead {
+            display: table-header-group !important;
+          }
+
+          tr {
+            page-break-inside: avoid !important;
+            border-bottom: 1px solid #cccccc !important;
+            display: table-row !important;
+          }
+
+          th, td {
+            color: #000000 !important;
+            border: 1px solid #dddddd !important;
+            padding: 6px 8px !important;
+            display: table-cell !important;
+          }
+
+          /* 4. Keep labels and data figures sharp */
+          span, strong, div {
+            color: #000000 !important;
+          }
+        }
+      `}} />
       {/* Header Bar */}
       <header style={{ borderBottom: "1px solid #142838", paddingBottom: "20px", marginBottom: "30px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
