@@ -332,7 +332,7 @@ export default function SovereignCorePage() {
   // Settlement & Paywall Gate State
   const [showSettlementModal, setShowSettlementModal] = useState(false);
   const [settlementRef, setSettlementRef] = useState("");
-  const [isSettled, setIsSettled] = useState(true);
+  const [isSettled, setIsSettled] = useState(false);
   const [clearanceStatus, setClearanceStatus] = useState<"IDLE" | "VERIFIED" | "FAILED">("IDLE");
   const [pendingAction, setPendingAction] = useState<"spec" | "dossier" | "remediation" | null>(null);
   // Master Key Persistence & URL Token Gate
