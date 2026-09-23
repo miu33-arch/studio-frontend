@@ -604,10 +604,21 @@ export default function SovereignCorePage() {
         if (content.startsWith("{") || content.startsWith("[")) {
           const parsed = JSON.parse(content);
           if (parsed.documentTitle) setStagedDocTitle(parsed.documentTitle);
-          if (Array.isArray(parsed.items)) {
-            setStagedItems(parsed.items);
+        // 1. Full pipeline manifest payload
+          if (parsed.items && Array.isArray(parsed.items)) {
+            setPipeline(parsed);
+            setStagedItems(parsed.items.map((it: any) => ({
+              code: it.itemNo || it.code || "CW-01",
+              name: it.description || it.name || "Curtain Wall Component",
+              details: it.materialGrade || it.details || "6063-T6",
+              material: it.materialGrade || it.material || "Aluminum Alloy",
+              standard: it.sasoStandard || it.standard || "SASO 2831 / ASTM B221"
+            })));
+            if (parsed.projectCode) setProjectCode(parsed.projectCode);
             return;
-          } else if (Array.isArray(parsed)) {
+          }
+
+          if (Array.isArray(parsed)) {
             setStagedItems(parsed);
             return;
           }

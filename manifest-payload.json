@@ -1,0 +1,394 @@
+{
+  "projectCode": "MOMRAH-RYD-2026-04",
+  "manifestHash": "be81e0811eb1358e7a3442ea12136ee0",
+  "logistics": {
+    "vesselName": "COSCO SHIPPING // V.2604W",
+    "billOfLading": "BOL-1789023185558-CN-KSA",
+    "containerNumber": "CSNU-789421-0",
+    "portOfOrigin": "Guangzhou / Nansha Port",
+    "portOfDestination": "Jeddah Islamic Port"
+  },
+  "items": [
+    {
+      "itemNo": "CW-001",
+      "description": "Architectural Aluminum Main Mullion Profile (3.0mm Wall)",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-002",
+      "description": "Architectural Aluminum Transom Profile (2.5mm Wall)",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-003",
+      "description": "Anodized Aluminum Facade Fin Extrusion",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-004",
+      "description": "Interlocking Structural Mullion Joint Member",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-005",
+      "description": "Perimeter Pressure Plate Extruded Profile",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-006",
+      "description": "Snap-On Exterior Aluminum Face Cap",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-007",
+      "description": "Heavy Duty Corner Column Extrusion",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-008",
+      "description": "Thermal-Break Separation Sub-Frame Bar",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-009",
+      "description": "Horizontal Expansion Joint Framing Bar",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-010",
+      "description": "Glazing Pocket Retaining Channel Profile",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-011",
+      "description": "Intermediate Structural Transom Member",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-012",
+      "description": "Base Anchor Connecting Sleeve Profile",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-013",
+      "description": "Upper Floor Deflection Track Profile",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-014",
+      "description": "Parapet Flashing Interface Angle Member",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-015",
+      "description": "Sill Drainage Weep-Hole Carrier Bar",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-016",
+      "description": "Architectural Louver Frame Profile",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-017",
+      "description": "Aerodynamic Louver Blade Extrusion",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-018",
+      "description": "Spandrel Retaining Backer Profile",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-019",
+      "description": "Structural Silicone Glazing Adaptor Strip",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-020",
+      "description": "Thermal Gasket Retention Spline Bar",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-021",
+      "description": "Shadow Box Perimeter Framing Bar",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-022",
+      "description": "Internal Drainage Condensation Gutter Member",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-023",
+      "description": "Stack Joint Heavy Reinforcement Spigot",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-024",
+      "description": "External Decorative Solar Fin Profile",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-025",
+      "description": "Curtain Wall Closure Trim Angle",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-026",
+      "description": "Corner Post 90-Degree Exterior Spline",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-027",
+      "description": "Glazing Stop Extrusion with Neoprene Groove",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-028",
+      "description": "Top Header Anchor Extension Bar",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-029",
+      "description": "Mullion Reinforcement Splice Plate Bar",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-030",
+      "description": "Perimeter Acoustic Infill Support Channel",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-031",
+      "description": "Vertical Expansion Joint Splice Member",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-032",
+      "description": "Exterior Cladding Anchorage Bracket Bar",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-033",
+      "description": "Soffit Return Aluminum Closure Member",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-034",
+      "description": "Glazing Block Support Profile Bar",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-035",
+      "description": "Fascia Panel Hook-On Extruded Profile",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-036",
+      "description": "Continuous Fire-Stop Retaining Angle",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-037",
+      "description": "Smoke Seal Edge Containment Channel",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-038",
+      "description": "Insulated Panel Back-Pan Frame Profile",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-039",
+      "description": "Interior Finish Trim Extruded Member",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-040",
+      "description": "Window Sill Sub-Frame Water Deflector",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-041",
+      "description": "Exterior Bullnose Architectural Feature Fin",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-042",
+      "description": "Structural Transom End Dam Retainer",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-043",
+      "description": "Concealed Operable Vent Outer Frame",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-044",
+      "description": "Concealed Operable Vent Inner Sash Bar",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    },
+    {
+      "itemNo": "CW-045",
+      "description": "Heavy Mullion Base Splice & Anchor Key",
+      "materialGrade": "6063-T6 Aluminum Alloy",
+      "hsCode": "7604.29.00",
+      "sasoStandard": "SASO 2831 / ASTM B221",
+      "totalFobUSD": 4500.00
+    }
+  ],
+  "fiscal": {
+    "subtotalFobUSD": 202500.00,
+    "freightUSD": 2400.00,
+    "insuranceUSD": 1012.50,
+    "totalCifSAR": 772171.88,
+    "customsDutySAR": 38608.59,
+    "zatcaVatSAR": 121617.07,
+    "grandTotalLandedSAR": 932397.54
+  },
+  "compliance": {
+    "saberRegulated": true,
+    "certRequired": "PCoC+SCoC",
+    "dutyDebited": false
+  },
+  "milestones": [
+    { "stage": "01", "name": "FACTORY DISPATCH & QC", "status": "COMPLETED", "node": "Guangzhou Factory Gate" },
+    { "stage": "02", "name": "PORT OF ORIGIN CLEARANCE", "status": "COMPLETED", "node": "Nansha Port" },
+    { "stage": "03", "name": "RED SEA MARITIME TRANSIT", "status": "IN_TRANSIT", "node": "Bab-el-Mandeb Lane" },
+    { "stage": "04", "name": "FASAH / ZATCA PORT CLEARANCE", "status": "PENDING", "node": "Jeddah Islamic Port" },
+    { "stage": "05", "name": "MOMRAH PROJECT SITE RECEIVAL", "status": "PENDING", "node": "Riyadh Zone 4" }
+  ]
+}
