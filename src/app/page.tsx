@@ -601,20 +601,23 @@ export default function SovereignCorePage() {
     reader.onload = (event) => {
       try {
         const content = (event.target?.result as string).trim();
+
+        // 1. JSON Parser Branch
         if (content.startsWith("{") || content.startsWith("[")) {
           const parsed = JSON.parse(content);
           if (parsed.documentTitle) setStagedDocTitle(parsed.documentTitle);
-        // 1. Full pipeline manifest payload
+
+          // Full pipeline manifest payload
           if (parsed.items && Array.isArray(parsed.items)) {
             setPipeline(parsed);
-            setStagedItems(parsed.items.map((it: any) => ({
-              code: it.itemNo || it.code || "CW-01",
+            if (parsed.projectCode) setProjectCode(parsed.projectCode);
+            setStagedItems(parsed.items.map((it: any, idx: number) => ({
+              code: it.itemNo || it.code || `CW-${String(idx + 1).padStart(3, "0")}`,
               name: it.description || it.name || "Curtain Wall Component",
               details: it.materialGrade || it.details || "6063-T6",
               material: it.materialGrade || it.material || "Aluminum Alloy",
               standard: it.sasoStandard || it.standard || "SASO 2831 / ASTM B221"
             })));
-            if (parsed.projectCode) setProjectCode(parsed.projectCode);
             return;
           }
 
@@ -622,8 +625,10 @@ export default function SovereignCorePage() {
             setStagedItems(parsed);
             return;
           }
+          return;
         }
 
+        // 2. CSV / Plain Text Fallback Branch
         const lines = content.split("\n").map((l) => l.trim()).filter(Boolean);
         if (lines.length > 0) {
           const firstLine = lines[0].toLowerCase();
@@ -633,7 +638,7 @@ export default function SovereignCorePage() {
           const parsedCsv: StagedBomItem[] = dataLines.map((line, idx) => {
             const parts = line.split(/[,;\t]/);
             return {
-              code: parts[0]?.trim() || `ITM-0${idx + 1}`,
+              code: parts[0]?.trim() || `ITM-${String(idx + 1).padStart(3, "0")}`,
               name: parts[1]?.trim() || `Imported Item ${idx + 1}`,
               details: parts[2]?.trim() || "",
               material: parts[3]?.trim() || "",
@@ -646,13 +651,13 @@ export default function SovereignCorePage() {
             setStagedDocTitle(file.name.replace(/\.[^/.]+$/, "") + " (Imported BOM)");
           }
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("File parse error:", err);
+        setError(`Manifest Parse Error: ${err.message}`);
       }
     };
     reader.readAsText(file);
   };
-
   // --- Edge Auditor Actions ---
   const handleRunAudit = async () => {
     setIsAuditing(true);
