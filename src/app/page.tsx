@@ -873,8 +873,9 @@ export default function SovereignCorePage() {
   };
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#04070a", color: "#00f3ff", fontFamily: "monospace", padding: "30px 40px" }}>
-{/* Print-Ready Media Overrides for Official Dossier PDF */}
-      <style dangerouslySetInnerHTML={{ __html: `
+      {/* Print-Ready Media Overrides for Official Dossier PDF */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @media print {
           /* 1. Force crisp white background & pure black text */
           html, body, div, main, section {
@@ -1321,7 +1322,91 @@ export default function SovereignCorePage() {
             <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
               <button
                 type="button"
-                onClick={() => window.print()}
+                onClick={() => {
+                  if (!pipeline?.items || pipeline.items.length === 0) {
+                    alert("Please load or ingest a manifest first.");
+                    return;
+                  }
+
+                  const printWin = window.open("", "_blank");
+                  if (!printWin) {
+                    alert("Please allow popups to generate the PDF dossier.");
+                    return;
+                  }
+
+                  const rowsHtml = pipeline.items.map((itm: any) => `
+      <tr>
+        <td style="padding: 6px 8px; border: 1px solid #ccc; font-weight: bold;">${itm.itemNo}</td>
+        <td style="padding: 6px 8px; border: 1px solid #ccc;">${itm.description}</td>
+        <td style="padding: 6px 8px; border: 1px solid #ccc;">${itm.materialGrade || ""}</td>
+        <td style="padding: 6px 8px; border: 1px solid #ccc; color: #006622; font-weight: bold;">${itm.hsCode}</td>
+        <td style="padding: 6px 8px; border: 1px solid #ccc;">${itm.sasoStandard}</td>
+        <td style="padding: 6px 8px; border: 1px solid #ccc; text-align: right;">$${(itm.totalFobUSD || 0).toFixed(2)}</td>
+      </tr>
+    `).join("");
+
+                  const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>MUNICIPAL_CUSTOMS_DOSSIER_${projectCode}</title>
+        <style>
+          @page { size: A4 portrait; margin: 12mm; }
+          body { font-family: monospace; color: #111; margin: 0; padding: 10px; }
+          .header { border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 14px; }
+          .title { font-size: 14px; font-weight: bold; }
+          .sub { font-size: 9px; color: #555; margin-top: 3px; }
+          table { width: 100%; border-collapse: collapse; font-size: 9px; margin-bottom: 16px; }
+          th { background: #f0f0f0; border: 1px solid #999; padding: 6px 8px; text-align: left; }
+          .fiscal-box { border: 1px solid #000; padding: 12px; margin-top: 10px; font-size: 10px; }
+          .fiscal-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+          .total { border-top: 1px solid #000; padding-top: 6px; font-size: 12px; font-weight: bold; margin-top: 6px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="title">MIU_33 // SOVEREIGN CUSTOMS CLEARANCE & SASO DOSSIER</div>
+          <div class="sub">PROJECT CODE: ${projectCode} &bull; MANIFEST HASH: ${pipeline.manifestHash || "VERIFIED"}</div>
+          <div class="sub">JURISDICTION: KINGDOM OF SAUDI ARABIA &bull; PORT: JEDDAH ISLAMIC PORT / FASAH</div>
+        </div>
+
+        <div style="font-weight: bold; font-size: 10px; margin-bottom: 6px;">1. HARMONIZED TARIFF & SASO CONFORMITY MAPPING</div>
+        <table>
+          <thead>
+            <tr>
+              <th>ITEM NO</th>
+              <th>DESCRIPTION</th>
+              <th>MATERIAL SPEC</th>
+              <th>HS CODE</th>
+              <th>SASO / ASTM STANDARD</th>
+              <th style="text-align: right;">FOB (USD)</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+
+        <div class="fiscal-box">
+          <div style="font-weight: bold; margin-bottom: 8px;">2. REGIONAL COMPLIANCE & FISCAL COMPUTATION (ZATCA PHASE-2)</div>
+          <div class="fiscal-row"><span>SUBTOTAL FOB (ORIGIN):</span><span>$${(pipeline.fiscal?.subtotalFobUSD || 0).toFixed(2)} USD</span></div>
+          <div class="fiscal-row"><span>OCEAN FREIGHT & INSURANCE:</span><span>$${((pipeline.fiscal?.freightUSD || 0) + (pipeline.fiscal?.insuranceUSD || 0)).toFixed(2)} USD</span></div>
+          <div class="fiscal-row"><span>TOTAL CIF JEDDAH:</span><span>${(pipeline.fiscal?.totalCifSAR || 0).toFixed(2)} SAR</span></div>
+          <div class="fiscal-row"><span>5% GCC UNIFIED CUSTOMS DUTY:</span><span>${(pipeline.fiscal?.customsDutySAR || 0).toFixed(2)} SAR</span></div>
+          <div class="fiscal-row"><span>15% ZATCA STATUTORY VAT:</span><span>${(pipeline.fiscal?.zatcaVatSAR || 0).toFixed(2)} SAR</span></div>
+          <div class="fiscal-row total"><span>ESTIMATED TOTAL LANDED (SAR):</span><span>${(pipeline.fiscal?.grandTotalLandedSAR || 0).toFixed(2)} SAR</span></div>
+        </div>
+      </body>
+      </html>
+    `;
+
+                  printWin.document.open();
+                  printWin.document.write(htmlContent);
+                  printWin.document.close();
+
+                  setTimeout(() => {
+                    printWin.focus();
+                    printWin.print();
+                  }, 400);
+                }}
                 style={{
                   backgroundColor: "#061824",
                   color: "#00f3ff",
@@ -3200,7 +3285,7 @@ export default function SovereignCorePage() {
         <CommunityFaqHub />
       </div>
       <div className="no-print mt-12">
-       {/* Sovereign Enterprise Compliance Footer */}
+        {/* Sovereign Enterprise Compliance Footer */}
         <footer className="border-t border-zinc-900 pt-5 pb-6 flex flex-col sm:flex-row justify-between items-start gap-4 text-[0.7rem] text-zinc-500 font-mono">
           <div className="max-w-3xl leading-relaxed space-y-1.5">
             <div>
