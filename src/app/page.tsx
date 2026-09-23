@@ -333,7 +333,7 @@ export default function SovereignCorePage() {
   const [showSettlementModal, setShowSettlementModal] = useState(false);
   const [settlementRef, setSettlementRef] = useState("");
   const [isSettled, setIsSettled] = useState(true);
-  const [clearanceStatus, setClearanceStatus] = useState<"IDLE" | "VERIFIED" | "FAILED">("VERIFIED");
+  const [clearanceStatus, setClearanceStatus] = useState<"IDLE" | "VERIFIED" | "FAILED">("IDLE");
   const [pendingAction, setPendingAction] = useState<"spec" | "dossier" | "remediation" | null>(null);
   // Master Key Persistence & URL Token Gate
   useEffect(() => {
@@ -1137,8 +1137,7 @@ export default function SovereignCorePage() {
           ERROR: {error}
         </div>
       )}
-
-      {/* ========================================================================= */}
+{/* ========================================================================= */}
       {/* TAB 0: UNIFIED CROSS-BORDER TRANSPORT & CUSTOMS CLEARANCE PIPELINE        */}
       {/* ========================================================================= */}
       {activeTab === "pipeline" && (
@@ -1634,6 +1633,25 @@ export default function SovereignCorePage() {
             justify-content: space-between;
             page-break-inside: avoid;
           }
+          ${!isSettled ? `
+          body::before {
+            content: "UNLICENSED TRIAL DRAFT // SETTLEMENT PENDING";
+            position: fixed;
+            top: 42%;
+            left: 5%;
+            width: 90%;
+            text-align: center;
+            transform: rotate(-35deg);
+            font-size: 26pt;
+            font-weight: 800;
+            color: rgba(220, 38, 38, 0.16);
+            border: 4px dashed rgba(220, 38, 38, 0.25);
+            padding: 16px 20px;
+            z-index: 9999;
+            pointer-events: none;
+            letter-spacing: 2px;
+          }
+          ` : ""}
         </style>
       </head>
       <body>
@@ -1803,7 +1821,6 @@ export default function SovereignCorePage() {
 
         </main>
       )}
-
       {/* ========================================================================= */}
       {/* TAB 1: DUAL-TRACK MULTI-VERTICAL INGESTION CONSOLE (AEC + FMCG)          */}
       {/* ========================================================================= */}
