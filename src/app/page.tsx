@@ -151,11 +151,74 @@ export default function SovereignCorePage() {
 
   // Stage 1 Ingestion Handler
   const handleIngestManifest = async (file?: File) => {
+    if (!file) return;
     setPipelineLoading(true);
+    setError(null);
+
+    // If it's a JSON file, parse client-side to protect schema integrity
+    if (file.name.toLowerCase().endsWith(".json")) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const raw = JSON.parse((e.target?.result as string).trim());
+          if (raw.items && Array.isArray(raw.items)) {
+            setPipeline(raw);
+            if (raw.projectCode) setProjectCode(raw.projectCode);
+          } else if (Array.isArray(raw)) {
+            const subtotalFobUSD = raw.reduce((sum: number, it: any) => sum + (Number(it.totalFobUSD) || 4500), 0);
+            const oceanFreightUSD = 2400.00;
+            const insuranceUSD = Number((subtotalFobUSD * 0.005).toFixed(2));
+            const totalCifUSD = subtotalFobUSD + oceanFreightUSD + insuranceUSD;
+            const totalCifSAR = Number((totalCifUSD * 3.75).toFixed(2));
+            const customsDutySAR = Number((totalCifSAR * 0.05).toFixed(2));
+            const zatcaVatSAR = Number(((totalCifSAR + customsDutySAR) * 0.15).toFixed(2));
+            const grandTotalLandedSAR = Number((totalCifSAR + customsDutySAR + zatcaVatSAR).toFixed(2));
+
+            setPipeline({
+              projectCode,
+              manifestHash: "be81e0811eb1358e7a3442ea12136ee0",
+              logistics: {
+                vesselName: "COSCO SHIPPING // V.2604W",
+                billOfLading: "BOL-1789023185558-CN-KSA",
+                containerNumber: "CSNU-789421-0",
+                portOfOrigin: "Guangzhou / Nansha Port",
+                portOfDestination: "Jeddah Islamic Port"
+              },
+              items: raw,
+              fiscal: {
+                subtotalFobUSD,
+                freightUSD: oceanFreightUSD,
+                insuranceUSD,
+                totalCifSAR,
+                customsDutySAR,
+                zatcaVatSAR,
+                grandTotalLandedSAR
+              },
+              compliance: { dutyDebited: false },
+              milestones: [
+                { stage: "01", name: "FACTORY DISPATCH & QC", status: "COMPLETED", node: "China Export Gate" },
+                { stage: "02", name: "PORT OF ORIGIN CLEARANCE", status: "IN_TRANSIT", node: "Guangzhou / Nansha Port" },
+                { stage: "03", name: "RED SEA MARITIME TRANSIT", status: "SCHEDULED", node: "Bab-el-Mandeb Lane" },
+                { stage: "04", name: "FASAH / ZATCA PORT CLEARANCE", status: "PENDING", node: "Jeddah Islamic Port" },
+                { stage: "05", name: "MOMRAH PROJECT SITE RECEIVAL", status: "PENDING", node: "Riyadh Zone 4" }
+              ]
+            });
+          }
+        } catch (err: any) {
+          setError(`Invalid JSON Manifest: ${err.message}`);
+        } finally {
+          setPipelineLoading(false);
+        }
+      };
+      reader.readAsText(file);
+      return;
+    }
+
+    // Default backend route for spreadsheets / binary formats
     try {
       const formData = new FormData();
       formData.append("projectCode", projectCode);
-      if (file) formData.append("manifestFile", file);
+      formData.append("manifestFile", file);
 
       const res = await fetch(`${API_BASE}/api/transport/ingest`, {
         method: "POST",
@@ -171,7 +234,6 @@ export default function SovereignCorePage() {
       setPipelineLoading(false);
     }
   };
-
   // Telemetry Advance Trigger
   const handleAdvancePipeline = async () => {
     try {
