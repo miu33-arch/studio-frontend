@@ -1411,18 +1411,40 @@ export default function SovereignCorePage() {
                     alert("Please allow popups to generate the PDF dossier.");
                     return;
                   }
+const cleanItems = (pipeline.items || []).filter((itm: any) => {
+                    const code = String(itm.itemNo || itm.code || "").trim();
+                    return code.startsWith("CW-") || code.startsWith("GL-") || code.startsWith("ITM-");
+                  });
 
-                  const rowsHtml = pipeline.items.map((itm: any) => `
-      <tr>
-        <td style="padding: 6px 8px; border: 1px solid #ccc; font-weight: bold;">${itm.itemNo}</td>
-        <td style="padding: 6px 8px; border: 1px solid #ccc;">${itm.description}</td>
-        <td style="padding: 6px 8px; border: 1px solid #ccc;">${itm.materialGrade || ""}</td>
-        <td style="padding: 6px 8px; border: 1px solid #ccc; color: #006622; font-weight: bold;">${itm.hsCode}</td>
-        <td style="padding: 6px 8px; border: 1px solid #ccc;">${itm.sasoStandard}</td>
-        <td style="padding: 6px 8px; border: 1px solid #ccc; text-align: right;">$${(itm.totalFobUSD || 0).toFixed(2)}</td>
-      </tr>
-    `).join("");
+                  const itemsToRender = cleanItems.length > 0 ? cleanItems : (stagedItems.length > 0 ? stagedItems.map((s, idx) => ({
+                    itemNo: s.code || `CW-${String(idx + 1).padStart(3, "0")}`,
+                    description: s.name || "Architectural Extrusion",
+                    materialGrade: s.material || "6063-T6 Aluminum Alloy",
+                    hsCode: "7604.29.00",
+                    sasoStandard: s.standard || "SASO 2831 / ASTM B221",
+                    totalFobUSD: 4500.00
+                  })) : pipeline.items);
 
+                  const subtotalUSD = itemsToRender.reduce((acc: number, it: any) => acc + (Number(it.totalFobUSD) || 4500), 0);
+                  const freightUSD = 2400.00;
+                  const insuranceUSD = Number((subtotalUSD * 0.005).toFixed(2));
+                  const cifUSD = subtotalUSD + freightUSD + insuranceUSD;
+                  const cifSAR = Number((cifUSD * 3.75).toFixed(2));
+                  const dutySAR = Number((cifSAR * 0.05).toFixed(2));
+                  const vatSAR = Number(((cifSAR + dutySAR) * 0.15).toFixed(2));
+                  const landedSAR = Number((cifSAR + dutySAR + vatSAR).toFixed(2));
+
+                  const rowsHtml = itemsToRender.map((itm: any) => `
+                    <tr>
+                      <td style="padding: 6px 8px; border: 1px solid #ccc; font-weight: bold;">${itm.itemNo || itm.code}</td>
+                      <td style="padding: 6px 8px; border: 1px solid #ccc;">${itm.description || itm.name}</td>
+                      <td style="padding: 6px 8px; border: 1px solid #ccc;">${itm.materialGrade || itm.material || "6063-T6 Aluminum Alloy"}</td>
+                      <td style="padding: 6px 8px; border: 1px solid #ccc; color: #006622; font-weight: bold;">${itm.hsCode || "7604.29.00"}</td>
+                      <td style="padding: 6px 8px; border: 1px solid #ccc;">${itm.sasoStandard || itm.standard || "SASO 2831 / ASTM B221"}</td>
+                      <td style="padding: 6px 8px; border: 1px solid #ccc; text-align: right;">$${(itm.totalFobUSD || 4500).toFixed(2)}</td>
+                    </tr>
+                  `).join("");
+              
                   const htmlContent = `
       <!DOCTYPE html>
       <html>
@@ -1463,14 +1485,14 @@ export default function SovereignCorePage() {
           <tbody>${rowsHtml}</tbody>
         </table>
 
-        <div class="fiscal-box">
+       <div class="fiscal-box">
           <div style="font-weight: bold; margin-bottom: 8px;">2. REGIONAL COMPLIANCE & FISCAL COMPUTATION (ZATCA PHASE-2)</div>
-          <div class="fiscal-row"><span>SUBTOTAL FOB (ORIGIN):</span><span>$${(pipeline.fiscal?.subtotalFobUSD || 0).toFixed(2)} USD</span></div>
-          <div class="fiscal-row"><span>OCEAN FREIGHT & INSURANCE:</span><span>$${((pipeline.fiscal?.freightUSD || 0) + (pipeline.fiscal?.insuranceUSD || 0)).toFixed(2)} USD</span></div>
-          <div class="fiscal-row"><span>TOTAL CIF JEDDAH:</span><span>${(pipeline.fiscal?.totalCifSAR || 0).toFixed(2)} SAR</span></div>
-          <div class="fiscal-row"><span>5% GCC UNIFIED CUSTOMS DUTY:</span><span>${(pipeline.fiscal?.customsDutySAR || 0).toFixed(2)} SAR</span></div>
-          <div class="fiscal-row"><span>15% ZATCA STATUTORY VAT:</span><span>${(pipeline.fiscal?.zatcaVatSAR || 0).toFixed(2)} SAR</span></div>
-          <div class="fiscal-row total"><span>ESTIMATED TOTAL LANDED (SAR):</span><span>${(pipeline.fiscal?.grandTotalLandedSAR || 0).toFixed(2)} SAR</span></div>
+          <div class="fiscal-row"><span>SUBTOTAL FOB (ORIGIN):</span><span>$${subtotalUSD.toFixed(2)} USD</span></div>
+          <div class="fiscal-row"><span>OCEAN FREIGHT & INSURANCE:</span><span>$${(freightUSD + insuranceUSD).toFixed(2)} USD</span></div>
+          <div class="fiscal-row"><span>TOTAL CIF JEDDAH:</span><span>${cifSAR.toFixed(2)} SAR</span></div>
+          <div class="fiscal-row"><span>5% GCC UNIFIED CUSTOMS DUTY:</span><span>${dutySAR.toFixed(2)} SAR</span></div>
+          <div class="fiscal-row"><span>15% ZATCA STATUTORY VAT:</span><span>${vatSAR.toFixed(2)} SAR</span></div>
+          <div class="fiscal-row total"><span>ESTIMATED TOTAL LANDED (SAR):</span><span>${landedSAR.toFixed(2)} SAR</span></div>
         </div>
       </body>
       </html>
