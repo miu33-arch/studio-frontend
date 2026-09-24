@@ -9,6 +9,7 @@ import RemediationStudioModal from "@/components/RemediationStudioModal";
 import SaberComplianceAuditor from "@/components/SaberComplianceAuditor";
 import InspectionVault from "@/components/InspectionVault";
 import IndustrialBOMVault from '@/components/IndustrialBOMVault';
+import GeMiuAgentModal from "@/components/GeMiuAgentModal";
 
 const API_BASE =
   typeof window !== "undefined" &&
@@ -55,6 +56,7 @@ export default function SovereignCorePage() {
   }, []);
   const [projectCode, setProjectCode] = useState("MOMRAH-RYD-2026-04");
   const [isIngestModalOpen, setIsIngestModalOpen] = useState(false);
+  const [isGeMiuOpen, setIsGeMiuOpen] = useState(false);
   // Edge GEO / AEO Auditor State
   const [auditUrl, setAuditUrl] = useState("https://miu33archstudio.xyz");
   const [isAuditing, setIsAuditing] = useState(false);
@@ -1022,6 +1024,35 @@ export default function SovereignCorePage() {
           </div>
           <div style={{ display: "flex", gap: "15px", alignItems: "center", marginTop: "5px", flexWrap: "wrap" }}>
             <span style={{ fontSize: "0.8rem", color: "#00ff66" }}>● MOMRAH / SASO PIPELINE ONLINE</span>
+
+{/* Sovereign geMiu Local 6.64M Agent Trigger */}
+            <button
+              type="button"
+              onClick={() => setIsGeMiuOpen(true)}
+              style={{
+                fontSize: "0.72rem",
+                padding: "2px 8px",
+                borderRadius: "2px",
+                border: "1px solid #00f3ff",
+                color: "#00f3ff",
+                backgroundColor: "#04141d",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                cursor: "pointer",
+                fontFamily: "monospace",
+                boxShadow: "0 0 10px rgba(0, 243, 255, 0.15)"
+              }}
+            >
+              <span style={{
+                display: "inline-block",
+                width: "6px",
+                height: "6px",
+                borderRadius: "50%",
+                backgroundColor: "#00ff66"
+              }} />
+              <span>geMiu [6.64M] AGENT</span>
+            </button>
 
             {/* Edge Geo Telemetry Status Pill */}
             <span style={{
@@ -3887,6 +3918,10 @@ export default function SovereignCorePage() {
         onClose={() => setIsRemediationOpen(false)}
         targetDomain={auditUrl || "https://miu33archstudio.xyz"}
         brandName="Cross-Border Industrial Partner"
+      />
+      <GeMiuAgentModal
+        isOpen={isGeMiuOpen}
+        onClose={() => setIsGeMiuOpen(false)}
       />
     </div>
   );
