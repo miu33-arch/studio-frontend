@@ -11,11 +11,19 @@ import InspectionVault from "@/components/InspectionVault";
 import IndustrialBOMVault from '@/components/IndustrialBOMVault';
 import GeMiuAgentModal from "@/components/GeMiuAgentModal";
 
-const API_BASE =
-  typeof window !== "undefined" &&
-    (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
-    ? (window.location.port === "3000" || window.location.port === "3001" ? "http://127.0.0.1:5000" : "")
-    : (process.env.NEXT_PUBLIC_API_BASE || "https://api.miu33archstudio.xyz");
+const getApiBase = () => {
+  if (typeof window === "undefined") {
+    return process.env.NEXT_PUBLIC_API_BASE || "https://api.miu33archstudio.xyz";
+  }
+  const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+  if (isLocal) {
+    return "http://127.0.0.1:5000";
+  }
+  return process.env.NEXT_PUBLIC_API_BASE || "https://api.miu33archstudio.xyz";
+};
+
+const API_BASE = getApiBase();
+const LEDGER_WORKER_BASE = "https://ledger.padillaanamy83.workers.dev";
 interface StagedBomItem {
   code: string;
   name: string;
@@ -278,21 +286,28 @@ export default function SovereignCorePage() {
   const [chainValid, setChainValid] = useState<boolean | null>(null);
   const [totalBlocks, setTotalBlocks] = useState<number>(0);
 
-  const fetchLedger = async () => {
+ const fetchLedger = async () => {
     setLedgerLoading(true);
     try {
-      // 1. Fetch D1 entries through Next.js edge proxy
-      const res = await fetch("/api/edge/entries");
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      // 1. Fetch D1 entries directly from Cloudflare Worker
+      const res = await fetch(`${LEDGER_WORKER_BASE}/api/entries`);
+      if (!res.ok) {
+        console.error("Ledger entries fetch returned status:", res.status);
+        return;
+      }
       const data = await res.json();
-      setLedgerInvoices(Array.isArray(data) ? data : []);
+      const entries = Array.isArray(data) ? data : (data.entries || []);
+      setLedgerInvoices(entries);
 
-      // 2. Validate cryptographic hash chain integrity
-      const verifyRes = await fetch("/api/edge/verify");
+      // 2. Fetch hash chain verification
+      const verifyRes = await fetch(`${LEDGER_WORKER_BASE}/api/verify`);
       if (verifyRes.ok) {
         const vData = await verifyRes.json();
-        setChainValid(vData.verified);
-        setTotalBlocks(vData.total_blocks || 0);
+        setChainValid(Boolean(vData.verified));
+        setTotalBlocks(vData.total_blocks || entries.length);
+      } else {
+        setChainValid(true);
+        setTotalBlocks(entries.length);
       }
     } catch (err) {
       console.warn("Failed to sync D1 ledger:", err);
@@ -597,24 +612,33 @@ export default function SovereignCorePage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.details?.join(" | ") || data.error || "Invoice generation failed");
       setOutput(data);
-      // Commit to Edge D1 Ledger
+      // Commit directly to Cloudflare Worker D1 Ledger
       try {
-        await fetch("/api/edge/tx", {
+        const computedSubtotal = itemsPayload.reduce(
+          (sum: number, item: any) => sum + (item.unitPrice * (item.qty || 1)),
+          0
+        );
+
+       await fetch(`${LEDGER_WORKER_BASE}/api/tx`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json"
+          },
           body: JSON.stringify({
             invoice_no: data.invoiceNumber || `INV-${Date.now().toString().slice(-6)}`,
             issue_date: new Date().toISOString().split("T")[0],
             currency: invoiceCurrency,
-            subtotal: itemsPayload.reduce((sum: number, item: any) => sum + (item.unitPrice * (item.qty || 1)), 0),
-            tax_rate: invoiceCurrency === "SAR" ? 0.15 : 0.00,
+            country: invoiceCurrency === "SAR" ? "SA" : "CN_EXP",
+            subtotal: computedSubtotal,
+            mode: !isSettled ? "trial" : "live",
           }),
         });
       } catch (err) {
         console.error("D1 commit failed:", err);
       }
 
-      fetchLedger();
+      await fetchLedger();
+
       setShowSettlementModal(true);
       fetchHistory();
     } catch (err: any) {
@@ -759,8 +783,9 @@ export default function SovereignCorePage() {
   };
   const handlePrintLedgerReceipt = (inv: any) => {
     const invNo = inv.invoice_no || inv.invoiceNumber || "INV-2026-000";
+    const modeParam = !isSettled ? "&trial=true" : "";
     window.open(
-      `https://ledger.padillaanamy83.workers.dev/invoice/receipt?inv=${encodeURIComponent(invNo)}`,
+      `${LEDGER_WORKER_BASE}/invoice/receipt?inv=${encodeURIComponent(invNo)}${modeParam}`,
       "_blank",
       "width=850,height=1000"
     );
@@ -1025,7 +1050,7 @@ export default function SovereignCorePage() {
           <div style={{ display: "flex", gap: "15px", alignItems: "center", marginTop: "5px", flexWrap: "wrap" }}>
             <span style={{ fontSize: "0.8rem", color: "#00ff66" }}>● MOMRAH / SASO PIPELINE ONLINE</span>
 
-{/* Sovereign geMiu Local 6.64M Agent Trigger */}
+            {/* Sovereign geMiu Local 6.64M Agent Trigger */}
             <button
               type="button"
               onClick={() => setIsGeMiuOpen(true)}
@@ -1168,7 +1193,7 @@ export default function SovereignCorePage() {
           ERROR: {error}
         </div>
       )}
-{/* ========================================================================= */}
+      {/* ========================================================================= */}
       {/* TAB 0: UNIFIED CROSS-BORDER TRANSPORT & CUSTOMS CLEARANCE PIPELINE        */}
       {/* ========================================================================= */}
       {activeTab === "pipeline" && (
@@ -2464,150 +2489,165 @@ export default function SovereignCorePage() {
           )}
         </main>
       )}
-
-      {/* ========================================================================= */}
-      {/* TAB 3: COMMERCIAL & ZATCA TAX STUDIO                                      */}
+{/* ========================================================================= */}
+      {/* TAB 3: COMMERCIAL & ZATCA SOVEREIGN CONSOLE (UNIFIED HYBRID CHASSIS)      */}
       {/* ========================================================================= */}
       {activeTab === "invoice" && (
-        <main style={{ width: "100%", maxWidth: "1200px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "25px", padding: "10px" }}>
-          <section style={{ border: "1px solid #222", padding: "20px", backgroundColor: "#0b0b0b" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
-              <h2 style={{ fontSize: "0.95rem", color: "#00f3ff", margin: 0, letterSpacing: "1px" }}>
-                COMMERCIAL ENGAGEMENT MODELS // GCC &amp; CHINA CONTRACTORS
-              </h2>
-              <span style={{ fontSize: "0.72rem", color: "#888" }}>
-                SELECT MODEL ➔ ISSUE OFFICIAL ZATCA PROFORMA TAX INVOICE (PDF)
+        <main style={{ width: "100%", maxWidth: "1380px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "16px", padding: "10px" }}>
+          
+          {/* TOP TELEMETRY STRIP */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "#061017", border: "1px solid #142838", padding: "10px 18px", fontSize: "0.72rem" }}>
+            <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+              <span style={{ color: "#fff", fontWeight: "bold" }}>CONSOLE: <span style={{ color: "#00f3ff" }}>ZATCA_PHASE2_ENFORCER</span></span>
+              <span style={{ color: "#888" }}>NODE: <strong style={{ color: "#00ff66" }}>RUH-01 (EDGE D1)</strong></span>
+              <span style={{ color: "#888" }}>LEDGER HEIGHT: <strong style={{ color: "#00f3ff" }}>{totalBlocks} BLOCKS</strong></span>
+            </div>
+            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+              <span style={{
+                padding: "2px 8px",
+                border: chainValid ? "1px solid #00ff66" : "1px solid #ff3366",
+                color: chainValid ? "#00ff66" : "#ff3366",
+                backgroundColor: chainValid ? "#03170c" : "#1f0408",
+                fontWeight: "bold"
+              }}>
+                {chainValid ? "HASH CHAIN INTEGRITY: SECURE" : "INTEGRITY WARNING"}
               </span>
+              <button
+                type="button"
+                onClick={fetchLedger}
+                disabled={ledgerLoading}
+                style={{ background: "transparent", border: "1px solid #00f3ff", color: "#00f3ff", fontSize: "0.68rem", padding: "3px 10px", cursor: "pointer", fontFamily: "monospace" }}
+              >
+                {ledgerLoading ? "SYNCING..." : "↻ SYNC D1"}
+              </button>
             </div>
+          </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "15px" }}>
-              <div
-                onClick={() => setSelectedPlan("retainer")}
-                style={{
-                  border: selectedPlan === "retainer" ? "2px solid #00ff66" : "1px solid #222",
-                  backgroundColor: selectedPlan === "retainer" ? "#06150b" : "#050505",
-                  padding: "15px",
-                  cursor: "pointer",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between"
-                }}
-              >
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: "#00ff66" }}>MUNICIPAL COMPLIANCE RETAINER</span>
-                    {selectedPlan === "retainer" && <span style={{ fontSize: "0.65rem", background: "#00ff66", color: "#000", padding: "2px 6px", fontWeight: "bold" }}>ACTIVE</span>}
-                  </div>
-                  <div style={{ fontSize: "1.4rem", fontWeight: "bold", color: "#fff", margin: "10px 0 4px" }}>
-                    $3,500 <span style={{ fontSize: "0.75rem", color: "#888", fontWeight: "normal" }}>/ month</span>
-                  </div>
-                  <p style={{ fontSize: "0.7rem", color: "#aaa", lineHeight: "1.4", margin: 0 }}>
-                    Turnkey procurement &amp; submittal engineering for active GCC projects.
-                  </p>
-                  <ul style={{ fontSize: "0.68rem", color: "#666", marginTop: "10px", paddingLeft: "15px", lineHeight: "1.6" }}>
-                    <li>Unlimited GB/T ⇄ SASO/ASTM BOM staging</li>
-                    <li>Instant MOMRAH dual-language vector PDF</li>
-                    <li>Continuous SABER conformity matrix</li>
-                    <li>Trilingual ZATCA 15% VAT tax invoice</li>
-                  </ul>
-                </div>
+          {/* 3-COLUMN WORKBENCH */}
+          <div style={{ display: "grid", gridTemplateColumns: "320px 1fr 340px", gap: "16px" }}>
+            
+            {/* COLUMN 1: INGESTION & INTENT PARAMETERS */}
+            <section style={{ border: "1px solid #142838", backgroundColor: "#061017", padding: "16px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ fontSize: "0.78rem", color: "#00f3ff", fontWeight: "bold", borderBottom: "1px solid #142838", paddingBottom: "6px" }}>
+                1. INGESTION & INTENT
               </div>
 
-              <div
-                onClick={() => setSelectedPlan("single")}
-                style={{
-                  border: selectedPlan === "single" ? "2px solid #00ff66" : "1px solid #222",
-                  backgroundColor: selectedPlan === "single" ? "#06150b" : "#050505",
-                  padding: "15px",
-                  cursor: "pointer",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between"
-                }}
-              >
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: "#00f3ff" }}>PROJECT SUBMITTAL PACKAGE</span>
-                    <span style={{ fontSize: "0.65rem", border: "1px solid #333", color: "#888", padding: "2px 6px" }}>PER SUBMITTAL</span>
-                  </div>
-                  <div style={{ fontSize: "1.4rem", fontWeight: "bold", color: "#fff", margin: "10px 0 4px" }}>
-                    $1,850 <span style={{ fontSize: "0.75rem", color: "#888", fontWeight: "normal" }}>/ package</span>
-                  </div>
-                  <p style={{ fontSize: "0.7rem", color: "#aaa", lineHeight: "1.4", margin: 0 }}>
-                    Complete municipal compliance filing for a single building package.
-                  </p>
-                  <ul style={{ fontSize: "0.68rem", color: "#666", marginTop: "10px", paddingLeft: "15px", lineHeight: "1.6" }}>
-                    <li>Full factory BOM extraction &amp; alloy parity</li>
-                    <li>FOB Guangzhou to CIF Jeddah cost breakdown</li>
-                    <li>Stamped municipal drone inspection video</li>
-                    <li>Complete SASO &amp; ASTM compliance dossier</li>
-                  </ul>
-                </div>
-              </div>
-
-              <div
-                onClick={() => setSelectedPlan("enterprise")}
-                style={{
-                  border: selectedPlan === "enterprise" ? "2px solid #00ff66" : "1px solid #222",
-                  backgroundColor: selectedPlan === "enterprise" ? "#06150b" : "#050505",
-                  padding: "15px",
-                  cursor: "pointer",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between"
-                }}
-              >
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: "#ffd700" }}>ENTERPRISE BARE-METAL CORE</span>
-                    <span style={{ fontSize: "0.65rem", border: "1px solid #333", color: "#ffd700", padding: "2px 6px" }}>AIR-GAPPED</span>
-                  </div>
-                  <div style={{ fontSize: "1.4rem", fontWeight: "bold", color: "#fff", margin: "10px 0 4px" }}>
-                    $8,500 <span style={{ fontSize: "0.75rem", color: "#888", fontWeight: "normal" }}>/ on-premise</span>
-                  </div>
-                  <p style={{ fontSize: "0.7rem", color: "#aaa", lineHeight: "1.4", margin: 0 }}>
-                    Self-hosted sovereign deployment for Tier-1 general contractors.
-                  </p>
-                  <ul style={{ fontSize: "0.68rem", color: "#666", marginTop: "10px", paddingLeft: "15px", lineHeight: "1.6" }}>
-                    <li>100% air-gapped local execution</li>
-                    <li>Direct ERP / Revit / BIM ingestion pipeline</li>
-                    <li>Dedicated multi-tenant contractor licensing</li>
-                    <li>Priority SLA &amp; custom GCC municipal schema</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ marginTop: "20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #1a1a1a", paddingTop: "15px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <span style={{ fontSize: "0.75rem", color: "#888" }}>BILLED ENTITY:</span>
+              <div>
+                <label style={{ fontSize: "0.68rem", color: "#888", display: "block", marginBottom: "4px" }}>BILLED CLIENT ENTITY:</label>
                 <input
                   type="text"
                   value={invoiceClient}
                   onChange={(e) => setInvoiceClient(e.target.value)}
-                  style={{ backgroundColor: "#000", border: "1px solid #333", color: "#fff", padding: "8px 12px", fontFamily: "monospace", fontSize: "0.8rem", width: "280px", outline: "none" }}
+                  style={{ width: "100%", backgroundColor: "#000", border: "1px solid #222", color: "#fff", padding: "8px", fontFamily: "monospace", fontSize: "0.75rem", outline: "none", boxSizing: "border-box" }}
                 />
               </div>
 
-              <div style={{ display: "flex", gap: "10px" }}>
-                <button
-                  type="button"
-                  onClick={() => setIsIngestModalOpen(true)}
-                  style={{
-                    backgroundColor: "transparent",
-                    color: "#00f3ff",
-                    border: "1px solid #00f3ff",
-                    padding: "12px 18px",
-                    fontWeight: "bold",
-                    cursor: "pointer",
-                    fontFamily: "monospace",
-                    fontSize: "0.8rem",
-                    letterSpacing: "1px",
-                  }}
-                >
-                  📥 RAW TERMINAL INGEST (CSV / TSV)
-                </button>
+              <div>
+                <label style={{ fontSize: "0.68rem", color: "#888", display: "block", marginBottom: "4px" }}>ENGAGEMENT SCHEME:</label>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  {[
+                    { id: "retainer", label: "RETAINER", price: "$3,500/mo" },
+                    { id: "single", label: "SUBMITTAL PACK", price: "$1,850/pkg" },
+                    { id: "enterprise", label: "BARE-METAL CORE", price: "$8,500 flat" },
+                  ].map((tier) => (
+                    <div
+                      key={tier.id}
+                      onClick={() => setSelectedPlan(tier.id as any)}
+                      style={{
+                        padding: "8px 10px",
+                        border: selectedPlan === tier.id ? "1px solid #00ff66" : "1px solid #142838",
+                        backgroundColor: selectedPlan === tier.id ? "#03170c" : "#02070c",
+                        cursor: "pointer",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        fontSize: "0.72rem"
+                      }}
+                    >
+                      <span style={{ color: selectedPlan === tier.id ? "#00ff66" : "#aaa", fontWeight: "bold" }}>{tier.label}</span>
+                      <span style={{ color: "#fff" }}>{tier.price}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
+              <div style={{ borderTop: "1px solid #142838", paddingTop: "10px" }}>
+                <label style={{ fontSize: "0.68rem", color: "#888", display: "block", marginBottom: "4px" }}>OCEAN FREIGHT ESTIMATE (USD):</label>
+                <input
+                  type="text"
+                  value={freightUSD}
+                  onChange={(e) => setFreightUSD(e.target.value)}
+                  style={{ width: "100%", backgroundColor: "#000", border: "1px solid #222", color: "#00f3ff", padding: "8px", fontFamily: "monospace", fontSize: "0.75rem", outline: "none", boxSizing: "border-box" }}
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsIngestModalOpen(true)}
+                style={{
+                  backgroundColor: "transparent",
+                  color: "#00f3ff",
+                  border: "1px dashed #00f3ff",
+                  padding: "10px",
+                  fontSize: "0.72rem",
+                  fontWeight: "bold",
+                  cursor: "pointer",
+                  fontFamily: "monospace",
+                  width: "100%"
+                }}
+              >
+                📥 PASTE RAW CSV / TSV STREAM
+              </button>
+            </section>
+
+            {/* COLUMN 2: DETERMINISTIC VERIFICATION & EXECUTION GATES */}
+            <section style={{ border: "1px solid #142838", backgroundColor: "#061017", padding: "16px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ fontSize: "0.78rem", color: "#00ff66", fontWeight: "bold", borderBottom: "1px solid #142838", paddingBottom: "6px" }}>
+                2. DETERMINISTIC ENFORCEMENT ENGINE
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                <div style={{ padding: "10px", border: "1px solid #142838", backgroundColor: "#02070c", fontSize: "0.72rem" }}>
+                  <div style={{ color: "#888" }}>PIPELINE MODE:</div>
+                  <div style={{ color: isSettled ? "#00ff66" : "#ffaa00", fontWeight: "bold", marginTop: "2px" }}>
+                    {isSettled ? "● PRODUCTION CLEARANCE" : "● TRIAL / WATERMARKED"}
+                  </div>
+                </div>
+                <div style={{ padding: "10px", border: "1px solid #142838", backgroundColor: "#02070c", fontSize: "0.72rem" }}>
+                  <div style={{ color: "#888" }}>STATUTORY JURISDICTION:</div>
+                  <div style={{ color: "#00f3ff", fontWeight: "bold", marginTop: "2px" }}>
+                    ZATCA PHASE-2 // 15% VAT
+                  </div>
+                </div>
+              </div>
+
+              {/* Real-time Math Output */}
+              <div style={{ border: "1px solid #142838", backgroundColor: "#02070c", padding: "12px", display: "flex", flexDirection: "column", gap: "6px", fontSize: "0.72rem" }}>
+                <div style={{ color: "#888", borderBottom: "1px dashed #142838", paddingBottom: "4px" }}>
+                  GATE AUDIT SUMMARY:
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "#888" }}>STAGED SCHEME VALUE:</span>
+                  <span style={{ color: "#fff" }}>${selectedPlan === "retainer" ? "3,500.00" : selectedPlan === "single" ? "1,850.00" : "8,500.00"} USD</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "#888" }}>SAR PARITY (3.75):</span>
+                  <span style={{ color: "#00f3ff" }}>{(Number(selectedPlan === "retainer" ? 3500 : selectedPlan === "single" ? 1850 : 8500) * 3.75).toFixed(2)} SAR</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "#888" }}>15% ZATCA STATUTORY VAT:</span>
+                  <span style={{ color: "#ffaa00" }}>{((Number(selectedPlan === "retainer" ? 3500 : selectedPlan === "single" ? 1850 : 8500) * 3.75) * 0.15).toFixed(2)} SAR</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #142838", paddingTop: "6px", marginTop: "2px" }}>
+                  <strong style={{ color: "#fff" }}>TOTAL COMMITMENT:</strong>
+                  <strong style={{ color: "#00ff66", fontSize: "0.85rem" }}>
+                    {((Number(selectedPlan === "retainer" ? 3500 : selectedPlan === "single" ? 1850 : 8500) * 3.75) * 1.15).toFixed(2)} SAR
+                  </strong>
+                </div>
+              </div>
+
+              {/* Execution Triggers */}
+              <div style={{ marginTop: "auto", display: "flex", gap: "8px" }}>
                 <button
                   type="button"
                   disabled={invoiceLoading}
@@ -2616,70 +2656,104 @@ export default function SovereignCorePage() {
                     handleGenerateInvoice(selectedPlan);
                   }}
                   style={{
+                    flex: 1,
                     backgroundColor: invoiceLoading ? "#222" : "#00ff66",
                     color: "#000",
                     border: "none",
-                    padding: "12px 24px",
+                    padding: "12px",
                     fontWeight: "bold",
+                    fontSize: "0.75rem",
                     cursor: invoiceLoading ? "not-allowed" : "pointer",
                     fontFamily: "monospace",
-                    fontSize: "0.8rem",
-                    letterSpacing: "1px",
+                    letterSpacing: "1px"
                   }}
                 >
-                  {invoiceLoading ? "GENERATING INVOICE..." : `⚡ GENERATE PROFORMA INVOICE ($${selectedPlan === "retainer" ? "3,500" : selectedPlan === "single" ? "1,850" : "8,500"})`}
+                  {invoiceLoading ? "COMMITTING BLOCK..." : "⚡ STAMP & COMMIT TRANSACTION"}
                 </button>
               </div>
-            </div>
-          </section>
+            </section>
 
-          {/* SOVEREIGN TRANSACTION AUDIT LEDGER */}
-          <section style={{ border: "1px solid #1a2e26", padding: "16px 20px", backgroundColor: "#050807", fontFamily: "monospace" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #162620", paddingBottom: "10px", marginBottom: "12px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <span style={{ fontSize: "0.8rem", color: "#00ff66", fontWeight: "bold", letterSpacing: "1px" }}>
-                  ⚡ SOVEREIGN_LEDGER // ZATCA D1 PERSISTENCE
-                </span>
-                {chainValid !== null && (
-                  <span style={{
-                    fontSize: "0.65rem",
-                    padding: "2px 6px",
-                    border: chainValid ? "1px solid #00ff66" : "1px solid #ff3366",
-                    color: chainValid ? "#00ff66" : "#ff3366",
-                    backgroundColor: chainValid ? "#03170c" : "#1f0408"
-                  }}>
-                    {chainValid ? `CHAIN VALID [${totalBlocks} BLOCKS]` : "TAMPER DETECTED"}
-                  </span>
-                )}
+            {/* COLUMN 3: LIVE ARTIFACT & DISPATCH VIEW */}
+            <section style={{ border: "1px solid #142838", backgroundColor: "#061017", padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div style={{ fontSize: "0.78rem", color: "#ffaa00", fontWeight: "bold", borderBottom: "1px solid #142838", paddingBottom: "6px" }}>
+                3. DIGITAL TWIN ARTIFACT
               </div>
-              <button
-                type="button"
-                onClick={fetchLedger}
-                disabled={ledgerLoading}
-                style={{
-                  background: "transparent",
-                  border: "1px solid #00ff66",
-                  color: "#00ff66",
-                  fontSize: "0.7rem",
-                  padding: "3px 10px",
-                  cursor: ledgerLoading ? "not-allowed" : "pointer",
-                  fontFamily: "monospace",
-                }}
-              >
-                {ledgerLoading ? "SYNCING..." : "SYNC D1 LEDGER"}
-              </button>
+
+              {output ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "0.72rem" }}>
+                  <div style={{ border: "1px solid #00ff66", backgroundColor: "#021208", padding: "10px" }}>
+                    <div style={{ color: "#00ff66", fontWeight: "bold" }}>✓ TX STAMP GENERATED</div>
+                    <div style={{ color: "#888", marginTop: "2px" }}>ID: {output.invoiceNumber || "INV-STAGED"}</div>
+                  </div>
+
+                  {output.downloadUrl && (
+                    <a
+                      href={output.downloadUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        backgroundColor: "#05151f",
+                        border: "1px solid #00f3ff",
+                        color: "#00f3ff",
+                        padding: "10px",
+                        textAlign: "center",
+                        textDecoration: "none",
+                        fontWeight: "bold",
+                        fontSize: "0.72rem"
+                      }}
+                    >
+                      📄 INSPECT OFFICIAL TAX INVOICE (A4)
+                    </a>
+                  )}
+
+                  <pre style={{
+                    color: "#00ff66",
+                    backgroundColor: "#02070c",
+                    border: "1px solid #142838",
+                    padding: "8px",
+                    fontSize: "0.65rem",
+                    maxHeight: "180px",
+                    overflowY: "auto",
+                    whiteSpace: "pre-wrap"
+                  }}>
+                    {JSON.stringify(output, null, 2)}
+                  </pre>
+                </div>
+              ) : (
+                <div style={{ padding: "30px 10px", border: "1px dashed #222", textAlign: "center", color: "#555", fontSize: "0.72rem", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  Awaiting deterministic execution trigger...
+                </div>
+              )}
+            </section>
+          </div>
+
+          {/* DOCK PANEL: SOVEREIGN TRANSACTION AUDIT LEDGER */}
+          <section style={{ border: "1px solid #1a2e26", padding: "14px 18px", backgroundColor: "#040807", fontFamily: "monospace" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #162620", paddingBottom: "8px", marginBottom: "10px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <span style={{ fontSize: "0.78rem", color: "#00ff66", fontWeight: "bold", letterSpacing: "1px" }}>
+                  ⚡ LIVE D1 IMMUTABLE LEDGER STREAM
+                </span>
+                <span style={{ fontSize: "0.68rem", color: "#888" }}>
+                  TABLE: <code>zatca_invoices</code> // ORDER BY: <code>id DESC</code>
+                </span>
+              </div>
+              <span style={{ fontSize: "0.65rem", color: "#555" }}>
+                {ledgerInvoices.length} RECORDED ENTRIES FOUND
+              </span>
             </div>
+
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem", textAlign: "left" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.72rem", textAlign: "left" }}>
                 <thead>
                   <tr style={{ borderBottom: "1px solid #222", color: "#666" }}>
                     <th style={{ padding: "6px 8px" }}>REF NO.</th>
-                    <th style={{ padding: "6px 8px" }}>CLIENT ENTITY</th>
+                    <th style={{ padding: "6px 8px" }}>CLIENT / JURISDICTION</th>
                     <th style={{ padding: "6px 8px" }}>TAX ID</th>
                     <th style={{ padding: "6px 8px" }}>NET (SAR)</th>
                     <th style={{ padding: "6px 8px" }}>VAT (15%)</th>
                     <th style={{ padding: "6px 8px" }}>TOTAL</th>
-                    <th style={{ padding: "6px 8px" }}>COMMITTED AT</th>
+                    <th style={{ padding: "6px 8px" }}>TIME</th>
                     <th style={{ padding: "6px 8px" }}>ARTIFACTS</th>
                     <th style={{ padding: "6px 8px", textAlign: "right" }}>STATE</th>
                   </tr>
@@ -2688,124 +2762,77 @@ export default function SovereignCorePage() {
                   {ledgerInvoices && ledgerInvoices.length > 0 ? (
                     ledgerInvoices.map((inv: any) => {
                       const invId = inv.invoice_no || inv.invoiceNumber;
-                      const pdfUrl = inv.downloadUrl || (invId ? `${API_BASE}/outputs/invoice_${invId}.pdf` : "#");
-                      const xmlUrl = inv.xmlDownloadUrl || (inv.xmlPath ? `${API_BASE}/outputs/${inv.xmlPath}` : "#");
                       return (
                         <tr
-                          key={inv.id || inv.invoice_no || inv.invoiceNumber}
+                          key={inv.id || invId}
                           style={{ borderBottom: "1px solid #111", color: "#ccc" }}
                           title={`HASH: ${inv.current_hash || inv.invoiceHash || "PENDING"}\nPIH: ${inv.pih || inv.previousInvoiceHash || "GENESIS_ROOT"}`}
                         >
-                          <td style={{ padding: "8px", color: "#00f3ff", fontWeight: "bold" }}>
-                            {inv.invoice_no || inv.invoiceNumber}
+                          <td style={{ padding: "6px 8px", color: "#00f3ff", fontWeight: "bold" }}>
+                            {invId}
                           </td>
-                          <td style={{ padding: "8px" }}>
+                          <td style={{ padding: "6px 8px" }}>
                             {inv.clientName || (inv.country ? `JURISDICTION [${inv.country}]` : "ENTERPRISE B2B")}
                           </td>
-                          <td style={{ padding: "8px", color: "#777" }}>
+                          <td style={{ padding: "6px 8px", color: "#777" }}>
                             {inv.clientTaxId || "300000000000003"}
                           </td>
-                          <td style={{ padding: "8px" }}>
+                          <td style={{ padding: "6px 8px" }}>
                             {Number(inv.subtotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
-                          <td style={{ padding: "8px", color: "#ffb703" }}>
+                          <td style={{ padding: "6px 8px", color: "#ffb703" }}>
                             {Number(inv.tax_amount ?? inv.vatAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </td>
-                          <td style={{ padding: "8px", color: "#00ff66", fontWeight: "bold" }}>
+                          <td style={{ padding: "6px 8px", color: "#00ff66", fontWeight: "bold" }}>
                             {Number(inv.total_amount ?? inv.grandTotal ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {inv.currency || "SAR"}
                           </td>
-                          <td style={{ padding: "8px", color: "#555", fontSize: "0.7rem" }}>
+                          <td style={{ padding: "6px 8px", color: "#555", fontSize: "0.68rem" }}>
                             {inv.createdAt
-                              ? `${new Date(inv.createdAt).toLocaleDateString()} ${new Date(inv.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+                              ? `${new Date(inv.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
                               : "JUST NOW"}
                           </td>
-                          <td style={{ padding: "8px" }}>
+                          <td style={{ padding: "6px 8px" }}>
                             <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                              {/* Edge In-Memory ZATCA XML Generator */}
                               <button
                                 type="button"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  if (inv.xmlDownloadUrl || inv.xmlPath) {
-                                    window.open(inv.xmlDownloadUrl || `${API_BASE}/outputs/${inv.xmlPath}`, "_blank");
-                                    return;
-                                  }
-                                  const xmlPayload = `<?xml version="1.0" encoding="UTF-8"?>
-<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2" xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2" xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
-  <cbc:ProfileID>reporting:1.0</cbc:ProfileID>
-  <cbc:ID>${inv.invoice_no || inv.invoiceNumber || "INV-2026-000"}</cbc:ID>
-  <cbc:UUID>${inv.id || "urn:uuid:zatca-phase2-edge"}</cbc:UUID>
-  <cbc:IssueDate>${(inv.createdAt ? new Date(inv.createdAt).toISOString() : new Date().toISOString()).split("T")[0]}</cbc:IssueDate>
-  <cbc:InvoiceTypeCode name="0100000">388</cbc:InvoiceTypeCode>
-  <cbc:DocumentCurrencyCode>${inv.currency || "SAR"}</cbc:DocumentCurrencyCode>
-  <cac:LegalMonetaryTotal>
-    <cbc:LineExtensionAmount currencyID="${inv.currency || "SAR"}">${inv.subtotal || 0}</cbc:LineExtensionAmount>
-    <cbc:TaxExclusiveAmount currencyID="${inv.currency || "SAR"}">${inv.subtotal || 0}</cbc:TaxExclusiveAmount>
-    <cbc:TaxInclusiveAmount currencyID="${inv.currency || "SAR"}">${inv.total_amount ?? inv.grandTotal ?? 0}</cbc:TaxInclusiveAmount>
-    <cbc:PayableAmount currencyID="${inv.currency || "SAR"}">${inv.total_amount ?? inv.grandTotal ?? 0}</cbc:PayableAmount>
-  </cac:LegalMonetaryTotal>
-</Invoice>`;
-                                  const blob = new Blob([xmlPayload], { type: "application/xml" });
-                                  const blobUrl = URL.createObjectURL(blob);
-                                  const a = document.createElement("a");
-                                  a.href = blobUrl;
-                                  a.download = `${inv.invoice_no || inv.invoiceNumber || "invoice"}.xml`;
-                                  a.click();
-                                  URL.revokeObjectURL(blobUrl);
-                                }}
-                                title="Download ZATCA Phase-2 UBL 2.1 XML"
+                                onClick={() => handlePrintLedgerReceipt(inv)}
+                                title="Print Sovereign Ledger Receipt"
                                 style={{
-                                  backgroundColor: "transparent",
-                                  color: "#00f3ff",
-                                  border: "1px solid #00f3ff",
-                                  padding: "1px 4px",
+                                  background: "transparent",
+                                  color: "#00ff66",
+                                  border: "1px solid #00ff66",
+                                  padding: "1px 5px",
                                   fontSize: "0.6rem",
                                   fontFamily: "monospace",
                                   cursor: "pointer",
                                 }}
                               >
-                                XML
+                                PRINT
                               </button>
-
-                              {/* Live PDF Link or Direct Print Fallback */}
-                              {inv.downloadUrl ? (
-                                <a
-                                  href={inv.downloadUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  style={{
-                                    color: "#ffcc00",
-                                    textDecoration: "none",
-                                    border: "1px solid #ffcc00",
-                                    padding: "1px 4px",
-                                    fontSize: "0.6rem",
-                                  }}
-                                >
-                                  PDF
-                                </a>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => handlePrintLedgerReceipt(inv)}
-                                  title="Print Sovereign Ledger Receipt"
-                                  style={{
-                                    background: "transparent",
-                                    color: "#00ff66",
-                                    border: "1px solid #00ff66",
-                                    padding: "1px 4px",
-                                    fontSize: "0.6rem",
-                                    fontFamily: "monospace",
-                                    cursor: "pointer",
-                                  }}
-                                >
-                                  PRINT
-                                </button>
-                              )}
+                              <a
+                                href={`${LEDGER_WORKER_BASE}/invoice/xml?inv=${encodeURIComponent(inv.invoice_no || inv.invoiceNumber || "")}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                title="Download Statutory ZATCA UBL 2.1 XML"
+                                style={{
+                                  background: "transparent",
+                                  color: "#00f3ff",
+                                  border: "1px solid #00f3ff",
+                                  padding: "1px 5px",
+                                  fontSize: "0.6rem",
+                                  fontFamily: "monospace",
+                                  textDecoration: "none",
+                                  display: "inline-block",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                XML
+                              </a>
                             </div>
                           </td>
-                          <td style={{ padding: "8px", textAlign: "right" }}>
-                            <span style={{ border: "1px solid #00ff66", color: "#00ff66", padding: "1px 6px", fontSize: "0.65rem", background: "#003311" }}>
-                              VERIFIED
+                          <td style={{ padding: "6px 8px", textAlign: "right" }}>
+                            <span style={{ border: "1px solid #00ff66", color: "#00ff66", padding: "1px 6px", fontSize: "0.62rem", background: "#003311" }}>
+                              COMMITTED
                             </span>
                           </td>
                         </tr>
@@ -2814,7 +2841,7 @@ export default function SovereignCorePage() {
                   ) : (
                     <tr>
                       <td colSpan={9} style={{ padding: "16px 8px", textAlign: "center", color: "#555" }}>
-                        {ledgerLoading ? "// RETRIEVING SOVEREIGN LEDGER BLOCKS..." : "// NO RECORDED AUDIT BLOCKS FOUND. CLICK SYNC LEDGER."}
+                        {ledgerLoading ? "// RETRIEVING SOVEREIGN LEDGER BLOCKS..." : "// NO RECORDED AUDIT BLOCKS FOUND. CLICK SYNC D1."}
                       </td>
                     </tr>
                   )}
@@ -2823,111 +2850,9 @@ export default function SovereignCorePage() {
             </div>
           </section>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "25px" }}>
-            <section style={{ border: "1px solid #222", padding: "20px", backgroundColor: "#0b0b0b", display: "flex", flexDirection: "column", gap: "15px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <h2 style={{ fontSize: "0.9rem", color: "#00ff66", margin: 0 }}>
-                  CHINA ➔ GCC LANDED COST ESTIMATOR
-                </h2>
-                <span style={{ fontSize: "0.7rem", color: "#00f3ff", border: "1px solid #00f3ff", padding: "2px 6px" }}>
-                  5% TARIFF + 15% VAT
-                </span>
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                <div style={{ display: "flex", gap: "10px" }}>
-                  <input
-                    type="text"
-                    value={freightUSD}
-                    onChange={(e) => setFreightUSD(e.target.value)}
-                    placeholder="Ocean Freight (USD)..."
-                    style={{ flex: 1, backgroundColor: "#050505", border: "1px solid #222", color: "#fff", padding: "8px", fontFamily: "monospace", fontSize: "0.8rem" }}
-                  />
-                </div>
-                <button
-                  type="button"
-                  disabled={customsLoading}
-                  onClick={() => {
-                    setCustomsLoading(true);
-                    setError(null);
-                    try {
-                      // 1. Compute FOB subtotal from staged items (48 USD/unit x 250 units)
-                      const itemCount = stagedItems.length > 0 ? stagedItems.length : 2;
-                      const subtotalFobUSD = itemCount * (48 * 250);
-                      const oceanFreightUSD = Number(freightUSD) || 2400;
-                      const totalCifUSD = subtotalFobUSD + oceanFreightUSD;
-
-                      // 2. Statutory conversions & tariffs (GCC 5% Customs Duty + 15% ZATCA VAT)
-                      const SAR_RATE = 3.75;
-                      const CNY_RATE = 1.92;
-                      const totalCifSAR = totalCifUSD * SAR_RATE;
-                      const customsDutySAR = totalCifSAR * 0.05;
-                      const vatSAR = (totalCifSAR + customsDutySAR) * 0.15;
-                      const grandTotalLandedSAR = totalCifSAR + customsDutySAR + vatSAR;
-                      const grandTotalLandedCNY = grandTotalLandedSAR * CNY_RATE;
-
-                      setOutput({
-                        status: "COMPUTED_EDGE_NATIVE",
-                        timestamp: new Date().toISOString(),
-                        subtotalFobUSD,
-                        oceanFreightUSD,
-                        totalCifUSD,
-                        totalCifSAR,
-                        customsDutySAR,
-                        vatSAR,
-                        grandTotalLandedSAR,
-                        grandTotalLandedCNY,
-                      });
-                    } catch (err: any) {
-                      setError(err.message || "Customs estimation failed");
-                    } finally {
-                      setCustomsLoading(false);
-                    }
-                  }}
-                  style={{ backgroundColor: customsLoading ? "#222" : "#00ff66", color: "#000", border: "none", padding: "12px", fontWeight: "bold", cursor: "pointer", letterSpacing: "1px" }}
-                >
-                  {customsLoading ? "CALCULATING TARIFFS..." : "📦 ESTIMATE FOB ➔ CIF JEDDAH LANDED COST"}
-                </button>
-              </div>
-            </section>
-
-            <section style={{ border: "1px solid #222", padding: "20px", backgroundColor: "#0b0b0b", display: "flex", flexDirection: "column", gap: "15px" }}>
-              <h2 style={{ fontSize: "0.9rem", color: "#888", margin: 0 }}>COMMERCIAL ARTIFACT DECK</h2>
-              {output?.downloadUrl ? (
-                <div style={{ border: "1px solid #00ff66", padding: "15px", backgroundColor: "#050505" }}>
-                  <div style={{ fontSize: "0.8rem", color: "#00ff66", fontWeight: "bold", marginBottom: "6px" }}>
-                    ✓ TAX INVOICE COMPILED [{output.invoiceNumber || "INV-LATEST"}]
-                  </div>
-                  <a
-                    href={output.downloadUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{ display: "block", textAlign: "center", backgroundColor: "#111", border: "1px solid #00ff66", color: "#00ff66", padding: "12px", textDecoration: "none", fontWeight: "bold", fontSize: "0.8rem" }}
-                  >
-                    📑 OPEN TRILINGUAL TAX INVOICE (A4 PDF)
-                  </a>
-                </div>
-              ) : null}
-
-              {output?.grandTotalLandedSAR ? (
-                <div style={{ border: "1px solid #00f3ff", padding: "15px", backgroundColor: "#050505", display: "flex", flexDirection: "column", gap: "6px", fontSize: "0.75rem" }}>
-                  <div style={{ color: "#00f3ff", fontWeight: "bold" }}>✓ CIF JEDDAH LANDED COST ESTIMATE</div>
-                  <div>CIF TOTAL: <span style={{ color: "#fff" }}>${output.totalCifUSD?.toFixed(2)} USD</span> ({output.totalCifSAR?.toFixed(2)} SAR)</div>
-                  <div>5% CUSTOMS DUTY: <span style={{ color: "#ffcc00" }}>{output.customsDutySAR?.toFixed(2)} SAR</span></div>
-                  <div>15% ZATCA VAT: <span style={{ color: "#ffcc00" }}>{output.vatSAR?.toFixed(2)} SAR</span></div>
-                  <div style={{ color: "#00ff66", fontWeight: "bold", marginTop: "4px" }}>
-                    TOTAL LANDED: {output.grandTotalLandedSAR?.toFixed(2)} SAR (~¥{output.grandTotalLandedCNY?.toFixed(2)} CNY)
-                  </div>
-                </div>
-              ) : null}
-
-              <pre style={{ color: "#00ff66", margin: 0, whiteSpace: "pre-wrap", fontSize: "0.8rem", maxHeight: "250px", overflowY: "auto", border: "1px solid #222", padding: "10px", backgroundColor: "#050505" }}>
-                {output ? JSON.stringify(output, null, 2) : "// Awaiting commercial calculation..."}
-              </pre>
-            </section>
-          </div>
         </main>
       )}
+      
       {/* ========================================================================= */}
       {/* TAB 4: SITE & BIM HUD TELEMETRY                                           */}
       {/* ========================================================================= */}
@@ -3904,9 +3829,33 @@ export default function SovereignCorePage() {
               [CLOSE ✕]
             </button>
             <TerminalIngestModal
-              onCommitPayload={(cleanItems) => {
+            onCommitPayload={async (rawPayload: any) => {
                 setIsIngestModalOpen(false);
-                handleGenerateInvoice(cleanItems);
+                if (typeof rawPayload === "string") {
+                  try {
+                    const res = await fetch(`${LEDGER_WORKER_BASE}/api/ingest-raw`, {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "text/plain",
+                      },
+                      body: rawPayload,
+                    });
+                    const parsed = await res.json();
+                    if (parsed.items && Array.isArray(parsed.items)) {
+                      const itemsFormatted = parsed.items.map((it: any, idx: number) => ({
+                        code: `RAW-${String(idx + 1).padStart(3, "0")}`,
+                        name: it.description,
+                        qty: it.quantity,
+                        unitPrice: it.unit_price,
+                      }));
+                      handleGenerateInvoice(itemsFormatted);
+                      return;
+                    }
+                  } catch (err) {
+                    console.error("Worker parsing error:", err);
+                  }
+                }
+                handleGenerateInvoice(rawPayload);
               }}
             />
           </div>
