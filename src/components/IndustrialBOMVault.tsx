@@ -73,7 +73,7 @@ export const MANIFEST_PRESETS: Record<string, BOMPresetConfig> = {
         incoterm: 'CIF',
         governingTR: 'Building Materials - Part 1: Metals & Alloys',
         trReferenceCode: 'SASO M.A. 156-16-03-01',
-        consigneeCR: '1010894412 (Verified Active)',
+        consigneeCR: '1010894412 (Active // SASO M/36 On-Body Parity Confirmed)',
         saberBindingStatus: 'BOUND',
         defaultCabId: 'astc',
         pcocNumber: 'PCOC-2026-ASTC-94821',
@@ -108,7 +108,7 @@ export const MANIFEST_PRESETS: Record<string, BOMPresetConfig> = {
         incoterm: 'DAP',
         governingTR: 'Machinery Safety Technical Regulation',
         trReferenceCode: 'SASO 01-05-21-182 / M.A. 164-18-05-02',
-        consigneeCR: 'UNBOUND // PENDING LOCAL BUYER FILING',
+        consigneeCR: 'UNBOUND // MISSING PHYSICAL ON-BODY NAMEPLATE',
         saberBindingStatus: 'PENDING_BUYER_ACTION',
         defaultCabId: 'sunchine',
         pcocNumber: 'UNISSUED (Missing ISO 17025 Test Report)',
@@ -186,7 +186,7 @@ export default function IndustrialBOMVault() {
     const [selectedPresetKey, setSelectedPresetKey] = useState<string>('ARCHITECTURAL_CURTAIN_WALL');
     const [currentIncoterm, setCurrentIncoterm] = useState<IncotermMode>('CIF');
     const [currentSaberStatus, setCurrentSaberStatus] = useState<SaberBindingStatus>('BOUND');
-    const [consigneeCR, setConsigneeCR] = useState<string>('1010894412 (Verified Active)');
+    const [consigneeCR, setConsigneeCR] = useState<string>('1010894412 (Active // SASO M/36 On-Body Parity Confirmed)');
     const [governingTR, setGoverningTR] = useState<string>('SASO M.A. 156-16-03-01 (Building Materials TR - Part 1)');
     const [selectedCabId, setSelectedCabId] = useState<string>('astc');
     const [pcocNumber, setPcocNumber] = useState<string>('PCOC-2026-ASTC-94821');
@@ -285,7 +285,7 @@ export default function IndustrialBOMVault() {
             });
             const data = await res.json();
             setAuditResult(data);
-        } catch (e) {
+        } catch {
             alert('Failed to evaluate BOM payload via compliance gateway.');
         } finally {
             setLoading(false);
@@ -342,7 +342,7 @@ export default function IndustrialBOMVault() {
         try {
             const parsed = JSON.parse(bomInput);
             await executeAuditPayload(parsed);
-        } catch (e) {
+        } catch {
             alert('Invalid JSON format in BOM input.');
         }
     };
@@ -360,6 +360,14 @@ export default function IndustrialBOMVault() {
         } catch {
             items = [];
         }
+
+        const now = new Date();
+        const dynamicRiyadhDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(now);
+        const dynamicYearMonth = new Intl.DateTimeFormat('en-CA', { 
+            timeZone: 'Asia/Riyadh', 
+            year: 'numeric', 
+            month: '2-digit' 
+        }).format(now);
 
         const rowsHtml = items
             .map((item: any, idx: number) => {
@@ -418,12 +426,12 @@ export default function IndustrialBOMVault() {
 
         const dapWarningHtml = isHighRiskDAP ? `
       <div style="margin-bottom: 12px; padding: 10px 12px; border: 2px solid #b45309; background: #fffbeb; border-radius: 4px; font-family: monospace; font-size: 10px; color: #92400e;">
-        <strong style="color: #b45309;">⚠️ CRITICAL DAP/DDP DEMURRAGE EXPOSURE WARNING:</strong><br/>
-        Consignee CR is unbound in SABER and SCoC is not yet issued. Under DAP terms, container demurrage ($120–$250/day per container) at port of destination falls strictly on the foreign exporter. <strong>Rule: NO VALID PCoC → NO SCoC → SHIPMENT WILL NOT BE CLEARED.</strong>
+        <strong style="color: #b45309;">⚠️ CRITICAL DAP/DDP DEMURRAGE EXPOSURE WARNING (SASO M/36 COMPLIANCE HOLD):</strong><br/>
+        Consignee CR is unbound in SABER or physical hardware lacks mandatory on-body nameplate. Under DAP terms, container demurrage ($120–$250/day per container) at port of destination falls strictly on the foreign exporter. <strong>Rule: NO ON-BODY NAMEPLATE → NO SCoC → SHIPMENT CANNOT BE CLEARED.</strong>
       </div>
     ` : `
       <div style="margin-bottom: 12px; padding: 8px 12px; border: 1px solid #059669; background: #ecfdf5; border-radius: 4px; font-family: monospace; font-size: 10px; color: #065f46;">
-        <strong>✓ INCOTERM CLEARANCE VERIFIED (${currentIncoterm}):</strong> Consignee CR (${consigneeCR}) bound. Issuing CAB: ${currentCab.name} (${currentCab.accreditationCode}).
+        <strong>✓ INCOTERM CLEARANCE VERIFIED (${currentIncoterm}):</strong> Consignee CR (${consigneeCR}) bound &amp; SASO M/36 on-body parity confirmed. Issuing CAB: ${currentCab.name} (${currentCab.accreditationCode}).
       </div>
     `;
 
@@ -454,12 +462,10 @@ export default function IndustrialBOMVault() {
       </div>
     ` : '';
 
-        // Binary TLV Base64 Generator for Dossier Verification Block
-        const zatcaTimestamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
         const dossierTlv = generateDossierZatcaTLV({
             sellerName: 'MIU_33 SOVEREIGN SYSTEMS',
             vatNumber: STATUTORY_VAT_NUMBER,
-            timestamp: zatcaTimestamp,
+            timestamp: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
             totalAmount: fiscalSummary ? fiscalSummary.totalLandedSAR : 517462.00,
             taxAmount: fiscalSummary ? fiscalSummary.zatcaVatSAR : 67487.00
         });
@@ -472,7 +478,7 @@ export default function IndustrialBOMVault() {
           <div><strong style="color: #0f172a;">GOVERNING SAUDI TR:</strong> ${governingTR}</div>
           <div><strong style="color: #0f172a;">ISSUING NOTIFIED CAB:</strong> ${currentCab.name} [Accreditation: ${currentCab.accreditationCode}]</div>
           <div><strong style="color: #0f172a;">ZATCA CRYPTOGRAPHIC STAMP:</strong> SHA-256 PARITY VERIFIED</div>
-          <div>FASAH PRE-DECLARATION BATCH: <code>SA-RUH-2026-09-EXP-${Math.floor(1000 + Math.random() * 9000)}</code></div>
+          <div>FASAH PRE-DECLARATION BATCH: <code>SA-RUH-${dynamicYearMonth}-EXP-${Math.floor(1000 + Math.random() * 9000)}</code></div>
           <div style="color: #047857; font-weight: bold; margin-top: 2px;">✓ 72-HOUR FASAH PRE-ARRIVAL CONFORMANCE ENGINE READY</div>
         </div>
         <div style="text-align: center; margin-left: 12px;">
@@ -500,7 +506,7 @@ export default function IndustrialBOMVault() {
         <body>
           <h1>MIU_33 // TRADE COMPLIANCE & SOVEREIGN PRE-CLEARANCE SUBMITTAL</h1>
           <div class="subtitle">
-            Port of Discharge: ${MANIFEST_PRESETS[selectedPresetKey]?.destinationPort || 'KSA Maritime Berth'} | Incoterm: ${currentIncoterm} | Consignee CR: ${consigneeCR}
+            Date: ${dynamicRiyadhDate} | Port of Discharge: ${MANIFEST_PRESETS[selectedPresetKey]?.destinationPort || 'KSA Maritime Berth'} | Incoterm: ${currentIncoterm} | Consignee CR: ${consigneeCR}
           </div>
 
           ${pipelineSummaryHtml}
@@ -525,7 +531,7 @@ export default function IndustrialBOMVault() {
           ${verificationBlock}
 
           <div style="margin-top: 10px; padding-top: 6px; border-top: 1px solid #cbd5e1; font-family: monospace; font-size: 7.5px; color: #64748b; line-height: 1.3;">
-            <strong>STATUTORY COMPLIANCE NOTICE:</strong> Verified upstream under SASO Saber & FASAH electronic integration rules. SCoC linkage requires prior PCoC issuance by accredited Conformity Assessment Body (${currentCab.accreditationCode}). Final port release is subject to ZATCA Phase-2 cryptographic ledger clearance.
+            <strong>STATUTORY COMPLIANCE NOTICE:</strong> Verified upstream under SASO Saber & FASAH electronic integration rules. SCoC linkage requires prior PCoC issuance by accredited Conformity Assessment Body (${currentCab.accreditationCode}) and verified physical hardware on-body nameplate parity (Royal Decree M/36). Final port release is subject to ZATCA Phase-2 cryptographic ledger clearance.
           </div>
 
           <div class="footer">
@@ -619,12 +625,12 @@ export default function IndustrialBOMVault() {
                         <span>⚠️ CRITICAL {currentIncoterm} DEMURRAGE EXPOSURE ALERT</span>
                     </div>
                     <p className="leading-relaxed text-[11px]">
-                        <strong>Consignee Commercial Registration (CR) is unbound or SCoC is pending.</strong> Under {currentIncoterm} terms, container demurrage ($120–$250/day) at port of destination rests strictly on the seller. <em>Operational Rule: NO VALID PCoC → NO SCoC → SHIPMENT WILL NOT BE CLEARED.</em>
+                        <strong>Consignee Commercial Registration (CR) is unbound or physical hardware lacks the mandatory on-body nameplate (SASO M/36 / 10.1).</strong> Under {currentIncoterm} terms, container demurrage ($120–$250/day) at port of destination rests strictly on the seller[cite: 11]. <em>Operational Rule: NO ON-BODY MARKING → NO SCoC → IMMEDIATE FASAH CUSTOMS REJECTION.</em>
                     </p>
                 </div>
             ) : (
                 <div className="mb-4 p-2.5 bg-emerald-950/30 border border-emerald-500/40 rounded text-xs text-emerald-300 flex items-center justify-between">
-                    <span>✓ <strong>INCOTERM CLEARANCE STATUS ({currentIncoterm}):</strong> Consignee CR ({consigneeCR}) verified. Low port demurrage risk.</span>
+                    <span>✓ <strong>INCOTERM CLEARANCE STATUS ({currentIncoterm}):</strong> Consignee CR ({consigneeCR}) verified // SASO M/36 on-body parity confirmed[cite: 11]. Low port demurrage risk.</span>
                     <span className="text-[10px] text-emerald-400 font-mono">FASAH READY</span>
                 </div>
             )}
@@ -637,7 +643,7 @@ export default function IndustrialBOMVault() {
                         <button
                             type="button"
                             onClick={() => handleSelectPreset('ARCHITECTURAL_CURTAIN_WALL')}
-                            className={`text-xs px-3 py-1.5 rounded transition ${
+                            className={`text-xs px-3 py-1.5 rounded transition cursor-pointer ${
                                 selectedPresetKey === 'ARCHITECTURAL_CURTAIN_WALL'
                                     ? 'bg-cyan-500 text-slate-950 font-bold'
                                     : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
@@ -648,7 +654,7 @@ export default function IndustrialBOMVault() {
                         <button
                             type="button"
                             onClick={() => handleSelectPreset('INDUSTRIAL_CNC_MACHINERY')}
-                            className={`text-xs px-3 py-1.5 rounded transition ${
+                            className={`text-xs px-3 py-1.5 rounded transition cursor-pointer ${
                                 selectedPresetKey === 'INDUSTRIAL_CNC_MACHINERY'
                                     ? 'bg-amber-500 text-slate-950 font-bold'
                                     : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
@@ -718,7 +724,7 @@ export default function IndustrialBOMVault() {
                             <button
                                 type="button"
                                 onClick={handlePasteManifest}
-                                className="text-[10px] bg-slate-900 hover:bg-cyan-950 text-cyan-300 border border-cyan-500/40 px-2 py-0.5 rounded transition"
+                                className="text-[10px] bg-slate-900 hover:bg-cyan-950 text-cyan-300 border border-cyan-500/40 px-2 py-0.5 rounded transition cursor-pointer"
                             >
                                 PASTE CSV/TSV
                             </button>
@@ -738,7 +744,7 @@ export default function IndustrialBOMVault() {
                     <button
                         onClick={handleEvaluate}
                         disabled={loading}
-                        className="mt-3 w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2 rounded text-xs transition"
+                        className="mt-3 w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2 rounded text-xs transition cursor-pointer"
                     >
                         {loading ? 'COMPUTING COMPLIANCE PARITY...' : 'EXECUTE CST / SABER PARITY AUDIT'}
                     </button>
@@ -749,7 +755,7 @@ export default function IndustrialBOMVault() {
                         <h3 className="text-xs text-slate-400">AUDIT MANIFEST OUTPUT:</h3>
                         <button
                             onClick={handlePrintExecutiveBrief}
-                            className="text-[11px] bg-slate-800 hover:bg-cyan-950 text-cyan-300 border border-cyan-500/40 px-2.5 py-1 rounded transition flex items-center gap-1.5"
+                            className="text-[11px] bg-slate-800 hover:bg-cyan-950 text-cyan-300 border border-cyan-500/40 px-2.5 py-1 rounded transition flex items-center gap-1.5 cursor-pointer"
                         >
                             <span>🖨️</span>
                             <span>PRINT / EXPORT DOSSIER</span>

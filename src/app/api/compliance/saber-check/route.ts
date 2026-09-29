@@ -6,6 +6,12 @@ interface ComplianceRule {
   cstMandate: 'COC-CST' | 'STANDARD_SABER';
   fasahWindow: string;
   accreditedBodies: string[];
+  sasoNameplateMandate?: {
+    effectiveDate: string;
+    legalBasis: string;
+    enforcementScope: string;
+    requirements: string[];
+  };
   certificates: {
     pcoc: {
       type: string;
@@ -32,6 +38,16 @@ const REGULATORY_DATABASE: Record<string, ComplianceRule> = {
     cstMandate: 'STANDARD_SABER',
     fasahWindow: '72h Pre-Arrival Declaration (Mandatory)',
     accreditedBodies: ['TÜV Rheinland', 'Intertek', 'SGS', 'Bureau Veritas'],
+    sasoNameplateMandate: {
+      effectiveDate: '2026-10-01',
+      legalBasis: 'SASO Circular 247 / Royal Decree M/36 (Art. 19)',
+      enforcementScope: 'Mandatory Physical On-Body Hardware Marking (Zero Tolerance)',
+      requirements: [
+        'Saudi Importer Official Name (Bilingual Arabic/English) permanently engraved or laser-etched on machine chassis',
+        'Importer 10-digit Commercial Registration (CR) Number verified against SABER portal',
+        'OEM Multi-Client Isolation: Tooling and plate must match the active consignment importer (carton stickers invalid)'
+      ]
+    },
     certificates: {
       pcoc: {
         type: 'Product Certificate (PCoC - Type 1a)',
@@ -39,10 +55,16 @@ const REGULATORY_DATABASE: Record<string, ComplianceRule> = {
         scope: 'Factory Test Report + CE/SASO Machinery Safety Technical Construction File'
       },
       scoc: {
-        penaltyRisk: 'DAP Risk: Unbound consignee CR stops SCoC issuance. Triggers immediate FASAH manifest rejection and container demurrage ($500–$1,500/day).'
+        penaltyRisk: 'DAP Risk: Unbound consignee CR stops SCoC issuance. Non-compliant nameplate triggers immediate FASAH manifest rejection and container demurrage ($500–$1,500/day).'
       }
     },
     fasahPreflightChecklist: [
+      {
+        item: 'SASO M/36 ON-BODY NAMEPLATE AUDIT',
+        description: 'Verify importer 10-digit CR and bilingual legal name are laser-etched/engraved directly on hardware body before container sealing. Packaging-only stickers strictly rejected.',
+        mandatory: true,
+        responsibleParty: 'EXPORTER'
+      },
       {
         item: 'SASO Technical File & Factory Test Protocol',
         description: 'Certified lab reports matching ISO 12100 & IEC 60204-1 electrical safety directives.',
@@ -83,6 +105,16 @@ const REGULATORY_DATABASE: Record<string, ComplianceRule> = {
     cstMandate: 'STANDARD_SABER',
     fasahWindow: '48h Pre-Declaration Window',
     accreditedBodies: ['TÜV Rheinland', 'Nemko', 'Intertek'],
+    sasoNameplateMandate: {
+      effectiveDate: '2026-10-01',
+      legalBasis: 'SASO Circular 247 / Royal Decree M/36 (Art. 19)',
+      enforcementScope: 'Hardware Rating Plate & Importer Parity',
+      requirements: [
+        'Importer Legal Name & 10-digit CR permanently affixed to bottom casing/rating label',
+        'Tamper-evident or indelible marking (packaging sticker alone invalid)',
+        'Exact parity with SABER technical file photos'
+      ]
+    },
     certificates: {
       pcoc: {
         type: 'Product Certificate (PCoC)',
@@ -90,10 +122,16 @@ const REGULATORY_DATABASE: Record<string, ComplianceRule> = {
         scope: 'SASO 3114 Conformance + CB Test Certificate'
       },
       scoc: {
-        penaltyRisk: 'Non-compliant USB-C or missing CB report leads to immediate cargo re-export.'
+        penaltyRisk: 'Non-compliant USB-C, missing CB report, or nameplate CR mismatch leads to immediate cargo re-export.'
       }
     },
     fasahPreflightChecklist: [
+      {
+        item: 'SASO M/36 RATING PLATE & CR PARITY',
+        description: 'Inspect physical chassis rating label for importer 10-digit CR and bilingual identity before packing.',
+        mandatory: true,
+        responsibleParty: 'EXPORTER'
+      },
       {
         item: 'CB Test Certificate & SASO 3114 Verification',
         description: 'IECEE CB scheme report verifying USB Type-C charging port standardization.',
@@ -128,6 +166,15 @@ const REGULATORY_DATABASE: Record<string, ComplianceRule> = {
     cstMandate: 'COC-CST',
     fasahWindow: 'Fast-Track 48h FASAH Electronic Gate',
     accreditedBodies: ['TÜV Rheinland', 'Nemko', 'Intertek'],
+    sasoNameplateMandate: {
+      effectiveDate: '2026-10-01',
+      legalBasis: 'SASO Circular 247 / Royal Decree M/36 (Art. 19)',
+      enforcementScope: 'Chassis Markings & CST Telemetry Parity',
+      requirements: [
+        'Importer Name and CR on device serial plate',
+        'Zero discrepancy with CST approval license'
+      ]
+    },
     certificates: {
       pcoc: {
         type: 'COC-CST Unified Track',
@@ -135,10 +182,16 @@ const REGULATORY_DATABASE: Record<string, ComplianceRule> = {
         scope: 'CST Platform Integrated SABER Approval'
       },
       scoc: {
-        penaltyRisk: 'Uncertified radio transmitters trigger immediate re-export with full carrier liability.'
+        penaltyRisk: 'Uncertified radio transmitters or labeling mismatches trigger immediate re-export with full carrier liability.'
       }
     },
     fasahPreflightChecklist: [
+      {
+        item: 'SASO M/36 SERIAL & IMPORTER CR VERIFICATION',
+        description: 'Physical validation of importer CR number and manufacturer serial plate on hardware casing.',
+        mandatory: true,
+        responsibleParty: 'EXPORTER'
+      },
       {
         item: 'CST Technical Specification Approval',
         description: 'Type-approval certificate for RF frequency allocation within Saudi territory.',
@@ -167,6 +220,16 @@ const REGULATORY_DATABASE: Record<string, ComplianceRule> = {
     cstMandate: 'STANDARD_SABER',
     fasahWindow: '72h Pre-Declaration Window',
     accreditedBodies: ['TÜV Rheinland', 'Intertek', 'SGS'],
+    sasoNameplateMandate: {
+      effectiveDate: '2026-10-01',
+      legalBasis: 'SASO Circular 247 / Royal Decree M/36 (Art. 19)',
+      enforcementScope: 'Mandatory Physical On-Body Product Identification',
+      requirements: [
+        'Saudi Importer Name & 10-digit CR Number marked on physical body (laser/engraved/silk-screen/riveted)',
+        'Carton or outer box labeling alone is non-compliant as of 2026-10-01',
+        'Physical marking must match SABER digital registration exactly'
+      ]
+    },
     certificates: {
       pcoc: {
         type: 'Standard PCoC',
@@ -174,10 +237,16 @@ const REGULATORY_DATABASE: Record<string, ComplianceRule> = {
         scope: 'General Regulatory File Verification'
       },
       scoc: {
-        penaltyRisk: 'Uncertified consignments trigger port detention and storage demurrage at Jeddah and Dammam ports.'
+        penaltyRisk: 'Uncertified consignments or nameplate discrepancies trigger port detention and storage demurrage at Jeddah and Dammam ports.'
       }
     },
     fasahPreflightChecklist: [
+      {
+        item: 'SASO M/36 PHYSICAL BODY NAMEPLATE CHECK',
+        description: 'Confirm physical product carries permanent importer name and CR marking prior to container stuffing. Packaging-only stickers fail clearance.',
+        mandatory: true,
+        responsibleParty: 'EXPORTER'
+      },
       {
         item: 'Commercial Invoice & Packing List',
         description: 'ZATCA-compliant line-item description and matching 12-digit HS subheading.',

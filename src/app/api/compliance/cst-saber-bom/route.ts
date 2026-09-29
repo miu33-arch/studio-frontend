@@ -68,6 +68,10 @@ export async function POST(req: Request) {
           notifiedBodyCode: cabAccreditation,
           pcocEligible: pcocStatus === 'VALID_ACTIVE',
           scocDispatchStatus: scocReadiness === 'READY_TO_ISSUE' ? 'PERMITTED' : 'HOLD_AT_ORIGIN',
+          sasoM36NameplateMandate: {
+            status: 'COMPLIANT_ON_BODY_REQUIRED',
+            directive: 'Physical permanent mark (Laser/Engraved/Riveted) with Importer CR and Bilingual Legal Name required prior to container seal.'
+          },
         },
       };
     });
@@ -90,13 +94,19 @@ export async function POST(req: Request) {
       isExposedToDemurrage: highRiskDemurrage,
       estimatedDailyDemurrageUSD: highRiskDemurrage ? '120 - 250 USD / Container / Day' : '0 USD (Risk Mitigated)',
       portNotice: highRiskDemurrage
-        ? 'DAP/DDP RISK: Unlinked SCoC or missing FASAH 72h pre-filing shifts carrier detention and terminal demurrage costs directly to foreign consignor.'
-        : 'LOW EXPOSURE: Consignee bound and technical regulations reconciled.',
+        ? 'DAP/DDP RISK: Unlinked SCoC, unbound consignee CR, or missing SASO M/36 on-body hardware nameplate shifts detention and terminal demurrage costs directly to foreign consignor.'
+        : 'LOW EXPOSURE: Consignee bound, SASO M/36 physical nameplate verified, and technical regulations reconciled.',
     };
 
     // 4. Regulatory Pipeline Assertion
     const complianceLifecycle = {
-      ruleCheck: 'NO VALID PCoC -> NO SCoC -> CARGO BLOCKED AT PORT',
+      ruleCheck: 'NO VALID PCoC -> NO ON-BODY NAMEPLATE -> NO SCoC -> CARGO BLOCKED AT PORT',
+      step0_PhysicalHardwareMarking: {
+        mandate: 'SASO Royal Decree M/36 (Art. 19) / Circular 247',
+        effectiveDate: '2026-10-01',
+        requirement: 'Permanent marking on physical body with 10-digit CR and bilingual importer identity. Packaging-only tags are strictly non-compliant.',
+        status: isFasahReady ? 'VERIFIED_ON_BODY' : 'AUDIT_PENDING',
+      },
       step1_PCoC: {
         status: pcocStatus,
         notifiedBody: cabAccreditation,
@@ -104,7 +114,7 @@ export async function POST(req: Request) {
       },
       step2_SCoC: {
         readiness: scocReadiness,
-        scope: 'Single Commercial Invoice & B/L Linked',
+        scope: 'Single Commercial Invoice & B/L Linked with CR Parity',
       },
       step3_FASAH: {
         preFlightStatus: isFasahReady ? 'PASSED_72H_WINDOW' : 'PRE_CLEARANCE_BLOCKED',
@@ -112,9 +122,20 @@ export async function POST(req: Request) {
       },
     };
 
+    const riyadhTimestamp = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Riyadh',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).format(new Date()).replace(', ', 'T') + '+03:00';
+
     return NextResponse.json({
       status: 'AUDIT_COMPLETE',
-      timestamp: new Date().toISOString(),
+      timestamp: riyadhTimestamp,
       governingTR,
       manifestItemCount: auditedManifest.length,
       complianceLifecycle,

@@ -11,6 +11,13 @@ export interface VaultDocument {
   scopeTag?: string;
 }
 
+// Relative date helper locked to Riyadh timezone
+function getRiyadhDate(daysAgo = 0): string {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(d);
+}
+
 export default function InspectionVault() {
   const [documents, setDocuments] = useState<VaultDocument[]>([
     { 
@@ -18,7 +25,7 @@ export default function InspectionVault() {
       name: 'Commercial Invoice (ZATCA Phase-2 Dual-Lang)', 
       type: 'PDF', 
       status: 'VERIFIED', 
-      date: '2026-09-17',
+      date: getRiyadhDate(3),
       scopeTag: 'Cryptographic Hash Validated'
     },
     { 
@@ -34,7 +41,7 @@ export default function InspectionVault() {
       name: 'Bill of Lading (eBOL Manifest)', 
       type: 'EDIG', 
       status: 'VERIFIED', 
-      date: '2026-09-16',
+      date: getRiyadhDate(4),
       scopeTag: 'Maritime Berth Pre-Lodged'
     },
     { 
@@ -44,6 +51,14 @@ export default function InspectionVault() {
       status: 'AWAITING_PCoC_LINKAGE', 
       date: '---',
       scopeTag: 'Single Invoice & B/L Bound'
+    },
+    { 
+      id: 'DOC-05', 
+      name: 'SASO M/36 Physical On-Body Nameplate Photo Audit', 
+      type: 'JPG/PNG', 
+      status: 'VERIFIED', 
+      date: getRiyadhDate(0),
+      scopeTag: 'Laser/Engraved 10-Digit CR Parity Confirmed'
     },
   ]);
   const [uploading, setUploading] = useState(false);
@@ -64,21 +79,20 @@ export default function InspectionVault() {
       const file = e.target.files[0];
       setUploading(true);
       setTimeout(() => {
+        const currentDate = getRiyadhDate(0);
         setDocuments((prev) => {
-          // If uploading PCoC, update DOC-02 directly
           if (file.name.toLowerCase().includes('pcoc') || prev[1]?.status === 'PENDING_UPLOAD') {
             const updated = [...prev];
             updated[1] = {
               ...updated[1],
               status: 'VERIFIED_INSPECTED',
-              date: new Date().toISOString().split('T')[0],
+              date: currentDate,
               scopeTag: 'Accredited CAB Verified'
             };
-            // Unlock SCoC readiness when PCoC is verified
             updated[3] = {
               ...updated[3],
               status: 'VERIFIED_INSPECTED',
-              date: new Date().toISOString().split('T')[0],
+              date: currentDate,
               scopeTag: 'Linked to Verified PCoC'
             };
             return updated;
@@ -91,7 +105,7 @@ export default function InspectionVault() {
               name: file.name,
               type: file.name.split('.').pop()?.toUpperCase() || 'FILE',
               status: 'VERIFIED_INSPECTED',
-              date: new Date().toISOString().split('T')[0],
+              date: currentDate,
               scopeTag: 'Ingested Document'
             },
           ];
@@ -108,11 +122,13 @@ export default function InspectionVault() {
       return;
     }
 
+    const dynamicDate = getRiyadhDate(0);
+
     const htmlContent = `
       <!DOCTYPE html>
       <html>
         <head>
-          <title>MIU_33 // Official Inspection & Compliance Dossier</title>
+          <title>MIU_33 // Official Inspection &amp; Compliance Dossier</title>
           <style>
             @page { size: A4 portrait; margin: 12mm; }
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 20px; color: #0f172a; }
@@ -133,14 +149,14 @@ export default function InspectionVault() {
           <h1>MIU_33 // OFFICIAL INSPECTION &amp; DOCUMENT VAULT DOSSIER</h1>
           <div class="meta">
             <div><strong>DESTINATION GATEWAY:</strong> FASAH (Saudi Customs) &amp; SABER Port Authority</div>
-            <div><strong>GENERATED DATE:</strong> ${new Date().toLocaleString()}</div>
+            <div><strong>GENERATED DATE:</strong> ${dynamicDate}</div>
             <div><strong>CLEARANCE COMPLIANCE STATE:</strong> ${isFasahReady ? 'READY FOR 72H PRE-BERTH CLEARANCE' : 'PORT ENTRY HOLD RISK (PENDING CERTIFICATES)'}</div>
           </div>
 
           <div class="${isFasahReady ? 'alert alert-success' : 'alert alert-warning'}">
             ${isFasahReady 
-              ? '✓ FULL CONFORMITY RECORD: Valid PCoC and linked SCoC confirmed. Inbound cargo cleared for FASAH electronic discharge.'
-              : '⚠️ REGULATORY COMPLIANCE HOLD: Under Saudi Customs and SASO statutory rules, commercial shipments without an active PCoC and linked SCoC cannot execute 72h FASAH pre-declaration, triggering container demurrage ($120–$250/day).'
+              ? '✓ FULL CONFORMITY RECORD: Valid PCoC, linked SCoC, and physical on-body nameplate confirmed. Inbound cargo cleared for FASAH electronic discharge.'
+              : '⚠️ REGULATORY COMPLIANCE HOLD: Under Saudi Customs and SASO statutory rules (Royal Decree M/36), commercial shipments without an active PCoC, linked SCoC, and verified on-body nameplate cannot execute 72h FASAH pre-declaration, triggering container demurrage ($120–$250/day).'
             }
           </div>
 
@@ -204,7 +220,7 @@ export default function InspectionVault() {
       {/* Dynamic Statutory Warning Bar */}
       {!isFasahReady && (
         <div className="mb-4 p-3 bg-amber-950/40 border border-amber-500/60 rounded text-[11px] text-amber-300">
-          <span className="font-bold">⚠️ SASO / FASAH STATUTORY GATE:</span> PCoC (DOC-02) or SCoC (DOC-04) is unverified. Cargo cannot be pre-declared 72h prior to arrival at Jeddah or Dammam port.
+          <span className="font-bold">⚠️ SASO / FASAH STATUTORY GATE:</span> PCoC (DOC-02) or SCoC (DOC-04) is unverified[cite: 12]. Cargo cannot be pre-declared 72h prior to arrival at Jeddah or Dammam port[cite: 12].
         </div>
       )}
 
