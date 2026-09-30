@@ -17,7 +17,7 @@ const nextConfig: NextConfig = {
           {
             key: "Content-Security-Policy",
             value:
-              "default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https://api.miu33archstudio.xyz https://geo.miu33archstudio.xyz https://*.workers.dev http://127.0.0.1:5000 http://localhost:5000 ws: wss:;",
+              "default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https://api.miu33archstudio.xyz https://geo.miu33archstudio.xyz https://*.workers.dev http://127.0.0.1:5000 http://localhost:5000 http://127.0.0.1:8000 http://localhost:8000 ws: wss:;",
           },
           {
             key: "X-Frame-Options",

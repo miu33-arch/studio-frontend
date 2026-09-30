@@ -119,9 +119,37 @@ export default function SaberComplianceAuditor() {
 
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${encodeURIComponent(dossierTlvBase64)}&format=svg`;
 
+    const mandateHtml = resultData.sasoNameplateMandate ? `
+      <div>
+        <div class="section-title">3. SASO M/36 ON-BODY NAMEPLATE &amp; CR PARITY MANDATE (EFFECTIVE OCT 1, 2026)</div>
+        <table>
+          <tr>
+            <th style="width: 32%;">REGULATORY PARAMETER</th>
+            <th style="width: 53%;">TECHNICAL DIRECTIVE</th>
+            <th style="width: 15%; text-align: center;">MANDATE STATUS</th>
+          </tr>
+          <tr>
+            <td style="font-weight: 600; font-family: monospace; font-size: 10px;">Physical Body Nameplate</td>
+            <td style="color: #334155; font-size: 10px;">Laser-etched / Engraved / Silkscreen / Riveted plate directly on hardware body. Outer packaging alone is non-compliant.</td>
+            <td style="text-align: center; font-family: monospace; font-size: 9px; font-weight: bold; color: #dc2626;">ENFORCED</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 600; font-family: monospace; font-size: 10px;">CR &amp; Entity Parity</td>
+            <td style="color: #334155; font-size: 10px;">Saudi Importer 10-digit CR and Bilingual (Arabic/English) legal name must match SABER record character-for-character.</td>
+            <td style="text-align: center; font-family: monospace; font-size: 9px; font-weight: bold; color: #047857;">ZERO TOLERANCE</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 600; font-family: monospace; font-size: 10px;">OEM Multi-Client Isolation</td>
+            <td style="color: #334155; font-size: 10px;">Factory mold version and serial tagging must dynamically isolate per-importer consignments.</td>
+            <td style="text-align: center; font-family: monospace; font-size: 9px; font-weight: bold; color: #0284c7;">ISOLATED RUN</td>
+          </tr>
+        </table>
+      </div>
+    ` : '';
+
     const checklistHtml = resultData.fasahPreflightChecklist ? `
       <div>
-        <div class="section-title">3. 72-HOUR FASAH PRE-FLIGHT READINESS CHECKLIST</div>
+        <div class="section-title">4. 72-HOUR FASAH PRE-FLIGHT READINESS CHECKLIST</div>
         <table>
           <tr>
             <th style="width: 32%;">AUDIT REQUIREMENT</th>
@@ -132,9 +160,8 @@ export default function SaberComplianceAuditor() {
             <tr>
               <td style="font-weight: 600; font-family: monospace; font-size: 10px;">${c.item}</td>
               <td style="color: #334155; font-size: 10px;">${c.description}</td>
-              <td style="text-align: center; font-family: monospace; font-size: 9px; font-weight: bold; color: ${
-                c.responsibleParty === 'EXPORTER' ? '#0284c7' : c.responsibleParty === 'IMPORTER' ? '#b45309' : '#047857'
-              };">
+              <td style="text-align: center; font-family: monospace; font-size: 9px; font-weight: bold; color: ${c.responsibleParty === 'EXPORTER' ? '#0284c7' : c.responsibleParty === 'IMPORTER' ? '#b45309' : '#047857'
+      };">
                 ${c.responsibleParty}
               </td>
             </tr>
@@ -160,7 +187,6 @@ export default function SaberComplianceAuditor() {
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
           }
-          /* DIAGONAL AUDIT DISCLAIMER WATERMARK */
           .watermark {
             position: fixed;
             top: 48%;
@@ -196,7 +222,6 @@ export default function SaberComplianceAuditor() {
         </style>
       </head>
       <body>
-        <!-- FIXED AUDIT WATERMARK -->
         <div class="watermark">DRAFT AUDIT // UNVERIFIED DEMO PRE-CLEARANCE</div>
 
         <div class="dossier-container">
@@ -205,7 +230,7 @@ export default function SaberComplianceAuditor() {
               <div class="title">MIU_33 // SASO &amp; CST TRADE COMPLIANCE DOSSIER</div>
               <div class="meta">KSA PORT PRE-CLEARANCE GATEWAY &bull; TARGET HS: ${resultData.hsCode}</div>
             </div>
-            <div class="meta" style="text-align: right;">DATE: ${new Date().toISOString().split('T')[0]}<br>CLEARANCE TRACK: ${isCst ? 'UNIFIED COC-CST' : 'STANDARD SABER'}</div>
+           <div class="meta" style="text-align: right;">DATE: ${new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(new Date())}<br>CLEARANCE TRACK: ${isCst ? 'UNIFIED COC-CST' : 'STANDARD SABER'}</div>
           </div>
 
           <div>
@@ -227,13 +252,15 @@ export default function SaberComplianceAuditor() {
             </div>
           </div>
 
+          ${mandateHtml}
+
           ${checklistHtml}
 
           <div style="margin-top: 10px; padding: 10px; border: 1px dashed #cbd5e1; background: #f8fafc; display: flex; justify-content: space-between; align-items: center;">
             <div style="font-family: monospace; font-size: 8.5px; line-height: 1.5; color: #334155;">
-              <div><strong>SOVEREIGN AUDIT TRAIL:</strong> SASO-SABER-PREFLIGHT-OK</div>
+              <div><strong>SOVEREIGN AUDIT TRAIL:</strong> SASO-SABER-M36-COMPLIANT</div>
               <div>REGULATORY DIGEST: <code>d9a6c7b1348f02ec3b11899a0e67104b901a</code></div>
-              <div style="color: #047857; font-weight: bold; margin-top: 2px;">✓ 72-HOUR FASAH PRE-ARRIVAL CONFORMANCE ENGINE READY</div>
+              <div style="color: #047857; font-weight: bold; margin-top: 2px;">✓ PHYSICAL NAMEPLATE &amp; 72H FASAH PRE-ARRIVAL CONFORMANCE ENGINE READY</div>
             </div>
             <div style="text-align: center;">
               <img src="${qrUrl}" alt="ZATCA Compliance QR" style="width: 65px; height: 65px; border: 1px solid #cbd5e1; background: #fff; padding: 2px;" />
@@ -282,7 +309,6 @@ export default function SaberComplianceAuditor() {
           />
         </div>
 
-        {/* 1-Click Fast-Fill HS Badges */}
         <div>
           <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">Preset High-Frequency HS Codes:</div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -291,9 +317,8 @@ export default function SaberComplianceAuditor() {
                 key={preset.code}
                 type="button"
                 onClick={() => handleSelectPreset(preset.code)}
-                className={`text-left p-2 bg-[#05070b] hover:bg-cyan-950/40 border border-cyan-500/30 hover:border-cyan-400 rounded transition ${
-                  idx === 4 ? 'col-span-2 sm:col-span-1 border-amber-500/30 hover:border-amber-400' : ''
-                }`}
+                className={`text-left p-2 bg-[#05070b] hover:bg-cyan-950/40 border border-cyan-500/30 hover:border-cyan-400 rounded transition ${idx === 4 ? 'col-span-2 sm:col-span-1 border-amber-500/30 hover:border-amber-400' : ''
+                  }`}
               >
                 <div className={`font-bold text-xs ${idx === 4 ? 'text-amber-300' : 'text-cyan-300'}`}>{preset.label}</div>
                 <div className="text-[10px] text-gray-400 truncate">{preset.desc}</div>
@@ -305,7 +330,7 @@ export default function SaberComplianceAuditor() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-400 text-cyan-300 py-2 rounded transition font-bold tracking-wide text-xs"
+          className="w-full bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-400 text-cyan-300 py-2 rounded transition font-bold tracking-wide text-xs cursor-pointer"
         >
           {loading ? 'ANALYZING REGULATORY RULES & CST PARITY...' : 'RUN PCoC / SCoC AUDIT'}
         </button>
@@ -326,6 +351,19 @@ export default function SaberComplianceAuditor() {
                 COC-CST MANDATORY
               </span>
             )}
+          </div>
+
+          {/* ACTIVE SASO M/36 BODY NAMEPLATE ALERT BADGE */}
+          <div className="p-3 bg-cyan-950/40 border border-cyan-400/50 rounded text-[11px] space-y-1">
+            <div className="flex justify-between items-center text-cyan-300 font-bold">
+              <span>⚡ SASO CIRCULAR 247 // ROYAL DECREE M/36 ENFORCEMENT</span>
+              <span className="text-[9px] bg-cyan-500/20 px-1.5 py-0.5 rounded text-cyan-200 border border-cyan-400/40">
+                OCT 1, 2026
+              </span>
+            </div>
+            <p className="text-gray-300 text-[10px] leading-relaxed">
+              Mandatory permanent on-body hardware marking (Laser/Engraved/Silkscreen) displaying Importer Legal Name (AR/EN) and 10-digit CR Number. Outer-box or sticker-only labeling is strictly rejected prior to SCoC issuance.
+            </p>
           </div>
 
           <div className="flex justify-between border-b border-slate-800/60 pb-1">
@@ -378,13 +416,12 @@ export default function SaberComplianceAuditor() {
                     <div className="flex-1">
                       <div className="flex justify-between items-center">
                         <span className="font-semibold text-slate-200">{task.item}</span>
-                        <span className={`px-1.5 py-0.2 rounded text-[8px] font-mono ${
-                          task.responsibleParty === 'EXPORTER' 
+                        <span className={`px-1.5 py-0.2 rounded text-[8px] font-mono ${task.responsibleParty === 'EXPORTER'
                             ? 'bg-cyan-950 text-cyan-300 border border-cyan-500/30'
                             : task.responsibleParty === 'IMPORTER'
-                            ? 'bg-amber-950 text-amber-300 border border-amber-500/30'
-                            : 'bg-slate-800 text-slate-300'
-                        }`}>
+                              ? 'bg-amber-950 text-amber-300 border border-amber-500/30'
+                              : 'bg-slate-800 text-slate-300'
+                          }`}>
                           {task.responsibleParty}
                         </span>
                       </div>

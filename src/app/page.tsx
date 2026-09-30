@@ -10,6 +10,7 @@ import SaberComplianceAuditor from "@/components/SaberComplianceAuditor";
 import InspectionVault from "@/components/InspectionVault";
 import IndustrialBOMVault from '@/components/IndustrialBOMVault';
 import GeMiuAgentModal from "@/components/GeMiuAgentModal";
+import CustomsAuditPanel from "@/components/CustomsAuditPanel";
 
 const getApiBase = () => {
   if (typeof window === "undefined") {
@@ -44,7 +45,7 @@ const SAMPLE_EN: StagedBomItem[] = [
 
 export default function SovereignCorePage() {
   const [activeTab, setActiveTab] = useState<
-    "pipeline" | "multi_vertical" | "spec" | "invoice" | "site_hud" | "pitch" | "auditor" | "saber_auditor" | "inspection_vault" | "industrial_bom"
+   "pipeline" | "multi_vertical" | "spec" | "invoice" | "site_hud" | "pitch" | "auditor" | "saber_auditor" | "inspection_vault" | "industrial_bom" | "gemiu_customs"
   >("pipeline");
   const [engineMode, setEngineMode] = useState<"trade" | "geo" | "unified">("unified");
 
@@ -1130,6 +1131,7 @@ export default function SovereignCorePage() {
         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
           {[
             { id: "pipeline", label: "🚢 LOGISTICS & TARIFF" },
+            { id: "gemiu_customs", label: "🤖 geMiu CUSTOMS AGENT" },
             { id: "multi_vertical", label: "❄️ DUAL-TRACK INGEST" },
             { id: "spec", label: "📑 BOM & SASO LOCALIZER" },
             { id: "invoice", label: "💳 COMMERCIAL & ZATCA" },
@@ -1877,6 +1879,16 @@ export default function SovereignCorePage() {
 
         </main>
       )}
+      
+      {/* ========================================================================= */}
+      {/* TAB: geMiu 6.64M AGENTIC CUSTOMS AUDITOR                                   */}
+      {/* ========================================================================= */}
+      {activeTab === "gemiu_customs" && (
+        <main style={{ width: "100%", maxWidth: "1200px", margin: "0 auto", padding: "10px" }}>
+          <CustomsAuditPanel />
+        </main>
+      )}
+
       {/* ========================================================================= */}
       {/* TAB 1: DUAL-TRACK MULTI-VERTICAL INGESTION CONSOLE (AEC + FMCG)          */}
       {/* ========================================================================= */}
