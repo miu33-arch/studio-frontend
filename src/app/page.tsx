@@ -1529,14 +1529,29 @@ export default function SovereignCorePage() {
                     return btoa(binary);
                   };
 
+                  // Accurate Saudi / Riyadh Local Timestamp (UTC+3)
+                  const now = new Date();
+                  const saFormatter = new Intl.DateTimeFormat("en-GB", {
+                    timeZone: "Asia/Riyadh",
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                    hour12: false
+                  });
+                  const parts = Object.fromEntries(saFormatter.formatToParts(now).map(p => [p.type, p.value]));
+                  const riyadhTimestamp = `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}+03:00`;
+
                   const zatcaTlvBase64 = generateZatcaTlv(
                     "MIU_33 SOVEREIGN TECH",
                     "300000000000003",
-                    new Date().toISOString(),
+                    riyadhTimestamp,
                     landedSAR.toFixed(2),
                     vatSAR.toFixed(2)
                   );
-                  const qrSvgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${encodeURIComponent(zatcaTlvBase64)}&color=0f172a&bgcolor=ffffff&margin=1`;
+                  const qrSvgUrl = `/api/services/zatca-qr?data=${encodeURIComponent(zatcaTlvBase64)}`;
 
                   const rowsHtml = itemsToRender.map((itm: any) => `
                     <tr>
