@@ -217,6 +217,7 @@ export default function SaberComplianceAuditor() {
           .badge { display: inline-block; padding: 2px 5px; border-radius: 3px; font-size: 9px; font-weight: bold; }
           .badge-cst { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
           .badge-green { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+          .badge-blue { background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
           .warning-box { border: 1px solid #fca5a5; background: #fef2f2; color: #991b1b; padding: 8px 10px; font-size: 10px; margin-top: 6px; border-radius: 4px; }
           .footer { margin-top: 14px; border-top: 1px solid #cbd5e1; padding-top: 6px; font-size: 8px; font-family: monospace; color: #64748b; display: flex; justify-content: space-between; }
         </style>
@@ -240,6 +241,7 @@ export default function SaberComplianceAuditor() {
               <tr><td>HS Tariff Code</td><td style="font-family: monospace; font-weight: bold;">${resultData.hsCode}</td><td>${resultData.category || 'Regulated Industrial Goods'}</td></tr>
               <tr><td>Applicable Standard</td><td style="font-weight: 600;">${resultData.standard}</td><td>Mandatory SASO Technical File verification</td></tr>
               <tr><td>Certification Track</td><td><span class="badge ${isCst ? 'badge-cst' : 'badge-green'}">${resultData.certificates?.pcoc?.type || 'Standard PCoC'}</span></td><td>${resultData.certificates?.pcoc?.scope}</td></tr>
+              <tr><td>SCoC Validity Window</td><td><span class="badge badge-blue">${resultData.certificates?.scoc?.validity || '90 Days'}</span></td><td>Extended 90-day buffer protects ocean transshipment &amp; rollovers</td></tr>
               <tr><td>FASAH Port SLA</td><td style="color: #047857; font-weight: bold;">${resultData.fasahWindow || '72h Pre-Arrival'}</td><td>Pre-arrival manifest linked before docking</td></tr>
               <tr><td>Accredited Inspection Bodies</td><td colspan="2">${(resultData.accreditedBodies || ['TÜV Rheinland', 'Intertek']).join(' &bull; ')}</td></tr>
             </table>
@@ -260,7 +262,7 @@ export default function SaberComplianceAuditor() {
             <div style="font-family: monospace; font-size: 8.5px; line-height: 1.5; color: #334155;">
               <div><strong>SOVEREIGN AUDIT TRAIL:</strong> SASO-SABER-M36-COMPLIANT</div>
               <div>REGULATORY DIGEST: <code>d9a6c7b1348f02ec3b11899a0e67104b901a</code></div>
-              <div style="color: #047857; font-weight: bold; margin-top: 2px;">✓ PHYSICAL NAMEPLATE &amp; 72H FASAH PRE-ARRIVAL CONFORMANCE ENGINE READY</div>
+              <div style="color: #047857; font-weight: bold; margin-top: 2px;">✓ PHYSICAL NAMEPLATE &amp; 90-DAY SCoC FASAH PRE-ARRIVAL CONFORMANCE ENGINE READY</div>
             </div>
             <div style="text-align: center;">
               <img src="${qrUrl}" alt="ZATCA Compliance QR" style="width: 65px; height: 65px; border: 1px solid #cbd5e1; background: #fff; padding: 2px;" />
@@ -382,8 +384,21 @@ export default function SaberComplianceAuditor() {
           </div>
 
           <div className="flex justify-between border-b border-slate-800/60 pb-1">
-            <span className="text-gray-400">Certification Scope:</span>
+            <span className="text-gray-400">PCoC Product Scope:</span>
             <span className="text-emerald-400">{result.certificates?.pcoc?.type} ({result.certificates?.pcoc?.validity})</span>
+          </div>
+
+          {/* SCoC 90-DAY STATUTORY VALIDITY ROW */}
+          <div className="flex justify-between items-center border-b border-slate-800/60 pb-1">
+            <span className="text-gray-400">SCoC Clearance Validity:</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sky-400 font-bold font-mono">
+                {result.certificates?.scoc?.validity || '90 Days'}
+              </span>
+              <span className="text-[9px] bg-sky-950/80 border border-sky-400/40 text-sky-300 px-1.5 py-0.2 rounded font-mono">
+                SASO EXTENSION
+              </span>
+            </div>
           </div>
 
           <div className="flex justify-between border-b border-slate-800/60 pb-1">

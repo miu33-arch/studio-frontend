@@ -19,6 +19,10 @@ interface ComplianceRule {
       scope: string;
     };
     scoc: {
+      type: string;
+      validity: string;
+      validityDays: number;
+      regulatoryUpdate: string;
       penaltyRisk: string;
     };
   };
@@ -55,6 +59,10 @@ const REGULATORY_DATABASE: Record<string, ComplianceRule> = {
         scope: 'Factory Test Report + CE/SASO Machinery Safety Technical Construction File'
       },
       scoc: {
+        type: 'Shipment Certificate of Conformity (SCoC)',
+        validity: '90 Days (Extended from 60 Days)',
+        validityDays: 90,
+        regulatoryUpdate: 'SASO / SABER Statutory Extension to 90 Days',
         penaltyRisk: 'DAP Risk: Unbound consignee CR stops SCoC issuance. Non-compliant nameplate triggers immediate FASAH manifest rejection and container demurrage ($500–$1,500/day).'
       }
     },
@@ -84,8 +92,8 @@ const REGULATORY_DATABASE: Record<string, ComplianceRule> = {
         responsibleParty: 'IMPORTER'
       },
       {
-        item: 'Electronic Bill of Lading (eBOL) SABER Linkage',
-        description: 'Draft B/L and commercial invoice matched to SABER platform to generate the SCoC.',
+        item: 'Electronic Bill of Lading (eBOL) & 90-Day SCoC Issuance',
+        description: 'Draft B/L and commercial invoice matched on SABER to generate 90-day valid SCoC before vessel arrival.',
         mandatory: true,
         responsibleParty: 'SHARED'
       },
@@ -122,6 +130,10 @@ const REGULATORY_DATABASE: Record<string, ComplianceRule> = {
         scope: 'SASO 3114 Conformance + CB Test Certificate'
       },
       scoc: {
+        type: 'Shipment Certificate of Conformity (SCoC)',
+        validity: '90 Days (Extended from 60 Days)',
+        validityDays: 90,
+        regulatoryUpdate: 'SASO / SABER Statutory Extension to 90 Days',
         penaltyRisk: 'Non-compliant USB-C, missing CB report, or nameplate CR mismatch leads to immediate cargo re-export.'
       }
     },
@@ -145,8 +157,8 @@ const REGULATORY_DATABASE: Record<string, ComplianceRule> = {
         responsibleParty: 'EXPORTER'
       },
       {
-        item: 'Consignee SABER SCoC Issuance',
-        description: 'Generation of shipment certificate against shipping invoice.',
+        item: 'Consignee SABER SCoC Issuance (90-Day Window)',
+        description: 'Generation of 90-day shipment certificate against shipping invoice and final eBOL.',
         mandatory: true,
         responsibleParty: 'IMPORTER'
       },
@@ -182,6 +194,10 @@ const REGULATORY_DATABASE: Record<string, ComplianceRule> = {
         scope: 'CST Platform Integrated SABER Approval'
       },
       scoc: {
+        type: 'Shipment Certificate of Conformity (SCoC)',
+        validity: '90 Days (Extended from 60 Days)',
+        validityDays: 90,
+        regulatoryUpdate: 'SASO / SABER Statutory Extension to 90 Days',
         penaltyRisk: 'Uncertified radio transmitters or labeling mismatches trigger immediate re-export with full carrier liability.'
       }
     },
@@ -200,7 +216,7 @@ const REGULATORY_DATABASE: Record<string, ComplianceRule> = {
       },
       {
         item: 'Unified COC-CST Platform Gateway Sync',
-        description: 'SABER-CST unified digital link validation.',
+        description: 'SABER-CST unified digital link validation with active 90-day SCoC emission.',
         mandatory: true,
         responsibleParty: 'SHARED'
       },
@@ -237,6 +253,10 @@ const REGULATORY_DATABASE: Record<string, ComplianceRule> = {
         scope: 'General Regulatory File Verification'
       },
       scoc: {
+        type: 'Shipment Certificate of Conformity (SCoC)',
+        validity: '90 Days (Extended from 60 Days)',
+        validityDays: 90,
+        regulatoryUpdate: 'SASO / SABER Statutory Extension to 90 Days',
         penaltyRisk: 'Uncertified consignments or nameplate discrepancies trigger port detention and storage demurrage at Jeddah and Dammam ports.'
       }
     },
@@ -254,8 +274,8 @@ const REGULATORY_DATABASE: Record<string, ComplianceRule> = {
         responsibleParty: 'EXPORTER'
       },
       {
-        item: 'Consignee SABER Portal SCoC Sign-Off',
-        description: 'Authorized importer account electronic approval on shipment certificate.',
+        item: 'Consignee SABER Portal SCoC Sign-Off (90-Day Validity)',
+        description: 'Authorized importer account electronic approval on shipment certificate (valid for 90 days).',
         mandatory: true,
         responsibleParty: 'IMPORTER'
       },

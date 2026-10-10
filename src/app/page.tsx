@@ -14,13 +14,14 @@ import CustomsAuditPanel from "@/components/CustomsAuditPanel";
 
 const getApiBase = () => {
   if (typeof window === "undefined") {
-    return process.env.NEXT_PUBLIC_API_BASE || "https://api.miu33archstudio.xyz";
+    return process.env.INTERNAL_BACKEND_URL || "http://miu-backend:5000";
   }
   const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
   if (isLocal) {
     return "http://127.0.0.1:5000";
   }
-  return process.env.NEXT_PUBLIC_API_BASE || "https://api.miu33archstudio.xyz";
+  // Sa browser/production, relative path lang para si Nginx ang bahala sa /api
+  return "";
 };
 
 const API_BASE = getApiBase();
