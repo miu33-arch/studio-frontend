@@ -3734,14 +3734,42 @@ export default function SovereignCorePage() {
                   OFFICIAL INSTITUTIONAL SETTLEMENT (SAR / USD)
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "0.72rem" }}>
-                  <div><span style={{ color: "#666" }}>BENEFICIARY ENTITY:</span> <strong style={{ color: "#fff" }}>MIU_33 SOVEREIGN SYSTEMS &amp; TECHNOLOGY</strong></div>
-                  <div><span style={{ color: "#666" }}>BANK:</span> <strong style={{ color: "#fff" }}>Al Rajhi Banking Corp (Corporate Banking Div)</strong></div>
-                  <div><span style={{ color: "#666" }}>ACCOUNT ROUTING:</span> <span style={{ color: "#aaa" }}>Riyadh Corporate Central Branch</span></div>
-                  <div><span style={{ color: "#666" }}>CORPORATE IBAN:</span></div>
-                  <div style={{ fontSize: "0.75rem", color: "#00ff66", fontWeight: "bold", backgroundColor: "#000", padding: "8px", border: "1px solid #142838", userSelect: "all" }}>
+                  <div>
+                    <span style={{ color: "#666" }}>BENEFICIARY NAME:</span>{" "}
+                    <strong style={{ color: "#fff" }}>ANAMY DE LA CRUZ PADILLA</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: "#666" }}>OPERATING ENTITY:</span>{" "}
+                    <span style={{ color: "#aaa" }}>MIU_33 STUDIO // DIGITAL ARCHITECTURE</span>
+                  </div>
+                  <div>
+                    <span style={{ color: "#666" }}>BANK / CLEARING:</span>{" "}
+                    <strong style={{ color: "#fff" }}>Al Rajhi Bank / urpay (SARIE Network)</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: "#666" }}>ACCOUNT ROUTING:</span>{" "}
+                    <span style={{ color: "#aaa" }}>Digital Settlement Branch (Bank Code: 80)</span>
+                  </div>
+                  <div>
+                    <span style={{ color: "#666" }}>SARIE IBAN:</span>
+                  </div>
+                  <div 
+                    style={{ 
+                      fontSize: "0.75rem", 
+                      color: "#00ff66", 
+                      fontWeight: "bold", 
+                      backgroundColor: "#000", 
+                      padding: "8px", 
+                      border: "1px solid #142838", 
+                      userSelect: "all" 
+                    }}
+                  >
                     SA4880207781501222121011
                   </div>
-                  <div><span style={{ color: "#666" }}>ZATCA TAX ID:</span> <span style={{ color: "#00f3ff" }}>300000000000003</span></div>
+                  <div>
+                    <span style={{ color: "#666" }}>ZATCA TAX ID:</span>{" "}
+                    <span style={{ color: "#00f3ff" }}>300000000000003</span>
+                  </div>
                 </div>
               </div>
 
