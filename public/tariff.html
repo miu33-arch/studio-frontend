@@ -14,6 +14,7 @@
       --accent-cyan: #00e5ff;
       --accent-gold: #ffd700;
       --accent-crimson: #ff3366;
+      --accent-warn: #f59e0b;
       --text-main: #e6edf3;
       --text-dim: #7d8590;
       --font-mono: 'Consolas', 'Courier New', Courier, monospace;
@@ -34,14 +35,12 @@
       width: 100vw;
       max-width: 100vw;
       overflow-x: hidden;
-      box-sizing: border-box;
     }
 
     .container {
       width: 100%;
       max-width: 100%;
       margin: 0 auto;
-      box-sizing: border-box;
     }
 
     header {
@@ -153,7 +152,6 @@
       padding: 16px;
       width: 100%;
       max-width: 100%;
-      box-sizing: border-box;
       overflow: hidden;
     }
 
@@ -350,6 +348,16 @@
       color: #fff;
     }
 
+    .btn-warn {
+      border-color: var(--accent-warn);
+      color: var(--accent-warn);
+    }
+
+    .btn-warn:hover {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fff;
+    }
+
     .table-wrapper {
       width: 100%;
       max-width: 100%;
@@ -358,19 +366,18 @@
       margin-bottom: 16px;
       border: 1px solid var(--border-subtle);
       display: block;
-      box-sizing: border-box;
     }
 
     .bom-table {
       width: 100%;
-      min-width: 1050px;
+      min-width: 1200px;
       border-collapse: collapse;
       table-layout: fixed;
     }
 
     .bom-table th,
     .bom-table td {
-      padding: 6px 4px;
+      padding: 6px 6px;
       text-align: left;
       border: 1px solid var(--border-subtle);
       font-size: 10.5px;
@@ -387,6 +394,14 @@
 
     .bom-table tr:hover {
       background: #131a24;
+    }
+
+    .row-warn {
+      background: rgba(245, 158, 11, 0.05);
+    }
+
+    .row-critical {
+      background: rgba(255, 51, 102, 0.08);
     }
 
     .cell-input {
@@ -414,6 +429,7 @@
       font-size: 9px;
       font-weight: 700;
       display: inline-block;
+      margin-right: 4px;
     }
 
     .tag-flag.saber {
@@ -434,33 +450,51 @@
       border: 1px solid var(--accent-gold);
     }
 
+    .tag-flag.warn {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--accent-warn);
+      border: 1px solid var(--accent-warn);
+    }
+
+    .tag-flag.pass {
+      background: rgba(63, 185, 80, 0.15);
+      color: #3fb950;
+      border: 1px solid #3fb950;
+    }
+
+    .tag-flag.lift {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      border: 1px dashed var(--accent-warn);
+    }
+
     .rollup-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
       margin-top: 16px;
     }
 
     .metric-card {
       background: var(--bg-surface);
       border: 1px solid var(--border-subtle);
-      padding: 12px;
+      padding: 10px;
     }
 
     .metric-label {
-      font-size: 10px;
+      font-size: 9.5px;
       color: var(--text-dim);
       text-transform: uppercase;
       margin-bottom: 4px;
     }
 
     .metric-val {
-      font-size: 15px;
+      font-size: 13.5px;
       font-weight: 700;
       color: var(--accent-cyan);
     }
 
-    /* Modal Styles */
+    /* Modals */
     .modal-overlay {
       display: none;
       position: fixed;
@@ -482,7 +516,7 @@
     .modal-card {
       background: var(--bg-surface);
       border: 1px solid var(--accent-cyan);
-      width: 600px;
+      width: 620px;
       max-width: 90%;
       padding: 24px;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
@@ -531,6 +565,22 @@
     .map-field select:focus {
       border-color: var(--accent-cyan);
       outline: none;
+    }
+
+    .audit-terminal-body {
+      background: #080a0d;
+      border: 1px solid var(--border-subtle);
+      padding: 12px;
+      font-size: 11px;
+      line-height: 1.6;
+      max-height: 280px;
+      overflow-y: auto;
+      margin-bottom: 16px;
+    }
+
+    .audit-row-item {
+      padding: 6px 0;
+      border-bottom: 1px dashed #1a2230;
     }
 
     .modal-actions {
@@ -648,27 +698,27 @@
 
       .rollup-grid {
         display: grid !important;
-        grid-template-columns: repeat(4, 1fr) !important;
+        grid-template-columns: repeat(6, 1fr) !important;
         margin-top: 10px !important;
         border-top: 1.5pt solid #000;
         padding-top: 8px;
-        gap: 8px !important;
+        gap: 6px !important;
       }
 
       .metric-card {
         background: transparent !important;
         border: 0.75pt solid #000 !important;
-        padding: 6px 8px !important;
+        padding: 4px 6px !important;
       }
 
       .metric-label {
         color: #555 !important;
-        font-size: 7pt !important;
+        font-size: 6.5pt !important;
       }
 
       .metric-val {
         color: #000 !important;
-        font-size: 9.5pt !important;
+        font-size: 8.5pt !important;
       }
 
       .print-footer {
@@ -701,8 +751,7 @@
       <div style="display: flex; justify-content: space-between;">
         <div>
           <div class="print-title">CUSTOMS VALUATION & CONFORMITY CLEARANCE DOSSIER</div>
-          <div style="font-size: 8.5pt; margin-top: 2px;" id="printRegimeTitle">GCC Common Customs Tariff & ZATCA
-            Statutory Compliance</div>
+          <div style="font-size: 8.5pt; margin-top: 2px;" id="printRegimeTitle">GCC Common Customs Tariff & ZATCA Statutory Compliance</div>
         </div>
         <div class="print-meta" style="text-align: right;">
           <div id="printTimestamp">EVALUATED: OFFLINE</div>
@@ -716,7 +765,7 @@
         <div class="badge">MODULAR AIR-GAPPED CORE</div>
         <div class="title">Deterministic HS & Landed Cost Engine</div>
       </div>
-      <div class="status" id="engineStatus">• RUNNING ENGINE CORE (PERSISTED)</div>
+      <div class="status" id="engineStatus">• RUNNING ENGINE CORE (INDEXEDDB AIR-GAPPED)</div>
     </header>
 
     <div class="top-controls">
@@ -752,8 +801,7 @@
       <div class="grid">
         <div class="panel">
           <div class="panel-title" id="dbTitle">Corridor Tariff Database</div>
-          <input type="text" id="searchInput" class="search-box" placeholder="Enter HS code or keyword..."
-            oninput="filterTariffs()">
+          <input type="text" id="searchInput" class="search-box" placeholder="Enter HS code or keyword..." oninput="filterTariffs()">
           <div class="card-list" id="tariffList"></div>
         </div>
 
@@ -807,11 +855,11 @@
         <div class="panel-title">Dynamic Multi-Regime Ledger</div>
 
         <div class="toolbar">
-          <span style="color: var(--text-dim); font-size: 11px;">Edit numbers directly in the table to recalculate under
-            the active corridor regime.</span>
+          <span style="color: var(--text-dim); font-size: 11px;">Edit values directly in the ledger. Real-time parity and demurrage calculation executed via client IndexedDB.</span>
           <div class="btn-group">
             <button class="btn btn-danger" onclick="clearActiveLedger()">✕ CLEAR LEDGER</button>
             <button class="btn" onclick="downloadSampleCSV()">⬇ SAMPLE CSV</button>
+            <button class="btn btn-warn" onclick="triggerPortAudit()">! RUN PORT CLEARANCE AUDIT</button>
             <button class="btn btn-accent" onclick="exportDossier()">⎙ EXPORT CLEARANCE DOSSIER</button>
           </div>
         </div>
@@ -819,8 +867,7 @@
         <div class="dropzone" id="dropzone" onclick="document.getElementById('csvFileInput').click()">
           <div class="dropzone-title">DRAG & DROP PROCUREMENT CSV HERE</div>
           <div class="dropzone-hint">Auto-matches or opens column mapping dialog for arbitrary vendor formats</div>
-          <input type="file" id="csvFileInput" accept=".csv,text/csv" style="display: none;"
-            onchange="handleFileSelect(event)">
+          <input type="file" id="csvFileInput" accept=".csv,text/csv" style="display: none;" onchange="handleFileSelect(event)">
         </div>
 
         <div id="batchResults" style="display: none;">
@@ -828,17 +875,18 @@
             <table class="bom-table">
               <thead>
                 <tr>
-                  <th style="width: 7%;">CODE</th>
-                  <th style="width: 20%;">ITEM DESCRIPTION</th>
-                  <th style="width: 11%;">HS CODE</th>
-                  <th style="width: 6%; text-align: right;">DUTY %</th>
-                  <th style="width: 12%; text-align: right;" id="thFob">FOB</th>
-                  <th style="width: 10%; text-align: right;" id="thFreight">FREIGHT</th>
-                  <th style="width: 9%; text-align: right;" id="thCif">CIF</th>
-                  <th style="width: 8%; text-align: right;">DUTY</th>
+                  <th style="width: 6%;">CODE</th>
+                  <th style="width: 17%;">ITEM DESCRIPTION</th>
+                  <th style="width: 10%;">HS CODE</th>
+                  <th style="width: 5%; text-align: right;">DUTY %</th>
+                  <th style="width: 10%; text-align: right;" id="thFob">FOB</th>
+                  <th style="width: 9%; text-align: right;" id="thFreight">FREIGHT</th>
+                  <th style="width: 8%; text-align: right;" id="thCif">CIF</th>
+                  <th style="width: 7%; text-align: right;">DUTY</th>
                   <th style="width: 8%; text-align: right;" id="thVat">TAX/VAT</th>
-                  <th style="width: 10%; text-align: right;">LANDED</th>
-                  <th style="width: 11%;">DIRECTIVE</th>
+                  <th style="width: 9%; text-align: right;">LANDED</th>
+                  <th style="width: 11%;">STATUTORY PARITY</th>
+                  <th style="width: 10%;">LOGISTICS DIRECTIVE</th>
                 </tr>
               </thead>
               <tbody id="bomTableBody"></tbody>
@@ -860,7 +908,15 @@
             </div>
             <div class="metric-card">
               <div class="metric-label">Grand Landed Cost</div>
-              <div class="metric-val" id="rollTotal" style="color: #ffd700;">$0.00</div>
+              <div class="metric-val" id="rollTotal" style="color: var(--accent-gold);">$0.00</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Statutory Quay Risk</div>
+              <div class="metric-val" id="rollQuayRisk" style="color: var(--accent-crimson);">0 FLAGS</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Demurrage Exp. (T+7)</div>
+              <div class="metric-val" id="rollDemurrage" style="color: var(--accent-warn);">$0.00 / DAY</div>
             </div>
           </div>
 
@@ -918,7 +974,115 @@
     </div>
   </div>
 
+  <!-- Modal: Port Clearance Audit HUD -->
+  <div class="modal-overlay" id="auditModal">
+    <div class="modal-card" style="border-color: var(--accent-warn);">
+      <div class="modal-title" style="color: var(--accent-warn);">STATUTORY PRE-CLEARANCE AUDIT DOSSIER</div>
+      <div class="modal-desc">
+        Forensic breakdown of technical directives, statutory holds, and daily demurrage exposure at berth:
+      </div>
+      <div class="audit-terminal-body" id="auditTerminalContent"></div>
+      <div class="modal-actions">
+        <button class="btn btn-warn" onclick="closeAuditModal()">ACKNOWLEDGE & DISMISS</button>
+      </div>
+    </div>
+  </div>
+
   <script>
+    // 0. Auto-unregister aggressive Service Workers to prevent stale cache traps
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        for (let registration of registrations) {
+          registration.unregister();
+        }
+      });
+    }
+
+    // 1. IndexedDB Client-Side Persistence Layer
+    const DB_NAME = 'MIU_TRADE_ENGINE_IDB';
+    const DB_VERSION = 1;
+
+    class TradeDB {
+      constructor() {
+        this.db = null;
+      }
+
+      async init() {
+        if (this.db) return this.db;
+        return new Promise((resolve, reject) => {
+          const req = indexedDB.open(DB_NAME, DB_VERSION);
+          req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('bom_ledger')) {
+              db.createObjectStore('bom_ledger', { keyPath: 'id' });
+            }
+            if (!db.objectStoreNames.contains('meta')) {
+              db.createObjectStore('meta', { keyPath: 'key' });
+            }
+          };
+          req.onsuccess = () => {
+            this.db = req.result;
+            resolve(this.db);
+          };
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async setMeta(key, value) {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction('meta', 'readwrite');
+          tx.objectStore('meta').put({ key, value });
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+        });
+      }
+
+      async getMeta(key, fallback = null) {
+        await this.init();
+        return new Promise((resolve) => {
+          const tx = this.db.transaction('meta', 'readonly');
+          const req = tx.objectStore('meta').get(key);
+          req.onsuccess = () => resolve(req.result ? req.result.value : fallback);
+          req.onerror = () => resolve(fallback);
+        });
+      }
+
+      async saveAllBOM(items) {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction('bom_ledger', 'readwrite');
+          const store = tx.objectStore('bom_ledger');
+          store.clear();
+          items.forEach(item => store.put(item));
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => reject(tx.error);
+        });
+      }
+
+      async getAllBOM() {
+        await this.init();
+        return new Promise((resolve) => {
+          const tx = this.db.transaction('bom_ledger', 'readonly');
+          const req = tx.objectStore('bom_ledger').getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => resolve([]);
+        });
+      }
+
+      async clearBOM() {
+        await this.init();
+        return new Promise((resolve) => {
+          const tx = this.db.transaction('bom_ledger', 'readwrite');
+          tx.objectStore('bom_ledger').clear();
+          tx.oncomplete = () => resolve();
+        });
+      }
+    }
+
+    const tradeDB = new TradeDB();
+
+    // 2. Constants & Peg Rates
     const CURRENCY_PEGS = {
       USD: { symbol: '$', rate: 1.0000, name: 'US Dollar' },
       SAR: { symbol: 'SAR ', rate: 3.7500, name: 'Saudi Riyal' },
@@ -1077,6 +1241,62 @@
         }
       ]
     };
+
+    // 3. Dynamic Statutory Risk & Parity Resolver (Data-Driven from Active Module)
+    function evaluateStatutoryRisk(matchedTariff, desc = '') {
+      if (!matchedTariff) {
+        return {
+          parity: 'UNMAPPED TARIFF',
+          riskLevel: 'warn',
+          directive: 'STANDARD',
+          heavyLift: false,
+          note: 'HS code does not resolve to active corridor registry. Manual classification required.'
+        };
+      }
+
+      const directive = matchedTariff.directive || 'STANDARD';
+      const parity = matchedTariff.parity || (matchedTariff.reg ? matchedTariff.reg.slice(0, 24).toUpperCase() : 'VERIFIED');
+      let riskLevel = matchedTariff.riskLevel || 'low';
+      let note = matchedTariff.note || matchedTariff.reg || 'Conforms to active corridor statutory schedule.';
+      let heavyLift = Boolean(matchedTariff.heavyLift);
+
+      const dirUpper = directive.toUpperCase();
+      const parityUpper = parity.toUpperCase();
+
+      // Explicit boundary check for Energy Efficiency (EE) and regulatory holds to avoid false matches on 'INCENTIVE' or 'GREEN'
+      const isEE = /\bEE\b/.test(dirUpper) || /\bEE\b/.test(parityUpper) || dirUpper.includes('ENERGY EFFICIENCY') || parityUpper.includes('ENERGY EFFICIENCY');
+      const isHold = parityUpper.includes('HOLD');
+
+      if (isEE || isHold) {
+        riskLevel = 'critical';
+      } else if (dirUpper.includes('SAFEGUARD') || dirUpper.includes('ADD') || dirUpper.includes('232') || parityUpper.includes('PEND') || parityUpper.includes('WARN')) {
+        riskLevel = 'warn';
+      }
+
+      // Check text or metadata for heavy-lift rigging constraints (>15 MT or chiller/crane units)
+      const textLower = (desc + ' ' + (matchedTariff.desc || '')).toLowerCase();
+      if (!heavyLift && (textLower.includes('chiller') || textLower.includes('packaged ac') || textLower.includes('heavy lift'))) {
+        heavyLift = true;
+      }
+
+      return {
+        parity: parity,
+        riskLevel: riskLevel,
+        directive: directive,
+        heavyLift: heavyLift,
+        note: note
+      };
+    }
+
+    // 4. Initial Sandbox Data for Visitors
+    const VISITOR_SAMPLE_BOM = [
+      { id: 0, code: 'CW-01', item: 'Alloy Curtain Wall Mullion', rawHs: '7604.21.00.00', fob: 45000, freight: 3200 },
+      { id: 1, code: 'ST-02', item: 'Deformed Rebar 16mm', rawHs: '7214.20.00.00', fob: 28000, freight: 2100 },
+      { id: 2, code: 'AC-03', item: 'Industrial Packaged AC Unit', rawHs: '8415.81.00.00', fob: 64000, freight: 4500 },
+      { id: 3, code: 'PV-04', item: 'Monocrystalline Solar PV Modules', rawHs: '8541.43.00.00', fob: 82000, freight: 4500 }
+    ];
+
+    // 5. Tariff Calculation Core
     class TariffEngineCore {
       constructor() {
         this.activeCorridor = 'gcc_sa';
@@ -1087,7 +1307,7 @@
         this.activeCorridor = corridorKey;
         if (!this.ratesCache[corridorKey]) {
           try {
-            const res = await fetch(`/tariff-engine/modules/${corridorKey}/rates.json`);
+            const res = await fetch(`/tariff-engine/modules/${corridorKey}/rates.json`, { cache: 'no-store' });
             if (res.ok) {
               this.ratesCache[corridorKey] = await res.json();
             } else {
@@ -1124,14 +1344,14 @@
         let penalties = 0;
 
         if (this.activeCorridor === 'gcc_sa') {
-          vat = (cif + duty) * 0.15; // ZATCA 15% statutory VAT
+          vat = (cif + duty) * 0.15;
         } else if (this.activeCorridor === 'eu_taric') {
-          vat = (cif + duty) * 0.19; // Standard EU 19% import turnover VAT
-          penalties = baseFob * (tariff.penaltyDutyRate || 0); // Anti-dumping / safeguard measures
+          vat = (cif + duty) * 0.19;
+          penalties = baseFob * (tariff.penaltyDutyRate || 0);
         } else if (this.activeCorridor === 'us_hts') {
-          penalties = baseFob * (tariff.penaltyDutyRate || 0); // Section 232/301 remedies
+          penalties = baseFob * (tariff.penaltyDutyRate || 0);
         } else if (this.activeCorridor === 'asean_cn') {
-          vat = (cif + duty) * 0.13; // PRC statutory VAT baseline
+          vat = (cif + duty) * 0.13;
         }
 
         const landed = cif + duty + vat + penalties;
@@ -1146,28 +1366,27 @@
     let pendingRawRows = [];
     let detectedHeaders = [];
 
-    const STORAGE_KEYS = {
-      REGIME: 'miu_tariff_active_regime',
-      CURRENCY: 'miu_tariff_active_curr',
-      BOM_ITEMS: 'miu_tariff_bom_items',
-      ACTIVE_TAB: 'miu_tariff_active_tab'
-    };
-
-    function saveState() {
-      try {
-        localStorage.setItem(STORAGE_KEYS.REGIME, engine.activeCorridor);
-        localStorage.setItem(STORAGE_KEYS.CURRENCY, activeCurrency);
-        localStorage.setItem(STORAGE_KEYS.BOM_ITEMS, JSON.stringify(activeBOMItems));
-      } catch (e) { }
+    // Security Helper: DOM XSS Neutralization
+    function escapeHTML(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
     }
 
-    function clearActiveLedger() {
+    async function saveState() {
+      await tradeDB.setMeta('activeRegime', engine.activeCorridor);
+      await tradeDB.setMeta('activeCurrency', activeCurrency);
+      await tradeDB.saveAllBOM(activeBOMItems);
+    }
+
+    async function clearActiveLedger() {
       if (!activeBOMItems.length) return;
-      if (confirm('Clear active BOM ledger and local storage cache?')) {
+      if (confirm('Clear active BOM ledger and local IndexedDB store?')) {
         activeBOMItems = [];
-        try {
-          localStorage.removeItem(STORAGE_KEYS.BOM_ITEMS);
-        } catch (e) { }
+        await tradeDB.clearBOM();
         document.getElementById('batchResults').style.display = 'none';
         document.getElementById('bomTableBody').innerHTML = '';
         document.getElementById('csvFileInput').value = '';
@@ -1184,10 +1403,10 @@
         document.querySelectorAll('.tab-btn')[1].classList.add('active');
         document.getElementById('view-batch').classList.add('active');
       }
-      try { localStorage.setItem(STORAGE_KEYS.ACTIVE_TAB, mode); } catch (e) { }
+      tradeDB.setMeta('activeTab', mode);
     }
 
-    function changeCurrency(currKey) {
+    async function changeCurrency(currKey) {
       activeCurrency = currKey;
       document.getElementById('currencySelect').value = currKey;
       document.getElementById('lblFob').innerText = `FOB Value (${currKey})`;
@@ -1199,7 +1418,7 @@
 
       calculateSingle();
       if (activeBOMItems.length > 0) renderBOMTable(true);
-      saveState();
+      await saveState();
     }
 
     async function changeCorridor(corridorKey, persist = true) {
@@ -1245,10 +1464,10 @@
       renderList(currentRates);
       if (currentRates.length > 0) selectTariff(currentRates[0]);
       if (activeBOMItems.length > 0) {
-        reclassifyBOM();
+        await reclassifyBOM();
         renderBOMTable(true);
       }
-      if (persist) saveState();
+      if (persist) await saveState();
     }
 
     function renderList(items) {
@@ -1259,12 +1478,12 @@
         card.className = `tariff-card ${selectedTariff && selectedTariff.code === t.code ? 'selected' : ''}`;
         card.onclick = () => selectTariff(t);
         card.innerHTML = `
-        <div class="card-header">
-          <span class="hs-code">${t.code}</span>
-          <span class="duty-tag">${(t.dutyRate * 100).toFixed(1)}% Duty</span>
-        </div>
-        <div class="desc">${t.desc}</div>
-      `;
+          <div class="card-header">
+            <span class="hs-code">${escapeHTML(t.code)}</span>
+            <span class="duty-tag">${(t.dutyRate * 100).toFixed(1)}% Duty</span>
+          </div>
+          <div class="desc">${escapeHTML(t.desc)}</div>
+        `;
         list.appendChild(card);
       });
     }
@@ -1357,17 +1576,39 @@
       return '';
     }
 
+    // Hardened Drag-and-Drop Handlers with Extension & Buffer Caps
     const dropzone = document.getElementById('dropzone');
     dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
     dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
     dropzone.addEventListener('drop', (e) => {
       e.preventDefault();
       dropzone.classList.remove('dragover');
-      if (e.dataTransfer.files.length) processCSV(e.dataTransfer.files[0]);
+      if (e.dataTransfer.files && e.dataTransfer.files.length) {
+        validateAndProcessFile(e.dataTransfer.files[0]);
+      }
     });
 
     function handleFileSelect(e) {
-      if (e.target.files.length) processCSV(e.target.files[0]);
+      if (e.target.files && e.target.files.length) {
+        validateAndProcessFile(e.target.files[0]);
+      }
+    }
+
+    function validateAndProcessFile(file) {
+      const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB threshold
+      const fileName = file.name.toLowerCase();
+
+      if (!fileName.endsWith('.csv') && file.type !== 'text/csv' && file.type !== 'application/vnd.ms-excel') {
+        alert('VALIDATION REJECTED: Only standard CSV procurement files (.csv) are accepted.');
+        return;
+      }
+
+      if (file.size > MAX_FILE_SIZE) {
+        alert('VALIDATION REJECTED: File size exceeds the 5 MB procurement ledger threshold.');
+        return;
+      }
+
+      processCSV(file);
     }
 
     function processCSV(file) {
@@ -1379,7 +1620,6 @@
         detectedHeaders = parsed.headers;
         pendingRawRows = parsed.rows;
 
-        // Validate if auto-detection resolves all 5 keys
         const sample = pendingRawRows[0] || {};
         const hasCode = findCol(sample, ['CODE', 'ITEMNO', 'LINE', 'TAG', 'ID', 'NO']) !== '';
         const hasDesc = findCol(sample, ['ITEMNAME', 'ITEM', 'DESCRIPTION', 'MATERIAL', 'SPECIFICATION']) !== '';
@@ -1424,7 +1664,7 @@
       document.getElementById('csvFileInput').value = '';
     }
 
-    function confirmMapping() {
+    async function confirmMapping() {
       const kCode = document.getElementById('mapCode').value;
       const kDesc = document.getElementById('mapDesc').value;
       const kHs = document.getElementById('mapHs').value;
@@ -1439,6 +1679,7 @@
         const freight = cleanNum((kFreight && r[kFreight]) ? r[kFreight] : 0);
 
         const tariff = engine.matchTariff(hsRaw, currentRates);
+        const risk = evaluateStatutoryRisk(tariff, itemDesc);
         return {
           id: idx,
           code: code,
@@ -1449,26 +1690,37 @@
           penaltyRate: tariff.penaltyDutyRate || 0,
           fob: fob,
           freight: freight,
-          directive: tariff.directive
+          directive: risk.directive,
+          parity: risk.parity,
+          riskLevel: risk.riskLevel,
+          heavyLift: risk.heavyLift,
+          note: risk.note
         };
       });
 
       document.getElementById('mapModal').classList.remove('active');
-      saveState();
+      await saveState();
       renderBOMTable(true);
     }
 
-    function reclassifyBOM() {
+    async function reclassifyBOM() {
       activeBOMItems.forEach(item => {
-        const tariff = engine.matchTariff(item.rawHs, currentRates);
+        const tariff = engine.matchTariff(item.rawHs || item.hsCode, currentRates);
+        const risk = evaluateStatutoryRisk(tariff, item.item);
+
         item.hsCode = tariff.code;
         item.dutyPercent = tariff.dutyRate * 100;
-        item.directive = tariff.directive;
         item.penaltyRate = tariff.penaltyDutyRate || 0;
+        item.directive = risk.directive;
+        item.parity = risk.parity;
+        item.riskLevel = risk.riskLevel;
+        item.heavyLift = risk.heavyLift;
+        item.note = risk.note;
       });
+      await saveState();
     }
 
-    function buildBOMState(rows) {
+    async function buildBOMState(rows) {
       activeBOMItems = rows.map((r, idx) => {
         const code = findCol(r, ['CODE', 'ITEMNO', 'LINE', 'TAG', 'ID', 'NO']) || `LINE-${idx + 1}`;
         const itemDesc = findCol(r, ['ITEMNAME', 'ITEM', 'DESCRIPTION', 'MATERIAL', 'SPECIFICATION']) || 'Industrial Component';
@@ -1477,6 +1729,8 @@
         const freight = cleanNum(findCol(r, ['FREIGHT', 'SHIPPING', 'INSURANCE', 'LOGISTICS']));
 
         const tariff = engine.matchTariff(hsRaw, currentRates);
+        const risk = evaluateStatutoryRisk(tariff, itemDesc);
+
         return {
           id: idx,
           code: code,
@@ -1487,23 +1741,28 @@
           penaltyRate: tariff.penaltyDutyRate || 0,
           fob: fob,
           freight: freight,
-          directive: tariff.directive
+          directive: risk.directive,
+          parity: risk.parity,
+          riskLevel: risk.riskLevel,
+          heavyLift: risk.heavyLift,
+          note: risk.note
         };
       });
-      saveState();
+      await saveState();
       renderBOMTable(true);
     }
 
-    function updateRowVal(idx, key, val) {
+    async function updateRowVal(idx, key, val) {
       const mult = CURRENCY_PEGS[activeCurrency].rate;
       activeBOMItems[idx][key] = (parseFloat(val) || 0) / mult;
-      saveState();
+      await saveState();
       renderBOMTable(false);
     }
 
     function renderBOMTable(fullRebuild = true) {
       const tbody = document.getElementById('bomTableBody');
       let sumCif = 0, sumDuty = 0, sumTax = 0, sumTotal = 0;
+      let flaggedItems = 0;
       const mult = CURRENCY_PEGS[activeCurrency].rate;
 
       if (fullRebuild) tbody.innerHTML = '';
@@ -1518,25 +1777,45 @@
         sumTax += taxLine;
         sumTotal += res.landed;
 
+        if (item.riskLevel === 'warn' || item.riskLevel === 'critical') {
+          flaggedItems++;
+        }
+
         const displayFob = (item.fob * mult).toFixed(2);
         const displayFreight = (item.freight * mult).toFixed(2);
+
+        let parityBadgeClass = 'pass';
+        let rowClass = '';
+        if (item.riskLevel === 'warn') {
+          parityBadgeClass = 'warn';
+          rowClass = 'row-warn';
+        }
+        if (item.riskLevel === 'critical') {
+          parityBadgeClass = 'qm';
+          rowClass = 'row-critical';
+        }
 
         if (fullRebuild) {
           const tr = document.createElement('tr');
           tr.id = `row-${idx}`;
+          if (rowClass) tr.className = rowClass;
           tr.innerHTML = `
-          <td style="color: var(--accent-cyan); font-weight: 700;">${item.code}</td>
-          <td>${item.item}</td>
-          <td>${item.hsCode}</td>
-          <td><input type="number" step="0.5" class="cell-input cell-input-num" value="${item.dutyPercent}" onchange="updateRowVal(${idx}, 'dutyPercent', this.value)"></td>
-          <td><input type="number" step="100" class="cell-input cell-input-num" value="${displayFob}" onchange="updateRowVal(${idx}, 'fob', this.value)"></td>
-          <td><input type="number" step="50" class="cell-input cell-input-num" value="${displayFreight}" onchange="updateRowVal(${idx}, 'freight', this.value)"></td>
-          <td class="col-cif" style="text-align: right;">${formatCurrency(res.cif)}</td>
-          <td class="col-duty" style="text-align: right;">${formatCurrency(res.duty)}</td>
-          <td class="col-tax" style="text-align: right;">${formatCurrency(taxLine)}</td>
-          <td class="col-landed" style="text-align: right; font-weight: 700; color: var(--accent-cyan);">${formatCurrency(res.landed)}</td>
-          <td><span class="tag-flag standard">${item.directive}</span></td>
-        </tr>`;
+            <td style="color: var(--accent-cyan); font-weight: 700;">${escapeHTML(item.code)}</td>
+            <td title="${escapeHTML(item.item)}">${escapeHTML(item.item)}</td>
+            <td>${escapeHTML(item.hsCode)}</td>
+            <td><input type="number" step="0.5" class="cell-input cell-input-num" value="${item.dutyPercent}" onchange="updateRowVal(${idx}, 'dutyPercent', this.value)"></td>
+            <td><input type="number" step="100" class="cell-input cell-input-num" value="${displayFob}" onchange="updateRowVal(${idx}, 'fob', this.value)"></td>
+            <td><input type="number" step="50" class="cell-input cell-input-num" value="${displayFreight}" onchange="updateRowVal(${idx}, 'freight', this.value)"></td>
+            <td class="col-cif" style="text-align: right;">${formatCurrency(res.cif)}</td>
+            <td class="col-duty" style="text-align: right;">${formatCurrency(res.duty)}</td>
+            <td class="col-tax" style="text-align: right;">${formatCurrency(taxLine)}</td>
+            <td class="col-landed" style="text-align: right; font-weight: 700; color: var(--accent-cyan);">${formatCurrency(res.landed)}</td>
+            <td><span class="tag-flag ${parityBadgeClass}">[${escapeHTML(item.parity || 'PASS')}]</span></td>
+            <td>
+              <span class="tag-flag standard">${escapeHTML(item.directive)}</span>
+              ${item.heavyLift ? '<span class="tag-flag lift">HEAVY LIFT</span>' : ''}
+            </td>
+          `;
           tbody.appendChild(tr);
         } else {
           const row = document.getElementById(`row-${idx}`);
@@ -1553,7 +1832,56 @@
       document.getElementById('rollDuty').innerText = formatCurrency(sumDuty);
       document.getElementById('rollVat').innerText = formatCurrency(sumTax);
       document.getElementById('rollTotal').innerText = formatCurrency(sumTotal);
+
+      const dailyExposure = flaggedItems * (1200 * mult);
+      document.getElementById('rollQuayRisk').innerText = `${flaggedItems} FLAGGED`;
+      document.getElementById('rollDemurrage').innerText = `${formatCurrency(dailyExposure)} / DAY`;
+
       document.getElementById('batchResults').style.display = activeBOMItems.length ? 'block' : 'none';
+    }
+
+    function triggerPortAudit() {
+      const flagged = activeBOMItems.filter(i => i.riskLevel === 'warn' || i.riskLevel === 'critical');
+      const terminal = document.getElementById('auditTerminalContent');
+      terminal.innerHTML = '';
+
+      if (!flagged.length) {
+        terminal.innerHTML = `
+          <div style="color: #3fb950; font-weight: 700; margin-bottom: 8px;">[✓] REGULATORY CLEARANCE PRE-FLIGHT: PASS</div>
+          <div style="color: var(--text-dim);">All ${activeBOMItems.length} lines conform to active corridor standards. Zero demurrage exposure identified. Ready for customs clearance filing.</div>
+        `;
+      } else {
+        const mult = CURRENCY_PEGS[activeCurrency].rate;
+        const totalDaily = flagged.length * (1200 * mult);
+
+        let html = `
+          <div style="color: var(--accent-crimson); font-weight: 700; margin-bottom: 6px;">
+            [!] PRE-FLIGHT STATUTORY EXCEPTION DETECTED (${flagged.length} ITEMS FLAGGED)
+          </div>
+          <div style="color: var(--accent-warn); margin-bottom: 12px; font-weight: 700;">
+            ESTIMATED QUAY HOLD DEMURRAGE EXPOSURE: ${formatCurrency(totalDaily)} / DAY (T+7)
+          </div>
+        `;
+
+        flagged.forEach(f => {
+          const color = f.riskLevel === 'critical' ? 'var(--accent-crimson)' : 'var(--accent-warn)';
+          html += `
+            <div class="audit-row-item">
+              <div><strong style="color: var(--accent-cyan);">${escapeHTML(f.code)}</strong> | ${escapeHTML(f.item)} (<span style="color: #fff;">${escapeHTML(f.hsCode)}</span>)</div>
+              <div style="color: ${color}; font-weight: 700; margin-top: 2px;">STATUS: [${escapeHTML(f.parity)}]</div>
+              <div style="color: var(--text-dim); font-size: 10.5px;">${escapeHTML(f.note || 'Non-conforming declaration line.')}</div>
+            </div>
+          `;
+        });
+
+        terminal.innerHTML = html;
+      }
+
+      document.getElementById('auditModal').classList.add('active');
+    }
+
+    function closeAuditModal() {
+      document.getElementById('auditModal').classList.remove('active');
     }
 
     function exportDossier() {
@@ -1578,20 +1906,40 @@
       document.body.removeChild(link);
     }
 
+    // 6. Offline Boot Sequence
     (async function boot() {
-      let savedRegime = 'gcc_sa';
-      let savedCurr = 'USD';
-      let savedTab = 'single';
-      try {
-        savedRegime = localStorage.getItem(STORAGE_KEYS.REGIME) || 'gcc_sa';
-        savedCurr = localStorage.getItem(STORAGE_KEYS.CURRENCY) || 'USD';
-        savedTab = localStorage.getItem(STORAGE_KEYS.ACTIVE_TAB) || 'single';
-        const storedBOM = localStorage.getItem(STORAGE_KEYS.BOM_ITEMS);
-        if (storedBOM) activeBOMItems = JSON.parse(storedBOM);
-      } catch (e) { }
+      await tradeDB.init();
+
+      const savedRegime = await tradeDB.getMeta('activeRegime', 'gcc_sa');
+      const savedCurr = await tradeDB.getMeta('activeCurrency', 'USD');
+      const savedTab = await tradeDB.getMeta('activeTab', 'single');
+
+      activeBOMItems = await tradeDB.getAllBOM();
+
+      currentRates = await engine.loadCorridor(savedRegime);
+
+      if (!activeBOMItems || activeBOMItems.length === 0) {
+        activeBOMItems = VISITOR_SAMPLE_BOM.map(s => {
+          const tariff = engine.matchTariff(s.rawHs, currentRates);
+          const risk = evaluateStatutoryRisk(tariff, s.item);
+          return {
+            ...s,
+            hsCode: tariff.code,
+            dutyPercent: tariff.dutyRate * 100,
+            penaltyRate: tariff.penaltyDutyRate || 0,
+            directive: risk.directive,
+            parity: risk.parity,
+            riskLevel: risk.riskLevel,
+            heavyLift: risk.heavyLift,
+            note: risk.note
+          };
+        });
+        await tradeDB.saveAllBOM(activeBOMItems);
+      }
 
       await changeCorridor(savedRegime, false);
-      changeCurrency(savedCurr);
+      await changeCurrency(savedCurr);
+
       if (savedTab !== 'single') switchTab(savedTab);
       if (activeBOMItems.length) renderBOMTable(true);
     })();

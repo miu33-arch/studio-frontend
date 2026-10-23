@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = 'tariff-engine-v1';
+﻿const CACHE_NAME = 'tariff-engine-v2';
 const STATIC_ASSETS = [
   '/tariff.html',
   '/manifest.json',
@@ -13,7 +13,8 @@ const STATIC_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
+      // Use cache: 'reload' during precache to avoid fetching stale browser disk items
+      return cache.addAll(STATIC_ASSETS.map(url => new Request(url, { cache: 'reload' })));
     }).then(() => self.skipWaiting())
   );
 });
@@ -33,6 +34,43 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+
+  // Only handle same-origin GET requests
+  if (event.request.method !== 'GET' || url.origin !== self.location.origin) {
+    return;
+  }
+
+  // Network-First for HTML and JSON/JS logic (prevents development stale traps)
+  const isDynamicAsset = event.request.mode === 'navigate' ||
+    url.pathname.endsWith('.html') ||
+    url.pathname.endsWith('.js') ||
+    url.pathname.endsWith('.json');
+
+  if (isDynamicAsset) {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const clone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          // Offline fallback
+          return caches.match(event.request).then((cached) => {
+            if (cached) return cached;
+            if (event.request.mode === 'navigate') {
+              return caches.match('/tariff.html');
+            }
+          });
+        })
+    );
+    return;
+  }
+
+  // Cache-First with Network Fallback for static media (SVG, images, fonts)
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
@@ -42,15 +80,9 @@ self.addEventListener('fetch', (event) => {
         if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
           return networkResponse;
         }
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
+        const clone = networkResponse.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
         return networkResponse;
-      }).catch(() => {
-        if (event.request.headers.get('accept') && event.request.headers.get('accept').includes('text/html')) {
-          return caches.match('/tariff.html');
-        }
       });
     })
   );
