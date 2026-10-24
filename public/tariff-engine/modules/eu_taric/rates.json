@@ -5,7 +5,11 @@
     "dutyRate": 0.075,
     "penaltyDutyRate": 0.15,
     "directive": "CE + ADD",
-    "reg": "EU Anti-Dumping Regulation 2021/546 & EN 1090-3 CE Declaration"
+    "reg": "EU Anti-Dumping Regulation 2021/546 & EN 1090-3 CE Declaration",
+    "parity": "EU-ADD-WARN",
+    "riskLevel": "warn",
+    "heavyLift": false,
+    "note": "15% provisional/definitive anti-dumping duty on originating extrusions. CE Declaration of Performance required."
   },
   {
     "code": "7214.20.00.00",
@@ -13,7 +17,11 @@
     "dutyRate": 0.00,
     "penaltyDutyRate": 0.25,
     "directive": "EU SAFEGUARD",
-    "reg": "EU Steel Safeguard Measure (TRQ Tariff Rate Quota / 25% Out-of-Quota)"
+    "reg": "EU Steel Safeguard Measure (TRQ Tariff Rate Quota / 25% Out-of-Quota)",
+    "parity": "EU-TRQ-ALERT",
+    "riskLevel": "warn",
+    "heavyLift": false,
+    "note": "Tariff-Rate Quota (TRQ) exhaustion triggers immediate 25% additional duty. CBAM embedded emissions reporting applies."
   },
   {
     "code": "7318.15.00.00",
@@ -21,7 +29,11 @@
     "dutyRate": 0.037,
     "penaltyDutyRate": 0.00,
     "directive": "STANDARD CE",
-    "reg": "Construction Products Regulation (CPR 305/2011/EU)"
+    "reg": "Construction Products Regulation (CPR 305/2011/EU)",
+    "parity": "CPR-CE-PASS",
+    "riskLevel": "low",
+    "heavyLift": false,
+    "note": "Requires manufacturer CE marking, EN 10204 3.1 mill test certificates, and CPR DoP filing."
   },
   {
     "code": "8415.81.00.00",
@@ -29,7 +41,11 @@
     "dutyRate": 0.026,
     "penaltyDutyRate": 0.00,
     "directive": "F-GAS + CE",
-    "reg": "EU F-Gas Regulation (EU) 2024/573 & Ecodesign Directive 2009/125/EC"
+    "reg": "EU F-Gas Regulation (EU) 2024/573 & Ecodesign Directive 2009/125/EC",
+    "parity": "FGAS-HOLD",
+    "riskLevel": "critical",
+    "heavyLift": true,
+    "note": "Pre-charged equipment requires verified HFC quota authorization on the EU F-Gas Portal prior to customs release."
   },
   {
     "code": "8541.43.00.00",
@@ -37,6 +53,10 @@
     "dutyRate": 0.00,
     "penaltyDutyRate": 0.00,
     "directive": "0% GREEN",
-    "reg": "Net-Zero Industry Act Tariff Exemption & WEEE Directive Compliance"
+    "reg": "Net-Zero Industry Act Tariff Exemption & WEEE Directive Compliance",
+    "parity": "NZIA-CONCESS",
+    "riskLevel": "low",
+    "heavyLift": false,
+    "note": "Autonomous zero-duty tariff suspension for clean energy; importer must register for WEEE take-back obligations."
   }
 ]

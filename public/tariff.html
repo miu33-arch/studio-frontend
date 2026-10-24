@@ -846,6 +846,11 @@
           <div class="compliance-box" id="complianceFlag">
             Select an industrial line item to verify technical directives and conformity frameworks.
           </div>
+
+          <div style="margin-top: 14px; padding: 10px 12px; background: #080a0f; border: 1px solid var(--border-subtle); border-left: 3px solid var(--accent-gold); font-size: 10px; line-height: 1.4; color: var(--text-dim);">
+            <div style="color: var(--accent-gold); font-weight: bold; margin-bottom: 3px;">[STATUTORY SIMULATION NOTICE]</div>
+            Duty, trade remedy (Sec 232/301, ADD), and VAT calculations are deterministic approximations. Final binding classification, valuation, and clearing admissibility remain subject to sovereign customs authorities (ZATCA, US CBP, EU Customs, GACC).
+          </div>
         </div>
       </div>
     </div>
@@ -1320,6 +1325,23 @@
         return this.ratesCache[corridorKey];
       }
 
+      validateHSLength(hsInput) {
+        const digits = (hsInput || '').replace(/\D/g, '');
+        const len = digits.length;
+        const rules = {
+          gcc_sa: [6, 8, 10, 12],
+          us_hts: [6, 8, 10],
+          eu_taric: [6, 8, 10],
+          asean_cn: [6, 8, 10]
+        };
+        const allowed = rules[this.activeCorridor] || [6, 8, 10];
+        return {
+          valid: allowed.includes(len),
+          digits: len,
+          allowed
+        };
+      }
+
       matchTariff(hsQuery, rates) {
         const cleaned = (hsQuery || '').replace(/\D/g, '');
         let matched = (rates || []).find(t => t.code.replace(/\D/g, '') === cleaned);
@@ -1497,7 +1519,6 @@
     function selectTariff(t) {
       selectedTariff = t;
       document.getElementById('displayHS').value = `${t.code} (${(t.dutyRate * 100).toFixed(1)}% Duty)`;
-      document.getElementById('complianceFlag').innerText = `Directive: ${t.reg}`;
       filterTariffs();
       calculateSingle();
     }
@@ -1519,6 +1540,17 @@
       document.getElementById('vatOut').innerText = formatCurrency(res.vat);
       document.getElementById('penaltyOut').innerText = formatCurrency(res.penalties);
       document.getElementById('totalOut').innerText = formatCurrency(res.landed);
+
+      // Validate tariff digit format against active regime
+      const check = engine.validateHSLength(selectedTariff.code);
+      const flagEl = document.getElementById('complianceFlag');
+      if (!check.valid) {
+        flagEl.style.borderLeftColor = 'var(--accent-crimson)';
+        flagEl.innerHTML = `<span style="color: var(--accent-crimson); font-weight: bold;">[DIGIT FORMAT WARN]:</span> Code has ${check.digits} digits. ${engine.activeCorridor.toUpperCase()} requires ${check.allowed.join('/')} digits for clearance.<br>Directive: ${escapeHTML(selectedTariff.reg)}`;
+      } else {
+        flagEl.style.borderLeftColor = 'var(--accent-cyan)';
+        flagEl.innerText = `Directive: ${selectedTariff.reg}`;
+      }
     }
 
     function cleanNum(val) {
@@ -1890,23 +1922,49 @@
       window.print();
     }
 
-    function downloadSampleCSV() {
-      const sample = `CODE,ITEM,HS_CODE,FOB,FREIGHT\n` +
-        `CW-01,"Alloy Curtain Wall Mullion",7604.21.00.00,45000,3200\n` +
-        `ST-02,"Deformed Rebar 16mm",7214.20.00.00,28000,2100\n` +
-        `AC-03,"Industrial Packaged AC Unit",8415.81.00.00,64000,4500\n` +
-        `PV-04,"Monocrystalline Solar PV Modules",8541.43.00.00,82000,4500`;
+   function downloadSampleCSV() {
+      const regime = (window.engine && window.engine.activeCorridor) || 'gcc_sa';
+      let sampleData = '';
 
-      const blob = new Blob([sample], { type: 'text/csv;charset=utf-8;' });
+      if (regime === 'us_hts') {
+        sampleData = `CODE,ITEM,HS_CODE,FOB,FREIGHT\n` +
+          `ST-01,"Prepared Structural Steel Plates",7308.90.30.00,55000,4200\n` +
+          `AL-02,"Extruded Aluminum Hollow Profiles",7604.21.00.10,38000,2900\n` +
+          `AC-03,"Compressor Assemblies & Parts",8415.90.80.85,72000,5100`;
+      } else if (regime === 'eu_taric') {
+        sampleData = `CODE,ITEM,HS_CODE,FOB,FREIGHT\n` +
+          `AL-01,"Aluminium Alloy Profiles & Extrusions",7604.21.00.00,42000,3100\n` +
+          `RB-02,"Deformed Concrete Reinforcing Bars",7214.20.00.00,31000,2400\n` +
+          `FN-03,"Threaded Fasteners & Screws",7318.15.00.00,12000,1100\n` +
+          `AC-04,"Reversible Commercial Packaged AC",8415.81.00.00,68000,4800\n` +
+          `PV-05,"Crystalline Silicon Solar Arrays",8541.43.00.00,85000,5200`;
+      } else if (regime === 'asean_cn') {
+        sampleData = `CODE,ITEM,HS_CODE,FOB,FREIGHT\n` +
+          `AL-01,"Architectural Aluminum Profiles",7604.21.00.00,45000,3200\n` +
+          `RB-02,"High-Strength Deformed Rebar",7214.20.00.00,29000,2200\n` +
+          `FN-03,"Industrial Threaded Fasteners",7318.15.00.00,14000,1200\n` +
+          `AC-04,"Industrial Packaged Chiller Units",8415.81.00.00,61000,4300\n` +
+          `PV-05,"Tier-1 Photovoltaic Solar Modules",8541.43.00.00,79000,4900`;
+      } else {
+        // Default GCC / KSA
+        sampleData = `CODE,ITEM,HS_CODE,FOB,FREIGHT\n` +
+          `CW-01,"Alloy Curtain Wall Mullion",7604.21.00.00,45000,3200\n` +
+          `ST-02,"Deformed Rebar 16mm",7214.20.00.00,28000,2100\n` +
+          `AC-03,"Industrial Packaged AC Unit",8415.81.00.00,64000,4500\n` +
+          `PV-04,"Monocrystalline Solar PV Modules",8541.43.00.00,82000,4500`;
+      }
+
+      const blob = new Blob(['\uFEFF' + sampleData], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.setAttribute('download', 'SAMPLE_BOM.csv');
+      link.setAttribute('download', `SAMPLE_BOM_${regime.toUpperCase()}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
     }
 
-    // 6. Offline Boot Sequence
+    // 6. Offline Boot Sequence (Clean Dropzone by Default)
     (async function boot() {
       await tradeDB.init();
 
@@ -1914,34 +1972,20 @@
       const savedCurr = await tradeDB.getMeta('activeCurrency', 'USD');
       const savedTab = await tradeDB.getMeta('activeTab', 'single');
 
-      activeBOMItems = await tradeDB.getAllBOM();
-
       currentRates = await engine.loadCorridor(savedRegime);
-
-      if (!activeBOMItems || activeBOMItems.length === 0) {
-        activeBOMItems = VISITOR_SAMPLE_BOM.map(s => {
-          const tariff = engine.matchTariff(s.rawHs, currentRates);
-          const risk = evaluateStatutoryRisk(tariff, s.item);
-          return {
-            ...s,
-            hsCode: tariff.code,
-            dutyPercent: tariff.dutyRate * 100,
-            penaltyRate: tariff.penaltyDutyRate || 0,
-            directive: risk.directive,
-            parity: risk.parity,
-            riskLevel: risk.riskLevel,
-            heavyLift: risk.heavyLift,
-            note: risk.note
-          };
-        });
-        await tradeDB.saveAllBOM(activeBOMItems);
-      }
+      activeBOMItems = await tradeDB.getAllBOM();
 
       await changeCorridor(savedRegime, false);
       await changeCurrency(savedCurr);
 
       if (savedTab !== 'single') switchTab(savedTab);
-      if (activeBOMItems.length) renderBOMTable(true);
+
+      // Display the table only if the user already uploaded or saved data
+      if (activeBOMItems && activeBOMItems.length > 0) {
+        renderBOMTable(true);
+      } else {
+        document.getElementById('batchResults').style.display = 'none';
+      }
     })();
   </script>
 </body>

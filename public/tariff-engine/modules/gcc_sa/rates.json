@@ -1,37 +1,62 @@
 [
   {
     "code": "7604.21.00.00",
-    "desc": "Aluminum Alloy Hollow Profiles (GB/T 5237, 6063-T5)",
+    "desc": "Aluminum Alloy Hollow Profiles (GB/T 5237, 6063-T5 Architectural Grade)",
     "dutyRate": 0.12,
+    "penaltyDutyRate": 0.00,
     "directive": "SABER PCoC",
-    "reg": "SASO Technical Regulation for Building Materials"
+    "reg": "SASO Technical Regulation for Building Materials (Part III: Metals & Alloys)",
+    "parity": "SASO-PCoC-PASS",
+    "riskLevel": "low",
+    "heavyLift": false,
+    "note": "Mandatory SABER Shipment Certificate (SC) linked to valid Product PCoC prior to port arrival."
   },
   {
     "code": "7214.20.00.00",
-    "desc": "Deformed Concrete Reinforcing Steel Bars (ASTM A615)",
+    "desc": "Deformed Concrete Reinforcing Steel Bars (ASTM A615 / SASO Equivalent)",
     "dutyRate": 0.10,
+    "penaltyDutyRate": 0.00,
     "directive": "SASO QUALITY MARK",
-    "reg": "SQM Mandatory Factory Inspection"
+    "reg": "SQM Mandatory Factory Audit & Conformity License",
+    "parity": "SQM-HOLD",
+    "riskLevel": "critical",
+    "heavyLift": false,
+    "note": "Mandatory SASO Quality Mark (SQM) certificate required. Shipments lacking SQM face immediate quay retention."
   },
   {
     "code": "7318.15.00.00",
     "desc": "Threaded Fasteners, High-Tensile Bolts & Screws (Gr 8.8 / 10.9)",
     "dutyRate": 0.05,
+    "penaltyDutyRate": 0.00,
     "directive": "STANDARD",
-    "reg": "GCC Common Customs Inspection"
+    "reg": "GCC Unified Customs Tariff Standard Declaration",
+    "parity": "GCC-PASS",
+    "riskLevel": "low",
+    "heavyLift": false,
+    "note": "Standard commercial invoice, packing list, and attested Certificate of Origin (COO)."
   },
   {
     "code": "8415.81.00.00",
     "desc": "Industrial Packaged AC Units with Refrigerating Circuit",
     "dutyRate": 0.05,
+    "penaltyDutyRate": 0.00,
     "directive": "SABER + EE",
-    "reg": "SASO IE3 Energy Efficiency Technical Standard"
+    "reg": "SASO IE3 Energy Efficiency Technical Standard (SASO 2874)",
+    "parity": "SASO-EE-HOLD",
+    "riskLevel": "critical",
+    "heavyLift": true,
+    "note": "Mandatory Energy Efficiency (EE) registration and seasonal energy efficiency ratio label registered on SABER."
   },
   {
     "code": "8541.43.00.00",
     "desc": "Photovoltaic Solar Cells Assembled in Modules / Panels",
     "dutyRate": 0.00,
+    "penaltyDutyRate": 0.00,
     "directive": "0% INCENTIVE",
-    "reg": "Statutory Green Energy Framework"
+    "reg": "National Renewable Energy Incentive Framework",
+    "parity": "RE-CONCESSION",
+    "riskLevel": "low",
+    "heavyLift": false,
+    "note": "Ad valorem duty exemption for certified renewable solar generation equipment."
   }
 ]

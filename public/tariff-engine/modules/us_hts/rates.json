@@ -1,26 +1,38 @@
 [
   {
     "code": "7308.90.30.00",
-    "desc": "Prepared Structural Steel Plates & Welded Sections",
+    "desc": "Prepared Structural Steel Plates & Welded Sections for Towers",
     "dutyRate": 0.00,
     "penaltyDutyRate": 0.25,
     "directive": "SEC 232 TARIFF",
-    "reg": "Section 232 Steel 25% Ad Valorem Duty"
+    "reg": "Section 232 Steel 25% Ad Valorem Duty (9903.80.01)",
+    "parity": "SEC232-FLAG",
+    "riskLevel": "warn",
+    "heavyLift": false,
+    "note": "Mandatory 25% Section 232 remedy duty applies unless covered by verified DOC product exclusion."
   },
   {
     "code": "7604.21.00.10",
-    "desc": "Extruded Aluminum Profiles for Structural Framework",
+    "desc": "Extruded Aluminum Hollow Profiles for Architectural Framework",
     "dutyRate": 0.015,
     "penaltyDutyRate": 0.10,
     "directive": "SEC 232 ALUM",
-    "reg": "Section 232 Aluminum 10% Additional Duty"
+    "reg": "Section 232 Aluminum 10% Additional Duty (9903.85.01)",
+    "parity": "SEC232-WARN",
+    "riskLevel": "warn",
+    "heavyLift": false,
+    "note": "10% additional ad valorem duty applied under Section 232. Importer must verify smelt and cast origin."
   },
   {
     "code": "8415.90.80.85",
-    "desc": "Compressor Assemblies & Parts for AC Systems",
+    "desc": "Compressor Assemblies & Parts for Commercial AC Systems",
     "dutyRate": 0.014,
     "penaltyDutyRate": 0.00,
     "directive": "CBP PGA RELEASE",
-    "reg": "EPA Section 608 Refrigerant Compliance Audit"
+    "reg": "EPA Section 608 Refrigerant Compliance Audit (AIM Act Framework)",
+    "parity": "EPA-PGA-PASS",
+    "riskLevel": "low",
+    "heavyLift": false,
+    "note": "Requires EPA PGA Message Set transmission in ACE prior to CBP customs admissibility release."
   }
 ]

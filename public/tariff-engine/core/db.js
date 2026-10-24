@@ -16,18 +16,18 @@ class TradeDB {
       req.onupgradeneeded = (e) => {
         const db = e.target.result;
 
-        // Active Ingested BOM Ledger
+        // Ingested BOM Ledger
         if (!db.objectStoreNames.contains('bom_ledger')) {
           const bomStore = db.createObjectStore('bom_ledger', { keyPath: 'id' });
           bomStore.createIndex('hsCode', 'hsCode', { unique: false });
         }
 
-        // Corridor Tariff Registry (Offline Cache of All Rates)
+        // Offline Tariff Cache
         if (!db.objectStoreNames.contains('tariffs')) {
           db.createObjectStore('tariffs', { keyPath: 'corridor' });
         }
 
-        // Engine State (Active regime, currency, tab)
+        // Persistent Session Meta
         if (!db.objectStoreNames.contains('meta')) {
           db.createObjectStore('meta', { keyPath: 'key' });
         }
@@ -42,7 +42,6 @@ class TradeDB {
     });
   }
 
-  // --- META STATE (Regime, Currency, Active Tab) ---
   async setMeta(key, value) {
     await this.init();
     return new Promise((resolve, reject) => {
@@ -63,7 +62,6 @@ class TradeDB {
     });
   }
 
-  // --- TARIFF RATES CACHE (Offline Resilience) ---
   async saveCorridorRates(corridor, rates) {
     await this.init();
     return new Promise((resolve, reject) => {
@@ -84,7 +82,6 @@ class TradeDB {
     });
   }
 
-  // --- BOM LEDGER CRUD ---
   async saveAllBOM(items) {
     await this.init();
     return new Promise((resolve, reject) => {

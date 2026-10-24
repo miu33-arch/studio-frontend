@@ -1,9 +1,34 @@
-﻿// public/tariff-engine/engine.js (or inside your script)
+﻿// public/tariff-engine/engine.js
 
 class TariffEngineCore {
   constructor() {
     this.activeCorridor = 'gcc_sa';
     this.ratesCache = {};
+  }
+
+  // Enforces valid customs digit lengths per regime
+  validateHSLength(hsInput, corridorKey = this.activeCorridor) {
+    const digitsOnly = (hsInput || '').replace(/\D/g, '');
+    const len = digitsOnly.length;
+
+    const rules = {
+      gcc_sa: [6, 8, 10, 12],
+      us_hts: [6, 8, 10],
+      eu_taric: [6, 8, 10],
+      asean_cn: [6, 8, 10]
+    };
+
+    const allowed = rules[corridorKey] || [6, 8, 10];
+
+    if (!allowed.includes(len)) {
+      return {
+        valid: false,
+        digits: len,
+        message: `INVALID FORMAT: ${corridorKey.toUpperCase()} requires ${allowed.join(', ')} digits (Received: ${len}).`
+      };
+    }
+
+    return { valid: true, digits: len };
   }
 
   async loadCorridor(corridorKey) {
@@ -13,7 +38,7 @@ class TariffEngineCore {
       return this.ratesCache[corridorKey];
     }
 
-    // 1. Try Network First
+    // 1. Network Fetch Attempt
     try {
       const res = await fetch(`/tariff-engine/modules/${corridorKey}/rates.json`, { cache: 'no-store' });
       if (res.ok) {
@@ -23,10 +48,10 @@ class TariffEngineCore {
         return rates;
       }
     } catch (e) {
-      // Offline mode - network unavailable
+      // Offline fallback triggered
     }
 
-    // 2. Fallback to IndexedDB Cache
+    // 2. IndexedDB Cache Read
     if (window.tradeDB) {
       const cached = await window.tradeDB.getCorridorRates(corridorKey);
       if (cached && cached.length) {
@@ -35,8 +60,8 @@ class TariffEngineCore {
       }
     }
 
-    // 3. Ultimate Fallback to Hardcoded Registry
-    const fallback = CORRIDOR_REGISTRY[corridorKey] || [];
+    // 3. Fallback to In-Memory Hardcoded Registry
+    const fallback = (typeof CORRIDOR_REGISTRY !== 'undefined' && CORRIDOR_REGISTRY[corridorKey]) ? CORRIDOR_REGISTRY[corridorKey] : [];
     this.ratesCache[corridorKey] = fallback;
     return fallback;
   }
@@ -67,10 +92,10 @@ class TariffEngineCore {
     if (this.activeCorridor === 'gcc_sa') {
       vat = (cif + duty) * 0.15; // ZATCA 15% statutory VAT
     } else if (this.activeCorridor === 'eu_taric') {
-      vat = (cif + duty) * 0.19; // EU 19% standard import VAT
-      penalties = baseFob * (tariff.penaltyDutyRate || 0);
+      vat = (cif + duty) * 0.19; // EU 19% standard VAT
+      penalties = baseFob * (tariff.penaltyDutyRate || 0); // EU Safeguard / ADD
     } else if (this.activeCorridor === 'us_hts') {
-      penalties = baseFob * (tariff.penaltyDutyRate || 0); // Sec 232/301
+      penalties = baseFob * (tariff.penaltyDutyRate || 0); // Sec 232 / 301
     } else if (this.activeCorridor === 'asean_cn') {
       vat = (cif + duty) * 0.13; // PRC statutory VAT
     }

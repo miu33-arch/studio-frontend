@@ -5,7 +5,11 @@
     "dutyRate": 0.08,
     "penaltyDutyRate": 0.00,
     "directive": "ACFTA 0%",
-    "reg": "Form E Certificate of Origin (Concessionary 0% Preferential Duty)"
+    "reg": "Form E Certificate of Origin (Concessionary 0% Preferential Duty)",
+    "parity": "FORM-E-PASS",
+    "riskLevel": "low",
+    "heavyLift": false,
+    "note": "Concessionary 0% preferential duty applied with valid electronic Form E Certificate of Origin."
   },
   {
     "code": "7214.20.00.00",
@@ -13,7 +17,11 @@
     "dutyRate": 0.10,
     "penaltyDutyRate": 0.00,
     "directive": "ACFTA 0%",
-    "reg": "Form E Certificate of Origin (ASEAN-China FTA Concession Rate)"
+    "reg": "Form E Certificate of Origin (ASEAN-China FTA Concession Rate)",
+    "parity": "FORM-E-PASS",
+    "riskLevel": "low",
+    "heavyLift": false,
+    "note": "Full duty waiver under ACFTA Tariff Reduction Schedule. Direct consignment rules must be documented."
   },
   {
     "code": "7318.15.00.00",
@@ -21,7 +29,11 @@
     "dutyRate": 0.05,
     "penaltyDutyRate": 0.00,
     "directive": "STANDARD MFN",
-    "reg": "Standard MFN Customs Rate (ACFTA Origin Rules Ineligible)"
+    "reg": "Standard MFN Customs Rate (ACFTA Origin Rules Ineligible)",
+    "parity": "MFN-STANDARD",
+    "riskLevel": "low",
+    "heavyLift": false,
+    "note": "Standard statutory MFN tariff applies where local value-add (RVC) does not meet preferential 40% criteria."
   },
   {
     "code": "8415.81.00.00",
@@ -29,7 +41,11 @@
     "dutyRate": 0.00,
     "penaltyDutyRate": 0.00,
     "directive": "ACFTA 0%",
-    "reg": "China-ASEAN FTA Protocol (Zero-Duty Regional Concession)"
+    "reg": "China-ASEAN FTA Protocol (Zero-Duty Regional Concession)",
+    "parity": "ACFTA-ZERO",
+    "riskLevel": "low",
+    "heavyLift": true,
+    "note": "Zero-tariff preferential treatment. Heavy-lift logistics coordination required for crane offloading at quay."
   },
   {
     "code": "8541.43.00.00",
@@ -37,6 +53,10 @@
     "dutyRate": 0.00,
     "penaltyDutyRate": 0.00,
     "directive": "0% PREFERENTIAL",
-    "reg": "Renewable Energy Trade Pact (Zero Customs Ad Valorem)"
+    "reg": "Renewable Energy Trade Pact (Zero Customs Ad Valorem)",
+    "parity": "RE-PREF-PASS",
+    "riskLevel": "low",
+    "heavyLift": false,
+    "note": "Bilateral renewable energy concession with zero customs tariff and expedited green clearance corridor."
   }
 ]
